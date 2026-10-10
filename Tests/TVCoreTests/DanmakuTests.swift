@@ -34,10 +34,27 @@ struct DanmakuTests {
         #expect(layout.place(comment, width: 200, at: 3)?.lane == 0)
         // A much longer (faster) comment must not catch the one ahead, so it waits for another lane.
         #expect(layout.place(comment, width: 3000, at: 3.2) == nil)
+        // Pinned comments stack in their own rows (on an empty screen, so no scrolling comment is in the way).
+        layout = DanmakuLayout(width: 1000, height: 400, laneHeight: 50, scrollArea: 0.5, scrollDuration: 10)
         let fixed = Danmaku(time: 0, position: .top, text: "t")
         #expect(layout.place(fixed, width: 100, at: 0)?.lane == 0)
         #expect(layout.place(fixed, width: 100, at: 1)?.lane == 1)
         #expect(layout.place(fixed, width: 100, at: 4.5)?.lane == 0)
+    }
+
+    @Test func topCommentsAndScrollingCommentsDoNotOverlap() {
+        var layout = DanmakuLayout(width: 1000, height: 400, laneHeight: 50, scrollArea: 0.5, scrollDuration: 10)
+        let moving = Danmaku(time: 0, position: .scroll, text: "x")
+        let pinned = Danmaku(time: 0, position: .top, text: "t")
+        // Lane 0 has a comment that crosses the centre within the next four seconds, so the top comment takes row 1.
+        #expect(layout.place(moving, width: 200, at: 0)?.lane == 0)
+        #expect(layout.place(pinned, width: 300, at: 1)?.lane == 1)
+        // Row 0 is still busy and row 1 holds a pinned comment this one would reach before it goes, so it takes row 2.
+        #expect(layout.place(moving, width: 200, at: 1.5)?.lane == 2)
+        // Once the first comment is past the centre, row 0 is clear for a top comment again.
+        var later = DanmakuLayout(width: 1000, height: 400, laneHeight: 50, scrollArea: 0.5, scrollDuration: 10)
+        _ = later.place(moving, width: 200, at: 0)
+        #expect(later.place(pinned, width: 300, at: 7.5)?.lane == 0)
     }
 }
 

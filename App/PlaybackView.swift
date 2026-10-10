@@ -210,6 +210,11 @@ import TVCore
         player.preventsDisplaySleepDuringVideoPlayback = true
         player.replaceCurrentItem(with: item)
         player.play()
+        #if DEBUG
+        // `-qaSeek <seconds>` starts playback there, for screenshots.
+        let qaSeek = UserDefaults.standard.double(forKey: "qaSeek")
+        if qaSeek > 0 { player.seek(to: CMTime(seconds: qaSeek, preferredTimescale: 600)) }
+        #endif
         let origin = channel.url.host()
         sampler = Task { [weak self] in
             var history: [(date: Date, bytes: Int64)] = []

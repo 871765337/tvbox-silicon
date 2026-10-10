@@ -68,6 +68,9 @@ import TVCore
             print("channel \(channel.url.absoluteString.prefix(120))")
             let comments = await DanmakuSource.comments(for: channel.url) ?? []
             print("danmaku \(comments.count) first=\(comments.prefix(3).map { "\(String(format: "%.1f", $0.time)) \($0.text)" })")
+            let windows = Dictionary(grouping: comments) { Int($0.time / 10) * 10 }.mapValues(\.count)
+            print("busiest 10s windows \(windows.sorted { $0.value > $1.value }.prefix(5).map { "\($0.key)s:\($0.value)" })")
+            print("per 10s \(windows.sorted { $0.key < $1.key }.map { "\($0.key):\($0.value)" }.joined(separator: " "))")
             let asset = BilibiliStreams.asset(for: channel.url) ?? AVURLAsset(url: channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
             if channel.url.scheme == BilibiliStreams.scheme {
                 for variant in try await asset.load(.variants) {

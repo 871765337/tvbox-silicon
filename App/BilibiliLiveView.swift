@@ -48,7 +48,13 @@ struct BilibiliLiveView: View {
         #if !os(tvOS)
         .toolbar { Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise") }.disabled(loading).accessibilityLabel(L10n.text("Refresh")) }
         #endif
-        .task { if rooms.isEmpty { await load() } }
+        .task {
+            #if DEBUG
+            // `-qaLiveArea <area>` opens that area, for screenshots.
+            if area == nil { area = UserDefaults.standard.string(forKey: "qaLiveArea") }
+            #endif
+            if rooms.isEmpty { await load() }
+        }
     }
 
     private func load() async {

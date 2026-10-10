@@ -133,7 +133,15 @@ struct SiteView: View {
         }
         .screenTitle(site.name).task {
             if canLoad && !browser.loaded {
-                if initialQuery.isEmpty { await home() }
+                if initialQuery.isEmpty {
+                    await home()
+                    #if DEBUG
+                    // `-qaCategory <type id>` opens that category, for screenshots.
+                    if let category = UserDefaults.standard.string(forKey: "qaCategory") {
+                        await browser.load(.list(category: category, query: "", page: 1), client: client)
+                    }
+                    #endif
+                }
                 else { query = initialQuery; await search(); await browser.loadCategories(client: client) }
             }
         }

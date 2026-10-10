@@ -193,6 +193,11 @@ public struct DanmakuLayout {
                     let leaves = last.start + (width + last.width) / last.speed
                     guard time + width / speed >= leaves else { continue }
                 }
+                // Top comments share these rows, so it must not reach one that is still pinned there.
+                if lane < top.count, let pinned = top[lane], time - pinned.start < fixedDuration {
+                    let right = (width + pinned.width) / 2
+                    guard time + (width - right) / speed >= pinned.start + fixedDuration else { continue }
+                }
                 let placement = Placement(comment: comment, start: time, width: textWidth, lane: lane, speed: speed)
                 scrolling[lane] = placement
                 return placement
@@ -200,7 +205,15 @@ public struct DanmakuLayout {
             return nil
         case .top, .bottom:
             let lanes = comment.position == .top ? top : bottom
-            guard let lane = lanes.indices.first(where: { lanes[$0].map { time - $0.start >= fixedDuration } ?? true }) else { return nil }
+            guard let lane = lanes.indices.first(where: { lane in
+                guard lanes[lane].map({ time - $0.start >= fixedDuration }) ?? true else { return false }
+                // A top comment also keeps clear of scrolling comments crossing the centre of its row while it shows.
+                guard comment.position == .top, lane < scrolling.count, let moving = scrolling[lane] else { return true }
+                let left = (width - textWidth) / 2, right = left + textWidth
+                let passed = width - (time - moving.start) * moving.speed + moving.width <= left
+                let arrives = width - (time + fixedDuration - moving.start) * moving.speed < right
+                return passed || !arrives
+            }) else { return nil }
             let placement = Placement(comment: comment, start: time, width: textWidth, lane: lane, speed: 0)
             if comment.position == .top { top[lane] = placement } else { bottom[lane] = placement }
             return placement
