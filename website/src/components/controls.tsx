@@ -1,3 +1,4 @@
+import { SFSymbol } from "./SFSymbol";
 import { useI18n } from "../i18n/I18nProvider";
 import { LANGS, LOCALES, type Lang } from "../i18n/strings";
 import { LANG_PATH } from "../site";
@@ -36,7 +37,7 @@ export function DownloadButton({ small = false }: { small?: boolean }) {
   const { t } = useI18n();
   return (
     <a className={small ? "pill pill-dark pill-sm" : "pill pill-dark"} href="#install">
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+      <SFSymbol name="arrow.down.circle.fill" />
       {t("dl.mac")}
     </a>
   );
@@ -54,6 +55,7 @@ export function LanguageSelect() {
           </option>
         ))}
       </select>
+      <SFSymbol name="chevron.up.chevron.down" />
     </label>
   );
 }

@@ -5,6 +5,7 @@ import { mountFilm } from "../intro/film";
 import { Headline } from "./Headline";
 import { CastIcon, ListIcon, QrIcon, QualityIcon, SearchIcon, UpdateIcon } from "./icons";
 import { Reveal } from "./Reveal";
+import { SFSymbol } from "./SFSymbol";
 import { Stage } from "./Stage";
 
 const CARDS: { shot: string; title: TextKey; body: TextKey }[] = [
@@ -43,7 +44,7 @@ export function WhatsNew() {
       <Reveal className="hero-film new-film">
         <NewFilm />
         <a className="link hero-film-link" href={`/whats-new/?lang=${lang}`}>
-          {t("new.film")} <span aria-hidden="true">→</span>
+          {t("new.film")} <SFSymbol name="chevron.right" />
         </a>
       </Reveal>
 

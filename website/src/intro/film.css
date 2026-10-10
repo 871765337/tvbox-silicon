@@ -50,10 +50,9 @@ img { display: block; }
   position: absolute; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
   background: radial-gradient(circle at 50% 35%, #2c2c2e, #161617); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.7);
 }
-.r-btn svg, .r-vol svg { width: 12px; height: 12px; fill: none; stroke: #e8e8ed; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.r-btn svg .f { fill: #e8e8ed; stroke: none; }
+.r-btn, .r-vol { color: #e8e8ed; font-size: 10px; }
 .r-power { right: 9px; top: 9px; width: 15px; height: 15px; }
-.r-power svg { width: 9px; height: 9px; stroke-width: 2.4; }
+.r-power { font-size: 8px; }
 .r-pad {
   position: absolute; left: 7px; top: 31px; width: 56px; height: 56px; border-radius: 50%;
   background: radial-gradient(circle at 50% 40%, #262628, #141415); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.7);
@@ -70,8 +69,7 @@ img { display: block; }
 .r-pad b { position: absolute; inset: 15px; border-radius: 50%; background: #1d1d1f; box-shadow: inset 0 0 0 1px #3a3a3d; }
 .r-pad b.on { background: #3e342c; box-shadow: inset 0 0 0 1.5px var(--acc), 0 0 10px rgba(245, 160, 79, 0.7); }
 .r-btn.on { background: var(--acc); box-shadow: 0 0 10px 3px rgba(245, 160, 79, 0.55); }
-.r-btn.on svg { stroke: #1d1d1f; }
-.r-btn.on svg .f { fill: #1d1d1f; }
+.r-btn.on { color: #1d1d1f; }
 .r-vol {
   position: absolute; left: 40px; top: 126px; width: 22px; height: 50px; border-radius: 11px;
   display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 5px 0;
@@ -103,7 +101,7 @@ img { display: block; }
   padding: .55cqw 1.4cqw .55cqw 1cqw; border-radius: 99px; background: rgba(255, 255, 255, 0.1);
   font-size: 1.35cqw; font-weight: 600; opacity: 0; transition: opacity .3s;
 }
-.chap i { font-style: normal; color: var(--muted); }
+.chap .sf { color: var(--muted); }
 .chap.on { opacity: 1; }
 .chap:not(.on) { display: none; }
 
@@ -235,6 +233,7 @@ img { display: block; }
 .full { position: absolute; inset: 0; }
 .full img { width: 100%; height: 100%; object-fit: cover; }
 .full.dim img { filter: brightness(.45); }
+.full .kb { width: 100%; height: 100%; transform-origin: var(--ox, 50%) var(--oy, 50%); animation: kb 6s cubic-bezier(.45, 0, .25, 1) calc(var(--kd, 99) * 1s) both; }
 .dm {
   position: absolute; left: 100%; z-index: 3; white-space: nowrap; font-size: 2.2cqw; font-weight: 700; color: #fff;
   text-shadow: 0 0 .2cqw #000, 0 0 .2cqw #000, 0 .1cqw .3cqw rgba(0, 0, 0, .6);
@@ -259,6 +258,12 @@ img { display: block; }
 .ph-meta i { display: block; height: .65cqw; margin-top: .75cqw; border-radius: .35cqw; background: #e3e5e7; }
 .ph-meta span { display: flex; justify-content: space-between; margin-top: 1.4cqw; }
 .ph-meta span i { width: 2.4cqw; height: 2.4cqw; margin: 0; border-radius: 50%; }
-.tvi { flex: none; width: 1.6cqw; height: 1.15cqw; border: .17cqw solid currentColor; border-radius: .25cqw; }
 @keyframes pick { to { background: #fb7299; color: #fff; } }
 .bili-mark { border-radius: 26%; box-shadow: 0 2cqw 5cqw rgba(0, 0, 0, 0.5); }
+
+/* SF Symbols (src/sf-icons.ts): each is sized in em from its own box, as if drawn at the text's point size,
+   so symbols of different shapes keep SF Symbols' proportions and sit centred on the text line. */
+.sf { display: inline-block; flex: none; vertical-align: middle; fill: currentColor; }
+.toast .sf, .acc .sf { margin-top: -.12em; }
+.toast .sf { margin-right: .35em; }
+.dev-row .sf { color: #61666d; }

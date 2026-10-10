@@ -7,6 +7,7 @@ import "./page.css";
 import { detectLang } from "../i18n/detect";
 import { type FilmName, mountFilm } from "./film";
 import { tr } from "./film-i18n";
+import { sfSvg } from "../sf-icons";
 
 const lang = detectLang();
 const brand = lang === "ja" || lang === "zh-Hant" ? "映匣" : "Yingxia";
@@ -15,7 +16,7 @@ const host = document.getElementById("film-host")!;
 const film = (host.dataset.film ?? "intro") as FilmName;
 const [title, label] = film === "whats-new" ? ["What’s new in Yingxia 1.1", "What’s new"] : ["How Yingxia works", "How it works"];
 document.title = tr(lang, title).replace("Yingxia", brand);
-document.querySelector("#back")!.textContent = `← ${brand}`;
+document.querySelector("#back")!.innerHTML = `${sfSvg("chevron.left")}${brand}`;
 document.querySelector("#how")!.textContent = tr(lang, label);
 
 const at = new URLSearchParams(location.search).get("t");

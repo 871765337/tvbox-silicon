@@ -1,3 +1,4 @@
+import { SFSymbol } from "./SFSymbol";
 import { useEffect, useState, type ComponentType } from "react";
 import { useI18n } from "../i18n/I18nProvider";
 import { INSTALL, type Platform } from "../i18n/install-strings";
@@ -91,7 +92,7 @@ export function Install() {
             </a>
             {sideload && (
               <a className="link-blue" href={SIDELOADLY} target="_blank" rel="noreferrer">
-                {copy.sideloadly} <span aria-hidden="true">›</span>
+                {copy.sideloadly} <SFSymbol name="chevron.right" />
               </a>
             )}
           </div>
@@ -127,7 +128,7 @@ export function Install() {
               {copy.keep.b} {copy.keep.tip}
             </p>
             <a className="link-blue" href={INSTALL_GUIDE} target="_blank" rel="noreferrer">
-              {copy.guide} <span aria-hidden="true">›</span>
+              {copy.guide} <SFSymbol name="chevron.right" />
             </a>
           </div>
         )}

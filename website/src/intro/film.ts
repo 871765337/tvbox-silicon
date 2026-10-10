@@ -6,6 +6,7 @@ import css from "./film.css?inline";
 import markup from "./film.html?raw";
 import markup11 from "./film-11.html?raw";
 import { translateFilm, tr } from "./film-i18n";
+import { sfSvg } from "../sf-icons";
 
 const FADE = 0.45;
 const PRESS = 0.28;
@@ -59,6 +60,8 @@ export function mountFilm(host: HTMLElement, { lang, film = "intro", startAt, ke
   const root = shadow.querySelector<HTMLElement>(".film")!;
   root.lang = lang;
   translateFilm(root, lang);
+  // SF Symbols: each <i data-sf="name"> becomes the traced symbol, sized like a glyph of the surrounding text.
+  for (const icon of root.querySelectorAll<HTMLElement>("[data-sf]")) icon.outerHTML = sfSvg(icon.dataset.sf!);
   // Same screenshot folders as the site: Korean uses the English app UI.
   const shots = lang === "ja" || lang === "zh-Hant" ? lang : "en";
   for (const img of root.querySelectorAll<HTMLImageElement>('img[src^="/screenshots/en/"]')) {

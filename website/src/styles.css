@@ -49,11 +49,11 @@ h1, h2, h3, h4, p { margin: 0; }
   font-size: 16px; font-weight: 500; padding: 14px 24px; border-radius: 999px;
   transition: transform 0.2s ease, background-color 0.2s ease;
 }
-.pill svg { width: 18px; height: 18px; }
+.pill .sf { font-size: 18px; }
 .pill-dark { background: var(--ink); color: #fff; }
 .pill-dark:hover { background: #2c2c2c; transform: translateY(-1px); }
 .pill-sm { font-size: 14px; padding: 8px 16px; }
-.pill-sm svg { width: 16px; height: 16px; }
+.pill-sm .sf { font-size: 16px; }
 .pill-soon { cursor: default; user-select: none; }
 .pill-soon:hover { background: var(--ink); transform: none; }
 .pill-soon .dot {
@@ -68,10 +68,11 @@ h1, h2, h3, h4, p { margin: 0; }
 .lang-select {
   appearance: none; -webkit-appearance: none; cursor: pointer;
   font: inherit; font-size: 14px; color: var(--ink);
-  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2366655f' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 13px center;
+  background: transparent;
   border: 1px solid var(--line); border-radius: 999px; padding: 7px 32px 7px 14px;
 }
 .lang-select:hover { border-color: rgba(18, 18, 18, 0.2); }
+.select .sf { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--muted); pointer-events: none; }
 
 /* Headlines: a sans line over an italic serif line */
 .headline { display: flex; flex-direction: column; align-items: center; text-align: center; }
@@ -129,7 +130,7 @@ h1, h2, h3, h4, p { margin: 0; }
 
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 56px; }
 .tile { background: var(--card); border-radius: 24px; padding: 30px 28px; }
-.tile svg { width: 28px; height: 28px; fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 20px; }
+.tile-icon { display: flex; align-items: center; height: 34px; margin-bottom: 16px; font-size: 26px; color: var(--ink); }
 .tile h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
 .tile p { margin-top: 8px; font-size: 15px; color: var(--muted); }
 
@@ -193,7 +194,7 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
 .btn-blue:hover { background: #0077ed; }
 .link-blue { font-size: 17px; color: #0066cc; }
 .link-blue:hover { text-decoration: underline; text-underline-offset: 3px; }
-.link-blue span { font-size: 1.2em; line-height: 0; }
+.link-blue .sf { font-size: .8em; margin-left: 1px; }
 
 .how { margin-top: 112px; }
 .how-title { font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.15; text-align: center; }
@@ -256,3 +257,7 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
   .card h3 { font-size: clamp(22px, 2.4vw, 30px); }
   .card > p { margin: 8px auto 20px; font-size: 16px; }
 }
+
+/* SF Symbols (SFSymbol.tsx): sized in em from each symbol's box, centred on the text line. */
+.sf { display: inline-block; flex: none; vertical-align: middle; fill: currentColor; }
+.link .sf, .badge-arrow { font-size: .78em; margin-left: 2px; }
