@@ -81,7 +81,7 @@ struct LiveRoomCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(alignment: .topLeading) {
                         HStack(spacing: 5) {
-                            Circle().fill(.white).frame(width: 6, height: 6)
+                            Image(systemName: "dot.radiowaves.left.and.right").font(.caption2.weight(.bold))
                             Text(L10n.text("LIVE")).font(.caption2.weight(.bold))
                         }
                         .foregroundStyle(.white).padding(.horizontal, 8).padding(.vertical, 4)

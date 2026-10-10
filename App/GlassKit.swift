@@ -271,7 +271,7 @@ struct Chip: View {
         let button = Button { if drag?.active != true { action() } } label: {
             HStack(spacing: 5) {
                 if selected { Image(systemName: "checkmark").font(.caption.weight(.bold)) }
-                if mark { BilibiliMark(size: 26) }
+                if mark { BilibiliGlyph(size: 22).foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(BilibiliMark.blue)) }
                 Text(title).lineLimit(1)
             }.padding(.horizontal, 4).frame(maxWidth: fill ? .infinity : nil)
         }.accessibilityAddTraits(selected ? [.isSelected] : [])

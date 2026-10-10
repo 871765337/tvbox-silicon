@@ -869,7 +869,7 @@ private struct SourceChip: View {
         // The chip under the pointer receives the mouse-up that ends a drag.
         Button { if drag?.active != true { action() } } label: {
             HStack(spacing: 6) {
-                if name == Site.bilibili.name { BilibiliMark(size: 18) } else if let symbol = label.symbol { Text(symbol) }
+                if name == Site.bilibili.name { BilibiliGlyph(size: 15).foregroundStyle(selected ? Brand.onAccent : BilibiliMark.blue) } else if let symbol = label.symbol { Text(symbol) }
                 Text(label.title).lineLimit(1)
                 if let count { Text("\(count)").monospacedDigit().opacity(0.55) }
             }

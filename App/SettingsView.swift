@@ -345,7 +345,7 @@ struct DiagnosticsView: View {
                 logList
                 Divider()
                 HStack(spacing: 8) {
-                    Circle().fill(live ? Brand.accent : .secondary).frame(width: 6, height: 6)
+                    Image(systemName: live ? "circle.fill" : "pause.circle.fill").font(.system(size: live ? 6 : 11)).foregroundStyle(live ? Brand.accent : .secondary)
                     Text(L10n.text(live ? "Newest first · Updates every 2 seconds" : "Updates paused"))
                     Spacer()
                     Text("\(filtered.count) / \(entries.count)").monospacedDigit()
