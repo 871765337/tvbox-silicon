@@ -64,6 +64,31 @@ export type TextKey =
   | "shots.note"
   | "soon"
   | "dl.mac"
+  | "nav.new"
+  | "new.l1"
+  | "new.l2"
+  | "new.sub"
+  | "new.film"
+  | "n.bili.t"
+  | "n.bili.b"
+  | "n.dm.t"
+  | "n.dm.b"
+  | "n.live.t"
+  | "n.live.b"
+  | "n.cast.t"
+  | "n.cast.b"
+  | "n.hd.t"
+  | "n.hd.b"
+  | "n.qr.t"
+  | "n.qr.b"
+  | "n.search.t"
+  | "n.search.b"
+  | "n.list.t"
+  | "n.list.b"
+  | "n.update.t"
+  | "n.update.b"
+  | "q7.q"
+  | "q7.a"
   | "dl.req";
 
 export interface Locale {
@@ -106,7 +131,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.runtime.t": "Plugins on device",
       "g.sub.b": "Import any TVBox JSON subscription by URL. A failed refresh never wipes the last working copy.",
       "g.sub.t": "Your subscription, kept safe",
-      "hero.badge": "New: iPhone, iPad & Apple TV preview",
+      "hero.badge": "Coming in 1.1: Bilibili, built in",
       "hero.film": "Watch the intro film",
       "hero.l1": "All your sources.",
       "hero.l2": "One big screen.",
@@ -134,6 +159,31 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "Everything TVBox does.",
       "sec.l2": "Rebuilt natively.",
       "sec.sub": "Written in SwiftUI and played through AVKit. No web views, no ported Android screens.",
+      "nav.new": "Yingxia 1.1",
+      "new.l1": "Coming in Yingxia 1.1.",
+      "new.l2": "Bilibili, built in.",
+      "new.sub": "Bilibili becomes a built-in source, with danmaku flying over the video, live rooms, and casting from the Bilibili app on your phone.",
+      "new.film": "Watch what’s new in 1.1",
+      "n.bili.t": "Bilibili, ready out of the box.",
+      "n.bili.b": "Recommendations, rankings, anime, films and every zone, in Bilibili’s own HD streams. No subscription needed.",
+      "n.dm.t": "Danmaku, in step with the video.",
+      "n.dm.b": "Comments fly across the picture, timed to playback. Turn them off from the player any time.",
+      "n.live.t": "Bilibili Live, chat included.",
+      "n.live.b": "Browse the busiest rooms by area, switch quality, and watch the live chat roll by as danmaku.",
+      "n.cast.t": "Cast from your phone",
+      "n.cast.b": "Tap 投屏 in the Bilibili app and pick Yingxia. Your Apple TV plays the HD stream, with danmaku.",
+      "n.hd.t": "Pick the quality",
+      "n.hd.b": "1080P60, 1080P+, 720P and more, right from the player menu. Live rooms too.",
+      "n.qr.t": "Sign in with a QR code",
+      "n.qr.b": "Scan it with the Bilibili app to bring your following feed, history, Watch Later and favorites.",
+      "n.search.t": "Bilibili in search",
+      "n.search.b": "Pin Bilibili in global search and keep scrolling. More results load as you go.",
+      "n.list.t": "Danmaku list",
+      "n.list.b": "See every comment in one list and jump straight to that moment.",
+      "n.update.t": "Update alerts",
+      "n.update.b": "Yingxia lets you know when a new version is out.",
+      "q7.q": "Do I need a Bilibili account?",
+      "q7.a": "No. Bilibili works without signing in, with videos up to 1080P. Signing in with a QR code adds your own lists and the higher qualities your account allows. The sign-in stays on your device.",
       "shots.note": "",
       "dl.mac": "Download",
       "dl.req": "For Mac, iPhone, iPad and Apple TV · Free",
@@ -172,7 +222,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.runtime.t": "プラグインをデバイス上で",
       "g.sub.b": "TVBox の JSON 配信設定を URL から読み込み。更新に失敗しても、最後に動いていた内容は消えません。",
       "g.sub.t": "配信設定を安全に保持",
-      "hero.badge": "iPhone・iPad・Apple TV プレビュー公開",
+      "hero.badge": "1.1 で登場予定：ビリビリ内蔵",
       "hero.film": "紹介動画を見る",
       "hero.l1": "すべてのソースを、",
       "hero.l2": "ひとつの大画面で。",
@@ -200,6 +250,31 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox のすべてを、",
       "sec.l2": "ネイティブに。",
       "sec.sub": "SwiftUI で書かれ、AVKit で再生。Web ビューも、Android 画面の移植もありません。",
+      "nav.new": "映匣 1.1",
+      "new.l1": "映匣 1.1 で登場予定。",
+      "new.l2": "ビリビリを内蔵。",
+      "new.sub": "ビリビリが内蔵ソースに。映像の上を流れる弾幕、生配信、スマホのビリビリアプリからのキャストに対応します。",
+      "new.film": "1.1 の新機能を動画で見る",
+      "n.bili.t": "ビリビリを、すぐに。",
+      "n.bili.b": "おすすめ、ランキング、アニメ、映画、各ジャンルを、ビリビリ本来の HD ストリームで。サブスクリプションは不要です。",
+      "n.dm.t": "映像とぴったり合う弾幕。",
+      "n.dm.b": "コメントが再生に合わせて画面を流れます。プレーヤーからいつでもオフにできます。",
+      "n.live.t": "ビリビリ生配信、チャットも一緒に。",
+      "n.live.b": "エリアごとに人気のルームを探し、画質を切り替え、ライブチャットを弾幕で楽しめます。",
+      "n.cast.t": "スマホからキャスト",
+      "n.cast.b": "ビリビリアプリで「投屏」をタップして映匣を選ぶだけ。Apple TV が HD ストリームを弾幕付きで再生します。",
+      "n.hd.t": "画質を選べる",
+      "n.hd.b": "1080P60、1080P+、720P などをプレーヤーのメニューから。生配信にも対応。",
+      "n.qr.t": "QR コードでログイン",
+      "n.qr.b": "ビリビリアプリで読み取れば、フォロー中の投稿、視聴履歴、あとで見る、お気に入りが使えます。",
+      "n.search.t": "検索でもビリビリ",
+      "n.search.b": "横断検索でビリビリを固定表示。スクロールするたびに結果を読み込みます。",
+      "n.list.t": "弾幕リスト",
+      "n.list.b": "すべてのコメントを一覧で表示し、その場面へすぐにジャンプ。",
+      "n.update.t": "アップデート通知",
+      "n.update.b": "新しいバージョンが出ると、映匣がお知らせします。",
+      "q7.q": "ビリビリのアカウントは必要ですか？",
+      "q7.a": "いいえ。ログインしなくても最大 1080P で視聴できます。QR コードでログインすると、自分のリストと、アカウントで利用できる高画質が加わります。ログイン情報はデバイス内にのみ保存されます。",
       "shots.note": "",
       "dl.mac": "ダウンロード",
       "dl.req": "Mac・iPhone・iPad・Apple TV 対応 · 無料",
@@ -238,7 +313,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.runtime.t": "기기에서 실행되는 플러그인",
       "g.sub.b": "TVBox JSON 구독을 URL로 가져오세요. 새로 고침에 실패해도 마지막으로 작동한 내용은 사라지지 않습니다.",
       "g.sub.t": "구독을 안전하게",
-      "hero.badge": "iPhone·iPad·Apple TV 프리뷰 공개",
+      "hero.badge": "1.1 예정: 빌리빌리 내장",
       "hero.film": "소개 영상 보기",
       "hero.l1": "모든 소스를,",
       "hero.l2": "하나의 큰 화면에서.",
@@ -266,6 +341,31 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox의 모든 것을,",
       "sec.l2": "네이티브로.",
       "sec.sub": "SwiftUI로 작성하고 AVKit으로 재생합니다. 웹 뷰도, Android 화면 이식도 없습니다.",
+      "nav.new": "Yingxia 1.1",
+      "new.l1": "Yingxia 1.1에서 만나요.",
+      "new.l2": "빌리빌리 내장.",
+      "new.sub": "빌리빌리가 내장 소스로 들어옵니다. 영상 위를 흐르는 탄막, 라이브 방송, 휴대폰 빌리빌리 앱에서의 캐스트까지.",
+      "new.film": "1.1 새 기능 영상 보기",
+      "n.bili.t": "바로 쓰는 빌리빌리.",
+      "n.bili.b": "추천, 랭킹, 애니메이션, 영화와 모든 분야를 빌리빌리의 HD 스트림으로. 구독은 필요 없습니다.",
+      "n.dm.t": "영상에 맞춰 흐르는 탄막.",
+      "n.dm.b": "댓글이 재생에 맞춰 화면을 가로질러요. 플레이어에서 언제든 끌 수 있습니다.",
+      "n.live.t": "빌리빌리 라이브, 채팅까지.",
+      "n.live.b": "분야별 인기 방송을 둘러보고, 화질을 바꾸고, 실시간 채팅을 탄막으로 즐기세요.",
+      "n.cast.t": "휴대폰에서 캐스트",
+      "n.cast.b": "빌리빌리 앱에서 投屏을 누르고 Yingxia를 선택하세요. Apple TV가 HD 스트림을 탄막과 함께 재생합니다.",
+      "n.hd.t": "화질 선택",
+      "n.hd.b": "1080P60, 1080P+, 720P 등을 플레이어 메뉴에서 바로. 라이브 방송도 지원합니다.",
+      "n.qr.t": "QR 코드로 로그인",
+      "n.qr.b": "빌리빌리 앱으로 스캔하면 팔로우 피드, 시청 기록, 나중에 보기, 즐겨찾기를 가져옵니다.",
+      "n.search.t": "검색 속 빌리빌리",
+      "n.search.b": "통합 검색에 빌리빌리를 고정하고 계속 스크롤하세요. 결과가 이어서 로드됩니다.",
+      "n.list.t": "탄막 목록",
+      "n.list.b": "모든 댓글을 목록으로 보고 그 장면으로 바로 이동합니다.",
+      "n.update.t": "업데이트 알림",
+      "n.update.b": "새 버전이 나오면 Yingxia가 알려 드립니다.",
+      "q7.q": "빌리빌리 계정이 필요한가요?",
+      "q7.a": "아니요. 로그인하지 않아도 최대 1080P로 볼 수 있습니다. QR 코드로 로그인하면 내 목록과 계정에서 허용하는 더 높은 화질이 추가됩니다. 로그인 정보는 기기에만 저장됩니다.",
       "shots.note": "앱은 아직 한국어를 지원하지 않아 스크린샷은 영어 화면입니다.",
       "dl.mac": "다운로드",
       "dl.req": "Mac·iPhone·iPad·Apple TV 지원 · 무료",
@@ -304,7 +404,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.runtime.t": "外掛在裝置上執行",
       "g.sub.b": "透過網址匯入任何 TVBox JSON 訂閱。更新失敗也不會清除最後一次可用的內容。",
       "g.sub.t": "訂閱妥善保存",
-      "hero.badge": "iPhone、iPad 與 Apple TV 預覽版登場",
+      "hero.badge": "1.1 即將推出：內建嗶哩嗶哩",
       "hero.film": "觀看介紹影片",
       "hero.l1": "所有片源，",
       "hero.l2": "盡在大螢幕。",
@@ -332,6 +432,31 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox 的一切，",
       "sec.l2": "原生重建。",
       "sec.sub": "以 SwiftUI 撰寫、透過 AVKit 播放。沒有網頁視圖，也不是移植的 Android 畫面。",
+      "nav.new": "映匣 1.1",
+      "new.l1": "映匣 1.1 即將推出。",
+      "new.l2": "內建嗶哩嗶哩。",
+      "new.sub": "嗶哩嗶哩成為內建片源，支援飛過畫面的彈幕、直播，還能從手機上的嗶哩嗶哩 App 投放。",
+      "new.film": "觀看 1.1 新功能影片",
+      "n.bili.t": "嗶哩嗶哩，開箱即用。",
+      "n.bili.b": "推薦、排行榜、番劇、電影和各分區，全是嗶哩嗶哩原生高畫質串流，不需要訂閱。",
+      "n.dm.t": "彈幕與影片同步。",
+      "n.dm.b": "留言隨播放進度飛過畫面，隨時可在播放器中關閉。",
+      "n.live.t": "嗶哩嗶哩直播，連同聊天。",
+      "n.live.b": "依分區瀏覽熱門直播間、切換畫質，即時聊天以彈幕呈現。",
+      "n.cast.t": "從手機投放",
+      "n.cast.b": "在嗶哩嗶哩 App 點「投屏」並選擇映匣，Apple TV 就會以高畫質串流連同彈幕播放。",
+      "n.hd.t": "自選畫質",
+      "n.hd.b": "1080P60、1080P+、720P 等，直接在播放器選單切換，直播也適用。",
+      "n.qr.t": "掃描 QR 碼登入",
+      "n.qr.b": "用嗶哩嗶哩 App 掃描，即可帶來關注動態、觀看紀錄、稍後再看和收藏。",
+      "n.search.t": "搜尋裡的嗶哩嗶哩",
+      "n.search.b": "在全域搜尋中固定嗶哩嗶哩，持續捲動就會載入更多結果。",
+      "n.list.t": "彈幕列表",
+      "n.list.b": "在列表中查看所有彈幕，一鍵跳到那個時刻。",
+      "n.update.t": "更新通知",
+      "n.update.b": "有新版本時，映匣會通知你。",
+      "q7.q": "需要嗶哩嗶哩帳號嗎？",
+      "q7.a": "不需要。未登入也能觀看最高 1080P 的影片。用 QR 碼登入後，可使用自己的清單以及帳號可用的更高畫質。登入資訊只保存在你的裝置上。",
       "shots.note": "",
       "dl.mac": "下載",
       "dl.req": "支援 Mac、iPhone、iPad 與 Apple TV · 免費",

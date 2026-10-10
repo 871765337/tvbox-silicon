@@ -5,6 +5,7 @@ import { ClosingCta, Footer } from "./components/Footer";
 import { Hero } from "./components/Hero";
 import { Install } from "./components/Install";
 import { Nav } from "./components/Nav";
+import { WhatsNew } from "./components/WhatsNew";
 
 export function App() {
   return (
@@ -12,6 +13,7 @@ export function App() {
       <Nav />
       <main>
         <Hero />
+        <WhatsNew />
         <Features />
         <Details />
         <Install />

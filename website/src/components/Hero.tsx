@@ -8,7 +8,7 @@ export function Hero() {
   const { t, lang } = useI18n();
   return (
     <section className="hero">
-      <a className="badge" href="#install">
+      <a className="badge" href="#new">
         <img src="/assets/icon-192.png" alt="" width={20} height={20} />
         <span>{t("hero.badge")}</span>
         <span className="badge-arrow" aria-hidden="true">→</span>

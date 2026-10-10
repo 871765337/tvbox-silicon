@@ -111,6 +111,8 @@ h1, h2, h3, h4, p { margin: 0; }
    cap its width so the whole film fits below the 64px nav on short screens. */
 .hero-film-host { width: 100%; max-width: max(520px, calc((100svh - 64px - 32px - 122px) * 16 / 9 + 154px)); min-height: 200px; }
 .hero-film-link { font-size: 15px; }
+/* The 1.1 film sits between the section intro and its cards. */
+.new-film { margin: 48px 0 64px; }
 
 /* Sections */
 .section { width: min(1200px, 100% - 32px); margin: 0 auto; padding: 140px 0 0; }

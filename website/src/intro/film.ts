@@ -4,9 +4,9 @@
 import type { Lang } from "../i18n/strings";
 import css from "./film.css?inline";
 import markup from "./film.html?raw";
+import markup11 from "./film-11.html?raw";
 import { translateFilm, tr } from "./film-i18n";
 
-const TOTAL = 100;
 const FADE = 0.45;
 const PRESS = 0.28;
 
@@ -19,8 +19,26 @@ const PRESSES: [number, string][] = [
   [77, "down"], [78, "down"],
 ];
 
+/** The films: the intro (/intro/) and What's new in 1.1 (/whats-new/). Each has its own length and remote presses. */
+const FILMS = {
+  intro: { markup, total: 100, presses: PRESSES },
+  "whats-new": {
+    markup: markup11,
+    total: 86,
+    presses: [
+      [0.3, "power"], [10, "right"], [12.5, "select"],
+      [24, "down"], [26.2, "select"],
+      [32.2, "down"], [33.4, "down"], [34.1, "select"],
+      [44, "right"], [72, "down"], [78.2, "select"],
+    ] as [number, string][],
+  },
+};
+export type FilmName = keyof typeof FILMS;
+
 export interface FilmOptions {
   lang: Lang;
+  /** Which film; the intro by default. */
+  film?: FilmName;
   /** Second to open at, paused. */
   startAt?: number;
   /** Space and arrow keys control the film (standalone page only). */
@@ -34,7 +52,8 @@ const clock = (t: number) => {
 };
 
 /** Renders the film into `host` and starts it. Returns a function that stops it. */
-export function mountFilm(host: HTMLElement, { lang, startAt, keys = false }: FilmOptions): () => void {
+export function mountFilm(host: HTMLElement, { lang, film = "intro", startAt, keys = false }: FilmOptions): () => void {
+  const { markup, total: TOTAL, presses: PRESSES } = FILMS[film];
   const shadow = host.shadowRoot ?? host.attachShadow({ mode: "open" });
   shadow.innerHTML = `<style>${css}</style>${markup}`;
   const root = shadow.querySelector<HTMLElement>(".film")!;

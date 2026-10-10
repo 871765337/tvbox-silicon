@@ -32,7 +32,7 @@ const { render, LANGS, LOCALES, LANG_PATH, SITE_URL, INSTALL, DOWNLOADS, MAC_DOW
 const OG_LOCALE = { en: "en_US", ja: "ja_JP", ko: "ko_KR", "zh-Hant": "zh_TW" };
 const LANG_NAME_EN = { en: "English", ja: "Japanese", ko: "Korean", "zh-Hant": "Traditional Chinese" };
 const VERSION = /\/(\d+(?:\.\d+)+)\//.exec(MAC_DOWNLOAD)?.[1];
-const FAQ = [1, 2, 3, 4, 5, 6];
+const FAQ = [1, 2, 3, 4, 5, 6, 7];
 
 const escape = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const jsonLd = (value) => `<script type="application/ld+json">${JSON.stringify(value).replace(/</g, "\\u003c")}</script>`;
@@ -118,6 +118,7 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${LANGS.map((lang) => `  <url><loc>${pageUrl(lang)}</loc>${links}</url>`).join("\n")}
   <url><loc>${SITE_URL}/intro/</loc></url>
+  <url><loc>${SITE_URL}/whats-new/</loc></url>
 </urlset>
 `;
 await writeFile(join(dist, "sitemap.xml"), sitemap);
@@ -148,6 +149,7 @@ ${["mac", "ios", "tv"].map((p) => `- [${install.title[p]}](${DOWNLOADS[p]}): ${i
 ## Optional
 
 - [Intro film](${SITE_URL}/intro/): a 100-second animated tour of the app.
+- [What’s new in 1.1](${SITE_URL}/whats-new/): an 86-second film about the built-in Bilibili source, danmaku, live rooms and casting.
 ${LANGS.filter((l) => l !== "en").map((l) => `- [${LOCALES[l].name}](${pageUrl(l)}): the website in ${LANG_NAME_EN[l]}.`).join("\n")}
 `;
 await writeFile(join(dist, "llms.txt"), llms);
