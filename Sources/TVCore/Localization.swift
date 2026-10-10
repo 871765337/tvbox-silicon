@@ -6,11 +6,17 @@ import Foundation
 public enum L10n {
     public static let supportedLanguages = ["en", "zh-Hans", "zh-Hant", "ja"]
 
+    /// One of `supportedLanguages`: the match for `language`, or the language the app's UI is shown in.
+    public static func resolvedLanguage(_ language: String? = nil) -> String {
+        guard let language else { return Bundle.module.preferredLocalizations.first ?? "en" }
+        let match = Bundle.preferredLocalizations(from: supportedLanguages, forPreferences: [language]).first ?? "en"
+        return supportedLanguages.contains(match) ? match : "en"
+    }
+
     public static func text(_ key: String, _ arguments: CVarArg..., language: String? = nil) -> String {
         let bundle: Bundle
         if let language {
-            let match = Bundle.preferredLocalizations(from: supportedLanguages, forPreferences: [language]).first ?? "en"
-            let selected = supportedLanguages.contains(match) ? match : "en"
+            let selected = resolvedLanguage(language)
             bundle = Bundle.module.path(forResource: selected, ofType: "lproj").flatMap(Bundle.init(path:)) ?? Bundle.module
         } else { bundle = Bundle.module }
         let format = bundle.localizedString(forKey: key, value: key, table: "Localizable")

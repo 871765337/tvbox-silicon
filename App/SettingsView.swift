@@ -103,7 +103,7 @@ struct SettingsLinkRow<Destination: View>: View {
 }
 
 #if !os(tvOS)
-private struct SettingsRowStyle: ButtonStyle {
+struct SettingsRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View { Highlight(configuration: configuration) }
     private struct Highlight: View {
         let configuration: ButtonStyleConfiguration
@@ -179,8 +179,14 @@ struct SettingsPage<Content: View>: View {
 
 struct SettingsView: View {
     @Environment(Store.self) private var store
+    @Environment(Updates.self) private var updates
     @State private var directURL = ""
     @State private var cloudSummary = ""
+    @State private var bilibiliSummary = ""
+    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
+    #if os(tvOS) || os(macOS)
+    @AppStorage(BilibiliCastController.key) private var receivesCasts = true
+    #endif
     private var version: String? {
         let info = Bundle.main.infoDictionary
         guard let short = info?["CFBundleShortVersionString"] as? String, !short.isEmpty else { return nil }
@@ -189,6 +195,8 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var store = store
         SettingsPage(title: L10n.text("Settings")) {
+            // A waiting release leads the page; otherwise update status sits with About.
+            if !updates.available.isEmpty { UpdateSettingsGroup() }
             SettingsGroup(title: L10n.text("Subscription"), footer: store.notice) {
                 VStack(alignment: .leading, spacing: 12) {
                     SettingsField(prompt: L10n.text("TVBox JSON URL"), text: $store.subscriptionAddress)
@@ -205,13 +213,27 @@ struct SettingsView: View {
                                 subtitle: L10n.text("Last updated %@", config.importedAt.formatted(date: .abbreviated, time: .shortened)))
                 }
             }
-            #if os(macOS)
             SettingsGroup(title: L10n.text("Accounts")) {
+                SettingsLinkRow(symbol: "play.tv.fill", tint: .pink, title: L10n.text("Bilibili"), subtitle: bilibiliSummary) { BilibiliAccountView() }
+                #if os(macOS)
                 SettingsLinkRow(symbol: "externaldrive.fill.badge.person.crop", tint: .brown,
                                 title: L10n.text("Cloud Drive Accounts"), subtitle: cloudSummary) { CloudDriveView() }
+                #endif
             }
-            #endif
             SettingsGroup(title: L10n.text("Playback")) {
+                SettingsRow(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"),
+                            subtitle: L10n.text("Bilibili's bullet comments, drawn over the video. You can also switch them in the player.")) {
+                    Toggle(L10n.text("Show Danmaku"), isOn: $showsDanmaku).labelsHidden()
+                }
+                #if os(tvOS) || os(macOS)
+                SettingsRow(symbol: "tv.and.mediabox.fill", tint: BilibiliMark.blue, title: L10n.text("Cast from the Bilibili App"),
+                            subtitle: L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia"))) {
+                    Toggle(L10n.text("Cast from the Bilibili App"), isOn: $receivesCasts).labelsHidden()
+                        .onChange(of: receivesCasts) { _, on in
+                            if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
+                        }
+                }
+                #endif
                 SettingsRow(symbol: "play.fill", tint: Brand.terracotta, title: L10n.text("Play a URL"))
                 HStack(spacing: 10) {
                     SettingsField(prompt: L10n.text("HTTP / HTTPS media URL"), text: $directURL)
@@ -234,7 +256,10 @@ struct SettingsView: View {
                             subtitle: [version, Brand.copyright].compactMap { $0 }.joined(separator: " · "))
                 SettingsLinkRow(symbol: "doc.plaintext.fill", tint: .gray, title: L10n.text("Open Source Licenses")) { LicensesView() }
             }
+            if updates.available.isEmpty { UpdateSettingsGroup() }
         }
+        // Refreshed whenever Settings reappears, so a sign-in on the account page shows here.
+        .onAppear { bilibiliSummary = BilibiliAccount.load().summary }
         #if os(macOS)
         .task { cloudSummary = CloudProvider.summary() }
         #endif

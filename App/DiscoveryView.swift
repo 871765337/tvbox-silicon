@@ -1,6 +1,12 @@
 import SwiftUI
 import TVCore
 
+private struct SearchSourceItem: Identifiable {
+    let id: String
+    let name: String
+    var count: Int? = nil
+}
+
 private struct SearchPoster: Identifiable {
     let site: Site
     let video: Video
@@ -11,13 +17,27 @@ struct GlobalSearchView: View {
     @Environment(Store.self) private var store
     @FocusState private var inputFocused: Bool
     @State private var showFailures = false
+    /// Whether the end of the results is on screen, so finished pages can ask for the next.
+    @State private var endVisible = false
     @AppStorage("videoSearchHistory") private var historyData = Data()
     private var model: SearchModel { store.searchModel }
     private var history: [String] { (try? JSONDecoder().decode([String].self, from: historyData)) ?? [] }
+    /// First pages in source order, then later pages as they arrive, so loading more only adds at the end.
     private var posters: [SearchPoster] {
-        model.matches.filter { model.selectedSource == nil || $0.id == model.selectedSource }.flatMap { result in
-            uniqueVideos(result.page?.videos ?? []).map { SearchPoster(site: result.site, video: $0) }
-        }
+        let shown = model.matches.filter { model.selectedSource == nil || $0.id == model.selectedSource }
+        let sites = Dictionary(shown.map { ($0.id, $0.site) }) { first, _ in first }
+        var seen = Set<String>()
+        let first = shown.flatMap { result in (result.page?.videos ?? []).map { SearchPoster(site: result.site, video: $0) } }
+        let later = model.batches.flatMap { batch in sites[batch.source].map { site in batch.videos.map { SearchPoster(site: site, video: $0) } } ?? [] }
+        return (first + later).filter { seen.insert($0.id).inserted }
+    }
+    /// The source chips: All, then Bilibili (always, so it can be picked before it answers), then the rest.
+    private var sourceItems: [SearchSourceItem] {
+        let bilibili = model.results.first { $0.site.isBuiltIn }
+        let searchingBilibili = model.total > 0 && (bilibili != nil || model.busy)
+        return [.init(id: "", name: L10n.text("All Sources"), count: model.videoCount)]
+            + (searchingBilibili ? [.init(id: Bilibili.siteKey, name: Site.bilibili.name, count: bilibili.map { _ in uniqueVideos(model.videos(for: Bilibili.siteKey)).count })] : [])
+            + model.matches.filter { !$0.site.isBuiltIn }.map { .init(id: $0.id, name: $0.site.name, count: uniqueVideos(model.videos(for: $0.id)).count) }
     }
 
     var body: some View {
@@ -92,11 +112,16 @@ struct GlobalSearchView: View {
                             LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
                                 resultLinks(config)
                             }.scrollTargetLayout()
-                            if let selected = model.matches.first(where: { $0.id == model.selectedSource }) {
-                                RouteLink {
-                                    SiteView(site: selected.site, origin: config.origin, jarURL: config.spiderURL, initialQuery: model.keyword)
-                                } label: { Label(L10n.text("More from %@", selected.site.name), systemImage: "arrow.right") }
-                                .controlButton()
+                            // Scrolling the end into view asks for the next page; while it stays in view each new page asks again.
+                            if model.canLoadMore(model.selectedSource) || model.loadingMore {
+                                ProgressView().frame(maxWidth: .infinity).padding(.vertical, 24)
+                                    .onScrollVisibilityChange(threshold: 0.2) { visible in
+                                        endVisible = visible
+                                        if visible { model.loadMore(model.selectedSource, config: config) }
+                                    }
+                                    .onChange(of: model.loadingMore) { _, loading in
+                                        if !loading, endVisible { model.loadMore(model.selectedSource, config: config) }
+                                    }
                             }
                         }
                     }
@@ -191,23 +216,21 @@ struct GlobalSearchView: View {
                 if model.busy {
                     SearchActivityList(origin: config.origin, completed: model.completed, total: model.total, runStart: model.runStart)
                 }
-                if !model.matches.isEmpty {
+                if sourceItems.count > 1 {
                     #if os(tvOS)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            Chip(title: L10n.text("All Sources"), selected: model.selectedSource == nil) { model.selectedSource = nil; model.scrollID = nil }
-                            ForEach(model.matches) { result in
-                                Chip(title: "\(result.site.name) · \(uniqueVideos(result.page?.videos ?? []).count)", selected: model.selectedSource == result.id) {
-                                    model.selectedSource = result.id; model.scrollID = nil
+                            ForEach(sourceItems) { item in
+                                Chip(title: item.count.map { "\(item.name) · \($0)" } ?? item.name, selected: (model.selectedSource ?? "") == item.id,
+                                     mark: item.id == Bilibili.siteKey) {
+                                    model.select(item.id.isEmpty ? nil : item.id)
                                 }
                             }
                         }.padding(.vertical, 4)
                     }
                     #else
-                    SourceStrip(items: [.init(id: "", name: L10n.text("All Sources"), count: model.videoCount)]
-                                    + model.matches.map { .init(id: $0.id, name: $0.site.name, count: uniqueVideos($0.page?.videos ?? []).count) },
-                                selection: model.selectedSource ?? "") { id in
-                        model.selectedSource = id.isEmpty ? nil : id; model.scrollID = nil
+                    SourceStrip(items: sourceItems.map { .init(id: $0.id, name: $0.name, count: $0.count) }, selection: model.selectedSource ?? "") { id in
+                        model.select(id.isEmpty ? nil : id)
                     }
                     #endif
                 }
@@ -846,7 +869,7 @@ private struct SourceChip: View {
         // The chip under the pointer receives the mouse-up that ends a drag.
         Button { if drag?.active != true { action() } } label: {
             HStack(spacing: 6) {
-                if let symbol = label.symbol { Text(symbol) }
+                if name == Site.bilibili.name { BilibiliMark(size: 18) } else if let symbol = label.symbol { Text(symbol) }
                 Text(label.title).lineLimit(1)
                 if let count { Text("\(count)").monospacedDigit().opacity(0.55) }
             }

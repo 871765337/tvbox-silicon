@@ -263,12 +263,15 @@ struct Chip: View {
     let title: String
     var selected = false
     var fill = false
+    /// Leads with the Bilibili mark.
+    var mark = false
     let action: () -> Void
     @Environment(\.stripDrag) private var drag
     var body: some View {
         let button = Button { if drag?.active != true { action() } } label: {
             HStack(spacing: 5) {
                 if selected { Image(systemName: "checkmark").font(.caption.weight(.bold)) }
+                if mark { BilibiliMark(size: 26) }
                 Text(title).lineLimit(1)
             }.padding(.horizontal, 4).frame(maxWidth: fill ? .infinity : nil)
         }.accessibilityAddTraits(selected ? [.isSelected] : [])

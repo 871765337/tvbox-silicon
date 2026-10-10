@@ -24,7 +24,8 @@ enum QALaunch {
     static var scrollTarget: String? { UserDefaults.standard.string(forKey: "qaScroll") }
 
     @MainActor static func start(_ store: Store) async {
-        guard section != nil || page != nil else { return }
+        guard section != nil || page != nil || UserDefaults.standard.string(forKey: "qaPlay") != nil
+                || UserDefaults.standard.string(forKey: "qaPlayLive") != nil else { return }
         if let subscription = UserDefaults.standard.string(forKey: "qaSubscription") { await store.importSubscription(address: subscription) }
         else if store.subscription == nil { await store.importSubscription() }
         if QASweep.enabled, let config = store.subscription { Task.detached(priority: .utility) { await QASweep.run(config) } }
@@ -33,6 +34,22 @@ enum QALaunch {
             // Let the tab settle first: switching sections suspends a search that is already running.
             try? await Task.sleep(for: .seconds(2))
             store.searchVideos(String(page.dropFirst(7)))
+        }
+        // `-qaPlayLive <room>` opens a Bilibili Live room in the player.
+        if let room = UserDefaults.standard.string(forKey: "qaPlayLive"), let url = URL(string: "\(BilibiliLive.scheme)://room/\(room)") {
+            store.playing = Channel(name: "Live \(room)", group: L10n.text("Bilibili Live"), url: url)
+        }
+        // `-qaPlay <site key>:<video id>[:<episode index>]` opens that source's video in the player.
+        if let target = UserDefaults.standard.string(forKey: "qaPlay"), let config = store.subscription {
+            let parts = target.split(separator: ":", maxSplits: 2).map(String.init)
+            if parts.count >= 2, let site = config.sites.first(where: { $0.key == parts[0] }) {
+                let client = CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL)
+                do {
+                    let video = try await client.detail(parts[1])
+                    let index = min(parts.count > 2 ? Int(parts[2]) ?? 0 : 0, max(0, video.episodes.count - 1))
+                    if video.episodes.indices.contains(index) { store.playing = try await client.playback(video.episodes[index]) }
+                } catch { store.error = error.localizedDescription }
+            }
         }
         if page == "player", let url = URL(string: "http://127.0.0.1:8765/clip.mp4") {
             store.playing = Channel(name: "测试频道 01", url: url)
@@ -65,6 +82,8 @@ enum QALaunch {
             case "runtime": RuntimeView()
             case "logs": DiagnosticsView()
             case "licenses": LicensesView()
+            case "bilibili-account": BilibiliAccountView()
+            case "bilibili-live": BilibiliLiveView()
             #if !os(macOS)
             case "cloud-login": CloudQRLoginView(drive: parts.dropFirst().first == "uc" ? .uc : .quark) {}
             #endif
@@ -75,7 +94,7 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "detail", "channels", "runtime", "logs", "licenses", "cloud-login"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "detail", "channels", "runtime", "logs", "licenses", "cloud-login", "bilibili-account", "bilibili-live"].contains(page.split(separator: ":").first.map(String.init) ?? "")
     }
 }
 

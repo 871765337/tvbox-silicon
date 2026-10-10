@@ -23,6 +23,14 @@ extension Site {
     }
 }
 
+/// One later page of a source's search results.
+public struct SearchBatch: Identifiable, Sendable {
+    public let source: String
+    public let page: Int
+    public let videos: [Video]
+    public var id: String { "\(source)#\(page)" }
+}
+
 public struct SearchSourceResult: Identifiable, Sendable {
     public let site: Site
     public let page: CatalogPage?

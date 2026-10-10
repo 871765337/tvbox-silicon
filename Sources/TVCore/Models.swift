@@ -136,6 +136,7 @@ public struct Site: Identifiable, Codable, Hashable, Sendable {
         return try WebAddress.resolve(address.components(separatedBy: ";md5;")[0], relativeTo: origin)
     }
     func pluginExtension(origin: URL?) throws -> JSONValue? {
+        if isBuiltIn { return builtInExtension }
         guard let origin else { return raw["ext"] }
         func resolve(_ value: JSONValue) throws -> JSONValue {
             switch value {
@@ -176,6 +177,7 @@ public struct Site: Identifiable, Codable, Hashable, Sendable {
             #endif
             return L10n.text("Requires script engine")
         case .jar:
+            if isBuiltIn { return L10n.text("Built-in") }
             if runsLitePort { return L10n.text("Lite JavaScript · JAR fallback") }
             #if os(macOS) || os(iOS) || os(tvOS)
             if EmbeddedJarHost.available { return L10n.text("Local JAR · Experimental") }

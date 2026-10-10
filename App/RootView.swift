@@ -5,6 +5,8 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case home = "Watch Now", live = "Live TV", search = "Global Search", sites = "Sources", favorites = "Favorites", settings = "Settings", more = "More"
     var id: String { rawValue }
     var title: String { L10n.text(rawValue) }
+    /// Where Software Update lives: Settings, or More when Settings is folded into it.
+    var showsUpdateBadge: Bool { self == .settings || self == .more }
     var icon: String {
         switch self {
         case .home: "play.rectangle.fill"
@@ -20,6 +22,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
 struct RootView: View {
     @Environment(Store.self) private var store
+    @Environment(Updates.self) private var updates
     @Environment(\.horizontalSizeClass) private var sizeClass
     // Untyped so it can hold both More-tab sections and Route pages.
     @State private var morePath = NavigationPath()
@@ -53,6 +56,7 @@ struct RootView: View {
             #endif
         }
         .modifier(PlayerPresentation(playing: $store.playing))
+        .updatePresentation(updates, playing: store.playing != nil)
         .alert(L10n.text("Unable to Complete"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button(L10n.text("OK"), role: .cancel) { store.error = nil }
         } message: { Text(store.error ?? "") }
@@ -74,6 +78,10 @@ struct RootView: View {
                             }
                         } else { NavigationStack { content(item).tvDefaultControls().routeDestinations() } }
                     }
+                    #if os(iOS)
+                    // tvOS tab bars have no badges; there the launch sheet and Settings carry the news.
+                    .badge(item.showsUpdateBadge && !updates.available.isEmpty ? Text(L10n.text("New")) : nil)
+                    #endif
                 }
             }
             .tabViewStyle(.sidebarAdaptable)
@@ -116,6 +124,9 @@ struct RootView: View {
             List {
                 NavigationLink(value: AppSection.favorites) { Label(AppSection.favorites.title, systemImage: AppSection.favorites.icon) }
                 NavigationLink(value: AppSection.settings) { Label(AppSection.settings.title, systemImage: AppSection.settings.icon) }
+                    #if os(iOS)
+                    .badge(updates.available.isEmpty ? nil : Text(L10n.text("New")))
+                    #endif
             }
             #if !os(tvOS)
             .scrollContentBackground(.hidden)
@@ -150,6 +161,7 @@ private struct PlayerPresentation: ViewModifier {
 /// Content-first sidebar: grouped rows, neutral selection, and ⌘1–⌘6 to switch sections.
 private struct MacSidebar: View {
     @Environment(Store.self) private var store
+    @Environment(Updates.self) private var updates
     private var groups: [(title: String, items: [AppSection])] {
         [(L10n.text("Browse"), [.home, .search, .live, .sites]), (L10n.text("Library"), [.favorites, .settings])]
     }
@@ -167,6 +179,7 @@ private struct MacSidebar: View {
                             .accessibilityAddTraits(.isHeader)
                         ForEach(group.items) { item in
                             SidebarRow(section: item, selected: store.section == item,
+                                       badge: item.showsUpdateBadge && !updates.available.isEmpty,
                                        shortcut: Character(String((ordered.firstIndex(of: item) ?? 0) + 1))) {
                                 store.section = item
                             }
@@ -184,6 +197,7 @@ private struct MacSidebar: View {
 private struct SidebarRow: View {
     let section: AppSection
     let selected: Bool
+    var badge = false
     let shortcut: Character
     let action: () -> Void
     @State private var hovering = false
@@ -199,6 +213,7 @@ private struct SidebarRow: View {
                     .font(.system(size: 13, weight: selected ? .semibold : .regular))
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                if badge { NewBadge() }
             }
             .foregroundStyle(.primary)
             .padding(.horizontal, 10)

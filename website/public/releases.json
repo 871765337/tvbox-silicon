@@ -1,0 +1,54 @@
+{
+  "releases": [
+    {
+      "version": "1.0.1",
+      "date": "2026-10-09",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.0.1/Yingxia-1.0.1-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "appletv.fill",
+          "title": {
+            "en": "On iPhone, iPad and Apple TV",
+            "zh-Hans": "登陆 iPhone、iPad 和 Apple TV",
+            "zh-Hant": "登陸 iPhone、iPad 和 Apple TV",
+            "ja": "iPhone、iPad、Apple TV に対応"
+          },
+          "detail": {
+            "en": "Preview builds bring your sources, live TV and favorites to the couch and your pocket.",
+            "zh-Hans": "预览版把你的点播源、直播和收藏带到客厅和掌上。",
+            "zh-Hant": "預覽版把你的隨選來源、直播和收藏帶到客廳和掌上。",
+            "ja": "プレビュー版で、配信ソース、ライブ TV、お気に入りをリビングでも手元でも。"
+          }
+        },
+        {
+          "symbol": "hand.draw.fill",
+          "platforms": ["macos"],
+          "title": {
+            "en": "Drag to browse chip rows",
+            "zh-Hans": "拖动浏览标签栏",
+            "zh-Hant": "拖曳瀏覽標籤列",
+            "ja": "ドラッグでチップ列をスクロール"
+          },
+          "detail": {
+            "en": "Drag any row of filters sideways, or page through it with its arrows.",
+            "zh-Hans": "任意一行筛选标签都能左右拖动，也可以用箭头翻页。",
+            "zh-Hant": "任何一列篩選標籤都能左右拖曳，也可以用箭頭翻頁。",
+            "ja": "フィルターの列は横にドラッグするか、矢印でページ送りできます。"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "date": "2026-10-08",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.0/Yingxia-1.0-macos-arm64.dmg"
+      },
+      "features": []
+    }
+  ]
+}

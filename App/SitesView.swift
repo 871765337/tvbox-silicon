@@ -9,7 +9,8 @@ struct SitesView: View {
             if let config = store.subscription {
                 ScrollView {
                     LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
-                        ForEach(SourceStrategy.arrange(config.sites) { !$0.hidden && $0.canBrowse(jarURL: config.spiderURL) }
+                        // Built-in sources lead the grid.
+                        ForEach(builtInFirst(SourceStrategy.arrange(config.sites) { !$0.hidden && $0.canBrowse(jarURL: config.spiderURL) })
                             .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { site in
                             RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site) }.cardButton()
                         }
@@ -22,16 +23,20 @@ struct SitesView: View {
     }
 }
 
+private func builtInFirst(_ sites: [Site]) -> [Site] { sites.filter(\.isBuiltIn) + sites.filter { !$0.isBuiltIn } }
+
 struct SiteCard: View {
     let site: Site
     var body: some View {
         let label = SourceLabel(site.name)
         HStack(spacing: 14) {
             // Most sources work, so only the exceptions carry a badge.
-            IconTile(symbol: site.native ? "film.stack" : "puzzlepiece.extension.fill", tint: site.native ? Brand.terracotta : Brand.amber, size: 46)
+            if site.isBuiltIn { BilibiliMark(size: 46) }
+            else { IconTile(symbol: site.native ? "film.stack" : "puzzlepiece.extension.fill", tint: site.native ? Brand.terracotta : Brand.amber, size: 46) }
             VStack(alignment: .leading, spacing: 6) {
                 CardTitle(text: label.text)
-                if !site.native { Pill(text: site.compatibility, tint: Brand.amber) }
+                if site.isBuiltIn { Pill(text: site.compatibility, tint: BilibiliMark.blue) }
+                else if !site.native { Pill(text: site.compatibility, tint: Brand.amber) }
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
@@ -52,6 +57,8 @@ struct SiteView: View {
     private var isIndex: Bool { (site.raw["indexs"]?.int ?? 0) == 1 }
     @State private var browser = CatalogBrowser()
     @State private var query = ""
+    /// The Bilibili login this page loaded with; signing in or out reloads it with the account's lists.
+    @State private var bilibiliLogin = BilibiliAccount.load().cookie
     private var initialLoading: Bool { browser.videos.isEmpty && browser.error == nil && (browser.busy || !browser.loaded) }
     private var client: CatalogClient { CatalogClient(site: site, origin: origin, jarURL: jarURL) }
     var body: some View {
@@ -76,6 +83,7 @@ struct SiteView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
+                        if site.isBuiltIn && !BilibiliAccount.load().signedIn { BilibiliSignInBanner() }
                         if !browser.categories.isEmpty { categoryBar } else if initialLoading { ChipSkeletonRow() }
                         if isIndex && !browser.videos.isEmpty {
                             Text(L10n.text("Choose a title to find it across your sources.")).font(.subheadline).foregroundStyle(.secondary)
@@ -118,6 +126,11 @@ struct SiteView: View {
             }
         }
         .screenBackdrop()
+        .onAppear {
+            guard site.isBuiltIn, browser.loaded else { return }
+            let login = BilibiliAccount.load().cookie
+            if login != bilibiliLogin { bilibiliLogin = login; query = ""; Task { await home(); await browser.loadCategories(client: client) } }
+        }
         .screenTitle(site.name).task {
             if canLoad && !browser.loaded {
                 if initialQuery.isEmpty { await home() }

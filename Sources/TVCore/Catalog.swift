@@ -131,7 +131,7 @@ public struct CatalogClient: Sendable {
         // A bundled lite port runs first, in-process on QuickJS everywhere; when it fails or answers
         // with nothing usable, the source's JAR spider answers instead.
         if let script = site.liteScript, ScriptRuntime.available, await LiteFallback.shared.prefersPort(site.key) {
-            let jarReady = EmbeddedJarHost.available && (try? site.pluginURL(origin: origin, fallback: jarURL)) != nil
+            let jarReady = !site.isBuiltIn && EmbeddedJarHost.available && (try? site.pluginURL(origin: origin, fallback: jarURL)) != nil
             let reason: String
             do {
                 #if DEBUG

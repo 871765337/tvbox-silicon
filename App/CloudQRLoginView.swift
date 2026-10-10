@@ -1,6 +1,5 @@
 #if os(iOS) || os(tvOS)
 import SwiftUI
-import CoreImage.CIFilterBuiltins
 import TVCore
 
 /// Sign in to Quark or UC by scanning a code with the drive's phone app; there is no browser
@@ -51,7 +50,7 @@ struct CloudQRLoginView: View {
     @ViewBuilder private var code: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous).fill(.white)
-            if let login, let image = Self.image(login.code) {
+            if let login, let image = QRCode.image(login.code) {
                 Image(image, scale: 1, label: Text(L10n.text("Sign-in code"))).interpolation(.none).resizable().scaledToFit()
                     .padding(28).opacity(expired ? 0.15 : 1)
             } else if error == nil {
@@ -98,13 +97,6 @@ struct CloudQRLoginView: View {
         } catch {
             self.error = error.localizedDescription
         }
-    }
-    private static func image(_ text: String) -> CGImage? {
-        let filter = CIFilter.qrCodeGenerator()
-        filter.message = Data(text.utf8)
-        filter.correctionLevel = "M"
-        guard let output = filter.outputImage else { return nil }
-        return CIContext().createCGImage(output, from: output.extent)
     }
     private var codeSize: CGFloat {
         #if os(tvOS)

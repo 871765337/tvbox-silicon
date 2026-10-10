@@ -19,7 +19,7 @@ import TVCore
         self.defaults = defaults
         subscriptionAddress = defaults.string(forKey: "subscriptionAddress") ?? Self.defaultURL
         let cached = (try? Data(contentsOf: Self.subscriptionFile)) ?? defaults.data(forKey: "subscription")
-        if let cached { subscription = try? JSONDecoder().decode(Subscription.self, from: cached) }
+        if let cached { subscription = (try? JSONDecoder().decode(Subscription.self, from: cached))?.withBuiltInSites() }
         if let subscription { Self.registerPlugins(subscription) }
         // Older builds kept the whole subscription in defaults; move it to the file and drop the key.
         if let legacy = defaults.data(forKey: "subscription") {
@@ -64,7 +64,7 @@ import TVCore
             defaults.set(url.absoluteString, forKey: "subscriptionAddress")
             searchModel.reset()
             recommendationModel.reset()
-            subscription = value
+            subscription = value.withBuiltInSites()
             Self.registerPlugins(value)
             notice = L10n.text("Imported sources: %lld · Live playlists: %lld", value.sites.count, value.lives.count)
         } catch { self.error = L10n.text("Import failed: %@", error.localizedDescription) }

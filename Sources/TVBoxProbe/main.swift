@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 import TVCore
 
 @main struct Probe {
@@ -7,6 +8,90 @@ import TVCore
         guard args.count >= 2 else {
             print("Usage: TVBoxProbe <jar path> [class descriptor] [static int method]")
             print("       TVBoxProbe --subscription-check <URL> [...]")
+            return
+        }
+        if args[1] == "--cast-upgrade", args.count >= 4, let cid = Int(args[2]) {
+            // --cast-upgrade <cid> <title>: finds the video a DLNA cast belongs to.
+            print("aid", await Bilibili.castVideo(cid: cid, title: args[3]).map(String.init) ?? "not found")
+            return
+        }
+        if args[1] == "--bili-chat", args.count >= 3, let room = Int(args[2]) {
+            // --bili-chat <room> [seconds]: prints a live room's comments as they arrive.
+            setvbuf(stdout, nil, _IONBF, 0)
+            let chat = BilibiliLiveChat(room: room)
+            chat.start { text, color, position in print("danmaku \(String(format: "%06x", color)) \(position) \(text)") }
+            try await Task.sleep(for: .seconds(args.count > 3 ? Double(args[3]) ?? 20 : 20))
+            chat.stop()
+            return
+        }
+        if args[1] == "--bili-rooms" {
+            // --bili-rooms: the built-in Bilibili Live source's channels, by group, then plays the first.
+            let channels = try await HTTPClient().channels(.bilibili)
+            for group in Dictionary(grouping: channels, by: \.group).sorted(by: { $0.key < $1.key }) { print(group.key, group.value.count, group.value.first?.name ?? "") }
+            if let first = channels.first { let live = try await BilibiliLive.resolve(first); print("resolved", live.channel.url.absoluteString.prefix(90), "qualities", live.qualities.map { "\($0.id) \($0.label)" }, "current", live.current ?? -1) }
+            return
+        }
+        if args[1] == "--bili-live", args.count >= 3, let room = Int(args[2]) {
+            // --bili-live <room>: a live room's stream through AVPlayer for a few seconds.
+            setvbuf(stdout, nil, _IONBF, 0)
+            let channel = try await Bilibili.liveChannel(room: room)
+            print("live \(channel.name) \(channel.url.absoluteString.prefix(100))")
+            let item = AVPlayerItem(asset: AVURLAsset(url: channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers]))
+            let player = AVPlayer(playerItem: item); player.isMuted = true; player.play()
+            for second in 1...8 {
+                try await Task.sleep(for: .seconds(1))
+                print("t=\(second) status=\(item.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) size=\(Int(item.presentationSize.width))x\(Int(item.presentationSize.height)) error=\(item.error.map { "\($0)" } ?? "-")")
+            }
+            return
+        }
+        if args[1] == "--cast-listen" {
+            // --cast-listen [seconds]: runs the Bilibili cast receiver and prints what phones send.
+            setvbuf(stdout, nil, _IONBF, 0)
+            let receiver = BilibiliCastReceiver.shared
+            receiver.name = "Yingxia Probe"
+            receiver.onEvent = { event in print("event \(event)") }
+            receiver.start()
+            receiver.update(.init(playing: true, position: 12, duration: 300))
+            print("listening")
+            try await Task.sleep(for: .seconds(args.count > 2 ? Double(args[2]) ?? 60 : 60))
+            return
+        }
+        if args[1] == "--bili-play", args.count >= 3 {
+            // --bili-play <BV id | season_N> [part index] [seconds]: the built-in Bilibili source end to end,
+            // through its script port, playback resolution and AVPlayer.
+            setvbuf(stdout, nil, _IONBF, 0)
+            let client = CatalogClient(site: .bilibili, origin: URL(string: "https://example.invalid/")!)
+            let video = try await client.detail(args[2])
+            let episode = video.episodes[min(args.count > 3 ? Int(args[3]) ?? 0 : 0, video.episodes.count - 1)]
+            print("detail \(video.name) parts=\(video.episodes.count) playing=\(episode.name) \(episode.address)")
+            let channel = try await client.playback(episode)
+            print("channel \(channel.url.absoluteString.prefix(120))")
+            let comments = await DanmakuSource.comments(for: channel.url) ?? []
+            print("danmaku \(comments.count) first=\(comments.prefix(3).map { "\(String(format: "%.1f", $0.time)) \($0.text)" })")
+            let asset = BilibiliStreams.asset(for: channel.url) ?? AVURLAsset(url: channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
+            if channel.url.scheme == BilibiliStreams.scheme {
+                for variant in try await asset.load(.variants) {
+                    let video = variant.videoAttributes
+                    print("variant peak=\(Int(variant.peakBitRate ?? 0)) size=\(video.map { "\(Int($0.presentationSize.width))x\(Int($0.presentationSize.height))" } ?? "-") codecs=\(video?.codecTypes.map { String(format: "%08x", $0) } ?? [])")
+                }
+            }
+            let item = AVPlayerItem(asset: asset)
+            let player = AVPlayer(playerItem: item)
+            player.isMuted = true
+            player.play()
+            for second in 1...(args.count > 4 ? Int(args[4]) ?? 12 : 12) {
+                try await Task.sleep(for: .seconds(1))
+                let log = item.accessLog()?.events.last
+                print("t=\(second) status=\(item.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) size=\(Int(item.presentationSize.width))x\(Int(item.presentationSize.height)) indicated=\(Int(log?.indicatedBitrate ?? 0)) error=\(item.error.map { "\($0)" } ?? item.errorLog()?.events.last?.errorComment ?? "-")")
+                if item.status == .failed { break }
+            }
+            // Seek near the end: fragments far from the start must resolve too.
+            let duration = try await asset.load(.duration).seconds
+            if duration.isFinite, duration > 30 {
+                await player.seek(to: CMTime(seconds: duration - 20, preferredTimescale: 600))
+                try await Task.sleep(for: .seconds(4))
+                print("after seek duration=\(Int(duration)) time=\(String(format: "%.1f", player.currentTime().seconds)) status=\(item.status.rawValue)")
+            }
             return
         }
         if args[1] == "--subscription-check" {

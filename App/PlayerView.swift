@@ -8,6 +8,8 @@ struct PlaybackView: View {
     @State private var session = PlaybackSession()
     @State private var showsChrome = true
     @State private var hideTask: Task<Void, Never>?
+    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
+    @State private var showsDanmakuList = false
 
     private var chromeVisible: Bool { showsChrome || session.error != nil || session.loading }
 
@@ -17,10 +19,12 @@ struct PlaybackView: View {
             #if os(tvOS)
             // Remove the native focus environment while recovery controls are shown.
             if session.error == nil {
-                NativePlayerView(player: session.player).ignoresSafeArea()
+                NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku,
+                                 qualities: session.qualities, quality: session.quality, choose: { session.choose(quality: $0) },
+                                 live: session.isLive).ignoresSafeArea()
             }
             #else
-            NativePlayerView(player: session.player).ignoresSafeArea()
+            NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku).ignoresSafeArea()
             #endif
             #if !os(tvOS)
             chrome.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
@@ -47,6 +51,37 @@ struct PlaybackView: View {
                     .padding(.horizontal, 18).padding(.vertical, 11)
                     .glassEffect(.regular, in: Capsule())
                 Spacer(minLength: 0)
+                if session.qualities.count > 1 {
+                    Menu {
+                        QualityPicker(session: session)
+                    } label: {
+                        Image(systemName: "sparkles.tv").font(.headline).frame(width: 22, height: 22)
+                    }
+                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
+                    .accessibilityLabel(L10n.text("Quality"))
+                }
+                if !session.danmaku.isEmpty {
+                    Button { showsDanmaku.toggle() } label: {
+                        Image(systemName: showsDanmaku ? "text.bubble.fill" : "text.bubble").font(.headline).frame(width: 22, height: 22)
+                    }
+                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
+                    .accessibilityLabel(L10n.text(showsDanmaku ? "Hide Danmaku" : "Show Danmaku"))
+                    Button { showsDanmakuList = true } label: {
+                        Image(systemName: "list.bullet.rectangle").font(.headline).frame(width: 22, height: 22)
+                    }
+                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
+                    .accessibilityLabel(L10n.text("Danmaku List"))
+                    .sheet(isPresented: $showsDanmakuList) {
+                        NavigationStack {
+                            DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
+                                .navigationTitle(L10n.text("Danmaku List"))
+                                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { showsDanmakuList = false } } }
+                        }
+                        #if os(macOS)
+                        .frame(minWidth: 460, minHeight: 520)
+                        #endif
+                    }
+                }
                 Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).frame(width: 22, height: 22) }
                     .controlButton().buttonBorderShape(.circle).controlSize(.large)
                     .accessibilityLabel(L10n.text("Close"))
@@ -174,7 +209,18 @@ private struct TVPlaybackRecoveryStyle: ButtonStyle {
 #endif
 
 #if os(macOS)
-private struct NativePlayerView: NSViewRepresentable {
+private struct NativePlayerView: View {
+    let player: AVPlayer
+    let comments: [Danmaku]
+    @Binding var showsDanmaku: Bool
+    var body: some View {
+        ZStack {
+            PlayerSurface(player: player)
+            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments) }
+        }
+    }
+}
+private struct PlayerSurface: NSViewRepresentable {
     let player: AVPlayer
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
@@ -185,10 +231,100 @@ private struct NativePlayerView: NSViewRepresentable {
     }
     func updateNSView(_ view: AVPlayerView, context: Context) { view.player = player }
 }
-#else
+#elseif os(iOS)
 private struct NativePlayerView: View {
     let player: AVPlayer
-    var body: some View { VideoPlayer(player: player) }
+    let comments: [Danmaku]
+    @Binding var showsDanmaku: Bool
+    var body: some View {
+        // The overlay sits between the video and the playback controls.
+        VideoPlayer(player: player) {
+            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments) }
+        }
+    }
+}
+#else
+/// Full screen inside a SwiftUI view that ignores the safe area, the controller is told it has none,
+/// and AVKit then lays its bottom controls into the TV's overscan margin, where focus effects are cut
+/// off. This restores the title-safe area for the controls; the video and its overlays still fill the screen.
+private final class TitleSafePlayerController: AVPlayerViewController {
+    private static let titleSafe = UIEdgeInsets(top: 60, left: 80, bottom: 60, right: 80)
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let given = view.safeAreaInsets, extra = additionalSafeAreaInsets
+        let wanted = UIEdgeInsets(top: max(0, Self.titleSafe.top - (given.top - extra.top)), left: max(0, Self.titleSafe.left - (given.left - extra.left)),
+                                  bottom: max(0, Self.titleSafe.bottom - (given.bottom - extra.bottom)), right: max(0, Self.titleSafe.right - (given.right - extra.right)))
+        if wanted != extra { additionalSafeAreaInsets = wanted }
+    }
+}
+
+/// AVPlayerViewController itself, for its transport-bar menu: the Danmaku switch lives there, next to
+/// subtitles and audio, where a remote can reach it. Comments draw in the content overlay, under the controls.
+private struct NativePlayerView: UIViewControllerRepresentable {
+    let player: AVPlayer
+    let comments: [Danmaku]
+    @Binding var showsDanmaku: Bool
+    var qualities: [StreamQuality] = []
+    var quality: Int? = nil
+    var choose: @MainActor (Int?) -> Void = { _ in }
+    var live = false
+    final class Coordinator { var host: UIHostingController<AnyView>?; var listed = -1 }
+    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = TitleSafePlayerController()
+        controller.player = player
+        let host = UIHostingController(rootView: overlay)
+        host.view.backgroundColor = .clear
+        host.view.isUserInteractionEnabled = false
+        // Comments use the whole picture, not the TV's title-safe area.
+        host.safeAreaRegions = []
+        // The content overlay exists only once the controller's view has loaded.
+        controller.loadViewIfNeeded()
+        if let container = controller.contentOverlayView {
+            controller.addChild(host)
+            host.view.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(host.view)
+            NSLayoutConstraint.activate([host.view.leadingAnchor.constraint(equalTo: container.leadingAnchor), host.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                                         host.view.topAnchor.constraint(equalTo: container.topAnchor), host.view.bottomAnchor.constraint(equalTo: container.bottomAnchor)])
+            host.didMove(toParent: controller)
+        }
+        context.coordinator.host = host
+        return controller
+    }
+    func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
+        if controller.player !== player { controller.player = player }
+        // Live has no timeline worth scrubbing: keep it at the live edge.
+        if controller.requiresLinearPlayback != live { controller.requiresLinearPlayback = live }
+        context.coordinator.host?.rootView = overlay
+        // The comment list is a tab in the info panel (swipe down), beside the video's own info.
+        if context.coordinator.listed != comments.count {
+            context.coordinator.listed = comments.count
+            if comments.isEmpty { controller.customInfoViewControllers = [] }
+            else {
+                let list = UIHostingController(rootView: DanmakuListView(player: player, comments: comments))
+                list.title = L10n.text("Danmaku")
+                list.preferredContentSize = CGSize(width: 0, height: 480)
+                controller.customInfoViewControllers = [list]
+            }
+        }
+        let binding = $showsDanmaku
+        var items: [UIMenuElement] = []
+        if !comments.isEmpty {
+            items.append(UIAction(title: L10n.text("Danmaku"), image: UIImage(systemName: showsDanmaku ? "text.bubble.fill" : "text.bubble"),
+                                  state: showsDanmaku ? .on : .off) { _ in binding.wrappedValue.toggle() })
+        }
+        if qualities.count > 1 {
+            let choose = choose
+            let current = qualities.first { $0.id == quality }?.label ?? L10n.text("Auto")
+            let options = [UIAction(title: L10n.text("Auto"), state: quality == nil ? .on : .off) { _ in choose(nil) }]
+                + qualities.map { option in UIAction(title: option.label, state: quality == option.id ? .on : .off) { _ in choose(option.id) } }
+            items.append(UIMenu(title: L10n.text("Quality") + " · " + current, image: UIImage(systemName: "sparkles.tv"), children: options))
+        }
+        controller.transportBarCustomMenuItems = items
+    }
+    private var overlay: AnyView {
+        AnyView(Group { if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments) } })
+    }
 }
 #endif
 
@@ -314,6 +450,8 @@ private struct DesktopPlaybackView: View {
     @State private var fillsFrame = false
     @State private var floats = false
     @State private var idle = ChromeIdle()
+    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
+    @State private var showsDanmakuList = false
 
     private var showsChrome: Bool { idle.visible || session.error != nil }
 
@@ -322,6 +460,7 @@ private struct DesktopPlaybackView: View {
             ZStack {
                 Color.black
                 DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame)
+                if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku) }
                 if let error = session.error {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle").font(.largeTitle)
@@ -346,6 +485,13 @@ private struct DesktopPlaybackView: View {
         .onChange(of: floats) { _, value in window.level = value ? .floating : .normal }
         .onChange(of: showsChrome) { _, value in setTrafficLights(visible: value) }
         .onAppear { floats = window.level == .floating; idle.attach(window) }
+        .sheet(isPresented: $showsDanmakuList) {
+            VStack(spacing: 0) {
+                DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
+                HStack { Spacer(); Button(L10n.text("Done")) { showsDanmakuList = false }.keyboardShortcut(.cancelAction) }.padding(12)
+            }
+            .frame(width: 520, height: 600)
+        }
         .onDisappear { idle.detach() }
     }
 
@@ -386,6 +532,13 @@ private struct DesktopPlaybackView: View {
             Toggle(L10n.text("Loop Playback"), isOn: $session.looping)
             Toggle(L10n.text("Fill Window"), isOn: $fillsFrame)
             Toggle(L10n.text("Float on Top"), isOn: $floats)
+            if session.qualities.count > 1 {
+                Menu(L10n.text("Quality")) { QualityPicker(session: session) }
+            }
+            if !session.danmaku.isEmpty {
+                Toggle(L10n.text("Show Danmaku"), isOn: $showsDanmaku)
+                Button(L10n.text("Danmaku List…")) { showsDanmakuList = true }
+            }
             Divider()
             Button(L10n.text("Enter / Exit Full Screen")) { window.toggleFullScreen(nil) }
             Button(L10n.text("Retry")) { session.start(channel) }
@@ -426,5 +579,19 @@ private struct DesktopNativePlayer: NSViewRepresentable {
         view.videoGravity = fillsFrame ? .resizeAspectFill : .resizeAspect
     }
     static func dismantleNSView(_ view: AVPlayerView, coordinator: ()) { view.player = nil }
+}
+#endif
+
+#if !os(tvOS)
+/// Automatic, or one of the stream's qualities, best first.
+private struct QualityPicker: View {
+    let session: PlaybackSession
+    var body: some View {
+        Picker(L10n.text("Quality"), selection: Binding(get: { session.quality ?? 0 }, set: { session.choose(quality: $0 == 0 ? nil : $0) })) {
+            Text(L10n.text("Auto")).tag(0)
+            ForEach(session.qualities) { Text($0.label).tag($0.id) }
+        }
+        .pickerStyle(.inline)
+    }
 }
 #endif

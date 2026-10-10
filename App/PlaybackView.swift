@@ -8,6 +8,17 @@ import TVCore
     var loading = true
     var looping = false
     var buffering = false
+    /// Bullet comments for the media, when its source has them.
+    var danmaku: [Danmaku] = []
+    /// Qualities the stream can switch between (Bilibili), and the one chosen; nil is automatic.
+    private(set) var qualities: [StreamQuality] = []
+    /// A live stream: played at the live edge, without scrubbing.
+    private(set) var isLive = false
+    private(set) var quality: Int?
+    private var playing: Channel?
+    private var automatic: URL?
+    /// A live room's chat, whose comments join `danmaku` as they are sent.
+    private var chat: BilibiliLiveChat?
     /// Download state while connecting or buffering, sampled once a second from AVFoundation's logs.
     struct Transfer {
         var received: Int64 = 0
@@ -46,6 +57,52 @@ import TVCore
         player.seek(to: CMTime(seconds: target, preferredTimescale: 600))
     }
 
+    /// Shows a live room's chat as danmaku: each comment enters as it arrives.
+    private func listen(room: Int, generation active: UUID) {
+        let chat = BilibiliLiveChat(room: room)
+        self.chat = chat
+        chat.start { text, color, position in
+            Task { @MainActor [weak self] in
+                guard let self, self.generation == active else { return }
+                let now = self.player.currentTime().seconds
+                let time = max(now.isFinite ? now + 0.2 : 0, self.danmaku.last?.time ?? 0)
+                self.danmaku.append(Danmaku(time: time, position: position, color: color, text: text))
+                // Keep the recent chat; dropping the oldest restarts the overlay's layout once.
+                if self.danmaku.count > 4000 { self.danmaku.removeFirst(1000) }
+            }
+        }
+    }
+
+    /// Plays the stream at `quality` (nil: automatic) from where it is now.
+    func choose(quality: Int?) {
+        guard let channel = playing, quality != self.quality,
+              let url = quality.flatMap({ id in qualities.first { $0.id == id }?.url }) ?? automatic else { return }
+        if BilibiliLive.room(url) != nil {
+            // A live quality is another stream address, fetched now; live has no position to keep.
+            let active = generation
+            Task {
+                guard let resolved = try? await BilibiliLive.resolve(Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)),
+                      self.generation == active else { return }
+                if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+                if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
+                self.endObserver = nil; self.failureObserver = nil
+                self.sampler?.cancel(); self.sampler = nil
+                self.quality = resolved.current ?? quality
+                self.configure(resolved.channel, url: resolved.channel.url, generation: active)
+            }
+            return
+        }
+        let time = player.currentTime(), paused = player.rate == 0
+        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+        if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
+        endObserver = nil; failureObserver = nil
+        sampler?.cancel(); sampler = nil
+        self.quality = quality
+        configure(Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo, headers: channel.headers), url: url, generation: generation)
+        player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+        if paused { player.pause() }
+    }
+
     func setSpeed(_ speed: Float) {
         player.defaultRate = speed
         if player.rate != 0 { player.rate = speed }
@@ -57,15 +114,30 @@ import TVCore
     #if os(macOS)
     private var proxy: HLSProxy?
     #endif
+    /// The session on screen, which casts from the Bilibili app control.
+    static weak var current: PlaybackSession?
     func start(_ channel: Channel) {
-        stop(); error = nil; loading = true
+        Self.current = self
+        stop(); error = nil; loading = true; danmaku = []; qualities = []; quality = nil
+        isLive = BilibiliLive.room(channel.url) != nil || channel.group == L10n.text("Bilibili Live")
         let activeGeneration = generation
         Diagnostics.shared.record(.info, "player", "start name=\(channel.name) group=\(channel.group) url=\(channel.url.absoluteString) headers=\(channel.headers.keys.sorted().joined(separator: ","))")
         preparation = Task { [weak self] in
             guard let self else { return }
+            // A Bilibili Live room becomes its current stream address now; the address expires.
+            var channel = channel
+            var liveQualities: [StreamQuality] = [], liveQuality: Int?
+            if let room = BilibiliLive.room(channel.url) { self.listen(room: room, generation: activeGeneration) }
+            if BilibiliLive.room(channel.url) != nil {
+                do { (channel, liveQualities, liveQuality) = try await BilibiliLive.resolve(channel) }
+                catch {
+                    guard self.generation == activeGeneration, !Task.isCancelled else { return }
+                    self.error = error.localizedDescription; self.loading = false; return
+                }
+            }
             var address = channel.url
             #if os(macOS)
-            if address.pathExtension.lowercased() == "m3u8" {
+            if address.pathExtension.lowercased() == "m3u8", address.scheme != BilibiliStreams.scheme {
                 let adapter = HLSProxy(headers: channel.headers)
                 self.proxy = adapter
                 do { address = try await adapter.start(url: address) }
@@ -78,6 +150,11 @@ import TVCore
             #endif
             guard self.generation == activeGeneration, !Task.isCancelled else { return }
             self.configure(channel, url: address, generation: activeGeneration)
+            self.playing = channel; self.automatic = address
+            self.qualities = liveQualities.isEmpty ? BilibiliStreams.qualities(for: address) : liveQualities
+            self.quality = liveQuality
+            if DanmakuSource.has(channel.url), let comments = await DanmakuSource.comments(for: channel.url),
+               self.generation == activeGeneration { self.danmaku = comments }
         }
     }
     private func configure(_ channel: Channel, url: URL, generation activeGeneration: UUID) {
@@ -89,7 +166,7 @@ import TVCore
         #endif
         // Some providers require request headers. AVURLAsset's HTTP-header option is
         // best-effort and is not a guarantee for every redirected HLS segment.
-        let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
+        let asset = BilibiliStreams.asset(for: url) ?? AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
         let item = AVPlayerItem(asset: asset)
         observation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             let status = item.status
@@ -204,6 +281,7 @@ import TVCore
             Diagnostics.shared.record(.info, "player", "stop at=\(seconds.isFinite ? Int(seconds) : -1)s")
         }
         generation = UUID()
+        chat?.stop(); chat = nil
         preparation?.cancel(); preparation = nil
         sampler?.cancel(); sampler = nil
         transfer = Transfer()

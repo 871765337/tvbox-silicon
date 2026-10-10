@@ -26,8 +26,8 @@ public struct PlaybackPlan: Sendable {
     public let requiresWebDetection: Bool
 }
 
-/// Converts the Bili spider's DASH proxy identifiers to Bilibili's progressive MP4 response.
-/// The service still decides which qualities the current account is allowed to access.
+/// Resolves the Bili spider's proxy identifiers: Bilibili's DASH streams as HLS (`BilibiliStreams`),
+/// else its progressive MP4. The service still decides which qualities the current account may play.
 enum BilibiliPlayback {
     static func resolve(_ address: String, headers supplied: [String: String], http: HTTPClient) async throws -> (url: URL, headers: [String: String])? {
         guard CatalogClient.isPluginProxy(address), let marker = address.range(of: "/proxy?") else { return nil }
@@ -37,7 +37,20 @@ enum BilibiliPlayback {
         guard parameter("do") == "bili" else { return nil }
         guard let aid = parameter("aid"), let cid = parameter("cid"),
               UInt64(aid) != nil, UInt64(cid) != nil else { throw TVError.invalidURL }
+        do {
+            if let stream = try await BilibiliStreams.stream(aid: aid, cid: cid, episode: parameter("ep").flatMap { UInt64($0) != nil ? $0 : nil }, session: http.session) {
+                return (stream, Bilibili.mediaHeaders)
+            }
+        } catch let refusal as BilibiliStreams.Refusal {
+            throw TVError.unsupported(refusal.message)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            Diagnostics.shared.record(.warning, "bilibili", "dash failed aid=\(aid) cid=\(cid): \(error.localizedDescription); trying MP4")
+        }
         var headers = supplied
+        let account = BilibiliAccount.load()
+        if account.signedIn { headers["Cookie"] = account.cookie }
         if !headers.keys.contains(where: { $0.lowercased() == "referer" }) { headers["Referer"] = "https://www.bilibili.com/" }
         if !headers.keys.contains(where: { $0.lowercased() == "user-agent" }) { headers["User-Agent"] = HTTPClient.userAgent }
         var endpoint = URLComponents(string: "https://api.bilibili.com/x/player/playurl")!
@@ -54,6 +67,9 @@ enum BilibiliPlayback {
               (media?["format"]?.string ?? "").lowercased().contains("mp4") else {
             throw TVError.unsupported(L10n.text("This video has no single MP4 stream available for this account."))
         }
-        return (try WebAddress.resolve(url), headers)
+        headers["Cookie"] = nil
+        let resolved = try WebAddress.resolve(url)
+        DanmakuSource.register(resolved, bilibiliCID: cid, duration: media?["timelength"]?.int.map { Double($0) / 1000 })
+        return (resolved, headers)
     }
 }

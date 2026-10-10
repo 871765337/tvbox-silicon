@@ -21,9 +21,10 @@ struct LiveView: View {
 struct SourceCard: View {
     let source: LiveSource
     var body: some View {
-        RouteLink { ChannelListView(source: source) } label: {
+        RouteLink { if source.isBuiltIn { BilibiliLiveView() } else { ChannelListView(source: source) } } label: {
             HStack(spacing: 14) {
-                IconTile(symbol: "antenna.radiowaves.left.and.right", tint: Brand.accent, size: 46)
+                if source.isBuiltIn { BilibiliMark(size: 46) }
+                else { IconTile(symbol: "antenna.radiowaves.left.and.right", tint: Brand.accent, size: 46) }
                 CardTitle(text: source.name)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)

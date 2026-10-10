@@ -25,6 +25,9 @@ targetTemplates:
     type: application
     sources:
       - path: App
+      # Release notes the website publishes; the bundled copy shows What's New offline.
+      - path: website/public/releases.json
+        buildPhase: resources
     dependencies:
       - package: TVCore
     info:

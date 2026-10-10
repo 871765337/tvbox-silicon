@@ -1,0 +1,501 @@
+import SwiftUI
+import CoreImage.CIFilterBuiltins
+import TVCore
+
+/// Tells people when a new version is out and, after they update, what it brings.
+/// Reads the release feed the website publishes; the bundled copy covers offline launches.
+@MainActor @Observable final class Updates {
+    enum Sheet: Identifiable {
+        /// Newer releases to install, newest first.
+        case available([ReleaseFeed.Release])
+        /// Releases installed since the last launch, newest first.
+        case whatsNew([ReleaseFeed.Release])
+        var id: String {
+            switch self {
+            case .available(let releases): "available-" + (releases.first?.version ?? "")
+            case .whatsNew(let releases): "new-" + (releases.first?.version ?? "")
+            }
+        }
+    }
+
+    /// The version this build carries, e.g. "1.0.1".
+    let current: String
+    /// Newer releases for this platform, newest first. Drives the "New" badges.
+    var available: [ReleaseFeed.Release] { feed.updates(after: current) }
+    var sheet: Sheet?
+    /// Result of a check someone asked for.
+    var message: String?
+    private(set) var checking = false
+    private(set) var lastChecked: Date?
+    private var feed: ReleaseFeed
+    private let defaults: UserDefaults
+    private let address: URL
+    private static let interval: TimeInterval = 6 * 3600
+
+    init(defaults: UserDefaults = .standard, bundle: Bundle = .main) {
+        self.defaults = defaults
+        var current = bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        var address = ReleaseFeed.address
+        #if DEBUG
+        // QA: `-qaReleaseFeed <url>` reads another feed, `-qaVersion 1.0` pretends to be an older build.
+        if let value = defaults.string(forKey: "qaReleaseFeed"), let url = URL(string: value) { address = url }
+        if let value = defaults.string(forKey: "qaVersion") { current = value }
+        #endif
+        self.current = current
+        self.address = address
+        let bundled = bundle.url(forResource: "releases", withExtension: "json")
+            .flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: Data(contentsOf: $0)) } ?? ReleaseFeed(releases: [])
+        let cached = defaults.data(forKey: Keys.feed).flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: $0) }
+        feed = cached.map(bundled.merged(with:)) ?? bundled
+        lastChecked = defaults.object(forKey: Keys.checked) as? Date
+    }
+
+    /// The current release's notes, for "What's New in This Version".
+    var currentNotes: [ReleaseFeed.Release] { feed.whatsNew(since: nil, current: current) }
+
+    /// Once per launch: queue What's New after an update, then look for a newer release.
+    /// `returning` says whether someone used the app before this build recorded versions.
+    func launched(returning: Bool) async {
+        let previous = defaults.string(forKey: Keys.lastVersion)
+        defaults.set(current, forKey: Keys.lastVersion)
+        if previous != nil || returning, previous.map({ AppVersion($0) < AppVersion(current) }) ?? true {
+            let notes = feed.whatsNew(since: previous, current: current)
+            if !notes.isEmpty { sheet = .whatsNew(notes) }
+        }
+        await check()
+    }
+
+    /// Looks for a newer release. Automatic checks run at most every few hours and announce each
+    /// version once; a check someone asks for always runs and reports the outcome.
+    func check(manual: Bool = false) async {
+        guard !checking else { return }
+        if !manual, let lastChecked, Date().timeIntervalSince(lastChecked) < Self.interval { announce(); return }
+        checking = true
+        defer { checking = false }
+        do {
+            let fetched = try await ReleaseFeed.fetch(address)
+            feed = feed.merged(with: fetched)
+            defaults.set(try? JSONEncoder().encode(fetched), forKey: Keys.feed)
+            lastChecked = Date()
+            defaults.set(lastChecked, forKey: Keys.checked)
+            Diagnostics.shared.record(.info, "updates", "Release feed checked: current=\(current) latest=\(available.first?.version ?? current)")
+        } catch {
+            Diagnostics.shared.record(.warning, "updates", "Release feed check failed: \(error.localizedDescription)")
+            if manual { message = L10n.text("Couldn't check for updates: %@", error.localizedDescription) }
+            return
+        }
+        if manual {
+            if available.isEmpty { message = L10n.text("Yingxia %@ is the latest version.", current) }
+            else { show() }
+        } else { announce() }
+    }
+
+    /// Shows the newer releases.
+    func show() {
+        guard !available.isEmpty else { return }
+        sheet = .available(available)
+        defaults.set(available.first?.version, forKey: Keys.announced)
+    }
+
+    func showCurrentNotes() {
+        if !currentNotes.isEmpty { sheet = .whatsNew(currentNotes) }
+    }
+
+    /// Presents a newer release the first time it is seen; later it only shows as a badge.
+    private func announce() {
+        guard sheet == nil, let latest = available.first,
+              defaults.string(forKey: Keys.announced).map({ AppVersion($0) < AppVersion(latest.version) }) ?? true else { return }
+        show()
+    }
+
+    private enum Keys {
+        static let lastVersion = "updates.lastVersion"
+        static let announced = "updates.announcedVersion"
+        static let checked = "updates.lastChecked"
+        static let feed = "updates.feed"
+    }
+}
+
+// MARK: Release notes
+
+/// Release notes in the manner of the Apple TV app: a cinematic backdrop, a big headline with
+/// pill buttons, and a shelf of artwork cards, one per feature.
+struct ReleaseNotesView: View {
+    let sheet: Updates.Sheet
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
+
+    private var releases: [ReleaseFeed.Release] {
+        switch sheet { case .available(let value), .whatsNew(let value): value }
+    }
+    private var update: ReleaseFeed.Release? {
+        if case .available(let value) = sheet { value.first } else { nil }
+    }
+    private var features: [ReleaseFeed.Feature] {
+        var seen = Set<ReleaseFeed.Feature>()
+        return releases.flatMap { $0.features(for: ReleaseFeed.platform) }.filter { seen.insert($0).inserted }
+    }
+    private var version: String { releases.first?.version ?? "" }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            Color.black.ignoresSafeArea()
+            ReleaseBackdrop(animated: !reduceMotion)
+                .frame(height: Size.backdrop).frame(maxWidth: .infinity)
+                .ignoresSafeArea(edges: [.top, .horizontal])
+            layout
+        }
+        .foregroundStyle(.white)
+        .environment(\.colorScheme, .dark)
+        #if os(macOS)
+        .frame(width: 780).fixedSize(horizontal: false, vertical: true)
+        #endif
+    }
+
+    @ViewBuilder private var layout: some View {
+        #if os(iOS)
+        // Phones scroll the story and keep the buttons under the thumb.
+        ScrollView {
+            VStack(alignment: .leading, spacing: Size.sectionGap) {
+                hero
+                if sizeClass == .compact { featureList } else { shelf }
+            }
+            .padding(.top, sizeClass == .compact ? Size.top * 2 : Size.top).padding(.bottom, 24)
+        }
+        .scrollIndicators(.hidden)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            actions.padding(.horizontal, Size.margin).padding(.top, 16).padding(.bottom, 12)
+                .background { LinearGradient(colors: [.black.opacity(0), .black], startPoint: .top, endPoint: .center).ignoresSafeArea() }
+        }
+        #else
+        VStack(alignment: .leading, spacing: Size.sectionGap) {
+            HStack(alignment: .bottom, spacing: 60) {
+                VStack(alignment: .leading, spacing: Size.buttonGap) { hero; actions.padding(.horizontal, Size.margin) }
+                Spacer(minLength: 0)
+                #if os(tvOS)
+                if let link = update?.link() { scanCode(link).padding(.trailing, Size.margin) }
+                #endif
+            }
+            shelf
+            #if os(tvOS)
+            Spacer(minLength: 0)
+            #endif
+        }
+        .padding(.top, Size.top)
+        #if os(macOS)
+        .padding(.bottom, Size.top)
+        #endif
+        #endif
+    }
+
+    private var hero: some View {
+        VStack(alignment: .leading, spacing: Size.heroSpacing) {
+            HStack(spacing: Size.markGap) {
+                Image(systemName: "play.tv.fill")
+                    .font(.system(size: Size.mark * 0.5, weight: .bold)).foregroundStyle(.white)
+                    .frame(width: Size.mark, height: Size.mark)
+                    .background(LinearGradient(colors: ReleaseArt.palettes[0], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                in: RoundedRectangle(cornerRadius: Size.mark * 0.26, style: .continuous))
+                // Letter-spaced capitals read as a label in Latin scripts; CJK stays unspaced.
+                Text(eyebrow).font(.system(size: Size.eyebrow, weight: .semibold)).tracking(L10n.resolvedLanguage() == "en" ? 1.2 : 0)
+                    .textCase(.uppercase).foregroundStyle(.white.opacity(0.8))
+            }
+            .accessibilityElement(children: .combine)
+            Text(update == nil ? L10n.text("What's New in Yingxia") : L10n.text("Something New Is Here"))
+                .font(.system(size: Size.title, weight: .heavy)).tracking(-0.6)
+                .lineLimit(2).minimumScaleFactor(0.7).fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text(update == nil ? L10n.text("Here's what's new in version %@.", version) : L10n.text("Yingxia %@ is ready with new features.", version))
+                .font(.system(size: Size.subtitle, weight: .medium)).foregroundStyle(.white.opacity(0.72))
+                .frame(maxWidth: Size.textWidth, alignment: .leading)
+        }
+        .padding(.horizontal, Size.margin)
+        .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
+    }
+
+    private var eyebrow: String {
+        let name = L10n.text("Yingxia %@", version)
+        return "\(name) · \(update == nil ? L10n.text("What's New") : L10n.text("Now Available"))"
+    }
+
+    /// One artwork card per feature, title and description underneath, as in an Apple TV shelf.
+    private var shelf: some View {
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: Size.cardGap) {
+                ForEach(Array(features.enumerated()), id: \.element) { index, feature in
+                    VStack(alignment: .leading, spacing: Size.captionGap) {
+                        #if os(tvOS)
+                        // Focusable so the remote can scroll the shelf; the card lifts like a poster.
+                        Button {} label: { ReleaseArt(symbol: feature.symbol, index: index) }.buttonStyle(.card)
+                        #else
+                        ReleaseArt(symbol: feature.symbol, index: index)
+                        #endif
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(feature.title.text()).font(.system(size: Size.cardTitle, weight: .semibold)).lineLimit(1)
+                            Text(feature.detail.text()).font(.system(size: Size.cardDetail)).foregroundStyle(.white.opacity(0.6))
+                                .lineLimit(3, reservesSpace: true)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                    .frame(width: Size.card)
+                }
+            }
+            .padding(.horizontal, Size.margin)
+        }
+        .scrollIndicators(.hidden)
+        .scrollClipDisabled()
+    }
+
+    #if os(iOS)
+    /// On a phone the features stack like an episode list: artwork left, words right.
+    private var featureList: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            ForEach(Array(features.enumerated()), id: \.element) { index, feature in
+                HStack(alignment: .center, spacing: 14) {
+                    ReleaseArt(symbol: feature.symbol, index: index).frame(width: 136)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(feature.title.text()).font(.system(size: Size.cardTitle, weight: .semibold))
+                        Text(feature.detail.text()).font(.system(size: Size.cardDetail)).foregroundStyle(.white.opacity(0.6))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(.horizontal, Size.margin)
+    }
+    #endif
+
+    @ViewBuilder private var actions: some View {
+        #if os(tvOS)
+        Button(L10n.text(update == nil ? "Continue" : "OK")) { dismiss() }.controlButton(prominent: true)
+        #else
+        let primary = update?.link()
+        let layout = Self.stackedButtons ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 12))
+        layout {
+            Button { if let primary { openURL(primary) }; dismiss() } label: {
+                Label(L10n.text(primary == nil ? "Continue" : "Get the Update"), systemImage: primary == nil ? "play.fill" : "arrow.down.circle.fill")
+                    .frame(maxWidth: Self.stackedButtons ? .infinity : nil)
+            }
+            .buttonStyle(PillButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
+            if primary != nil {
+                Button { dismiss() } label: { Text(L10n.text("Not Now")).frame(maxWidth: Self.stackedButtons ? .infinity : nil) }
+                    .buttonStyle(PillButtonStyle(prominent: false)).keyboardShortcut(.cancelAction)
+            }
+        }
+        #endif
+    }
+
+    #if os(tvOS)
+    /// Apple TV can't open web pages, so the install page goes to a phone as a QR code.
+    private func scanCode(_ link: URL) -> some View {
+        VStack(spacing: 18) {
+            if let image = QRCode.image(link.absoluteString) {
+                Image(decorative: image, scale: 1).interpolation(.none).resizable().scaledToFit()
+                    .frame(width: 220, height: 220).padding(18)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            }
+            Text(L10n.text("Scan with your iPhone to get the update."))
+                .font(.system(size: 22, weight: .medium)).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
+        }
+        .frame(width: 300)
+    }
+    #endif
+
+    private static var stackedButtons: Bool {
+        #if os(iOS)
+        true
+        #else
+        false
+        #endif
+    }
+
+    private enum Size {
+        #if os(tvOS)
+        static let margin: CGFloat = 90, top: CGFloat = 70, backdrop: CGFloat = 760, sectionGap: CGFloat = 56, buttonGap: CGFloat = 36
+        static let mark: CGFloat = 44, markGap: CGFloat = 14, eyebrow: CGFloat = 24, title: CGFloat = 80, subtitle: CGFloat = 32
+        static let heroSpacing: CGFloat = 16, textWidth: CGFloat = 1000
+        static let card: CGFloat = 480, cardGap: CGFloat = 48, captionGap: CGFloat = 22, cardTitle: CGFloat = 29, cardDetail: CGFloat = 23
+        #elseif os(macOS)
+        static let margin: CGFloat = 44, top: CGFloat = 44, backdrop: CGFloat = 420, sectionGap: CGFloat = 34, buttonGap: CGFloat = 24
+        static let mark: CGFloat = 26, markGap: CGFloat = 9, eyebrow: CGFloat = 12, title: CGFloat = 44, subtitle: CGFloat = 16
+        static let heroSpacing: CGFloat = 10, textWidth: CGFloat = 520
+        static let card: CGFloat = 250, cardGap: CGFloat = 18, captionGap: CGFloat = 12, cardTitle: CGFloat = 14, cardDetail: CGFloat = 12
+        #else
+        static let margin: CGFloat = 24, top: CGFloat = 56, backdrop: CGFloat = 520, sectionGap: CGFloat = 36, buttonGap: CGFloat = 24
+        static let mark: CGFloat = 26, markGap: CGFloat = 9, eyebrow: CGFloat = 12, title: CGFloat = 40, subtitle: CGFloat = 17
+        static let heroSpacing: CGFloat = 12, textWidth: CGFloat = 520
+        static let card: CGFloat = 260, cardGap: CGFloat = 14, captionGap: CGFloat = 12, cardTitle: CGFloat = 16, cardDetail: CGFloat = 14
+        #endif
+    }
+}
+
+/// A feature's 16:9 artwork: a deep gradient with a lit corner and the feature's symbol.
+private struct ReleaseArt: View {
+    let symbol: String
+    let index: Int
+    static let palettes: [[Color]] = [
+        [Color(red: 1.0, green: 0.60, blue: 0.28), Color(red: 0.78, green: 0.20, blue: 0.28)],
+        [Color(red: 0.52, green: 0.42, blue: 1.0), Color(red: 0.16, green: 0.14, blue: 0.50)],
+        [Color(red: 0.18, green: 0.80, blue: 0.72), Color(red: 0.05, green: 0.30, blue: 0.56)],
+        [Color(red: 1.0, green: 0.82, blue: 0.32), Color(red: 0.88, green: 0.38, blue: 0.12)],
+        [Color(red: 1.0, green: 0.45, blue: 0.62), Color(red: 0.45, green: 0.12, blue: 0.42)],
+    ]
+    var body: some View {
+        let colors = Self.palettes[index % Self.palettes.count]
+        GeometryReader { geometry in
+            ZStack {
+                LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+                RadialGradient(colors: [.white.opacity(0.32), .clear], center: .topLeading, startRadius: 0, endRadius: geometry.size.width * 0.9)
+                Image(systemName: symbol)
+                    .font(.system(size: geometry.size.height * 0.38, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical).foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.28), radius: geometry.size.height * 0.08, y: geometry.size.height * 0.03)
+            }
+        }
+        .aspectRatio(16 / 9, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: Self.radius, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: Self.radius, style: .continuous).strokeBorder(.white.opacity(0.12)) }
+        .accessibilityHidden(true)
+    }
+    static var radius: CGFloat {
+        #if os(tvOS)
+        16
+        #else
+        12
+        #endif
+    }
+}
+
+/// Slowly drifting brand colours that fade into black, like the Apple TV app's hero glow.
+private struct ReleaseBackdrop: View {
+    var animated: Bool
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: !animated)) { context in
+            let drift = Float(sin(context.date.timeIntervalSinceReferenceDate * 0.3)) * 0.12
+            MeshGradient(width: 3, height: 3, points: [
+                [0, 0], [0.5, 0], [1, 0],
+                [0, 0.5], [0.5 + drift, 0.42 - drift / 2], [1, 0.5],
+                [0, 1], [0.5, 1], [1, 1],
+            ], colors: [
+                Color(red: 0.95, green: 0.48, blue: 0.20), Color(red: 0.70, green: 0.16, blue: 0.30), Color(red: 0.24, green: 0.10, blue: 0.42),
+                Color(red: 0.48, green: 0.16, blue: 0.10), Color(red: 0.36, green: 0.08, blue: 0.20), Color(red: 0.10, green: 0.06, blue: 0.22),
+                .black, .black, .black,
+            ])
+        }
+        .overlay { LinearGradient(colors: [.black.opacity(0.1), .black.opacity(0.35), .black], startPoint: .top, endPoint: .bottom) }
+        .accessibilityHidden(true)
+    }
+}
+
+#if !os(tvOS)
+/// White and translucent capsules, the Apple TV app's primary and secondary buttons.
+private struct PillButtonStyle: ButtonStyle {
+    let prominent: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: Self.font, weight: .semibold))
+            .foregroundStyle(prominent ? Color.black : Color.white)
+            .padding(.horizontal, 26).frame(minHeight: Self.height)
+            .background(prominent ? AnyShapeStyle(Color.white) : AnyShapeStyle(Color.white.opacity(0.16)), in: Capsule())
+            .contentShape(Capsule())
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+    #if os(macOS)
+    static let font: CGFloat = 14, height: CGFloat = 38
+    #else
+    static let font: CGFloat = 17, height: CGFloat = 52
+    #endif
+}
+#endif
+
+// MARK: Settings
+
+/// The update group in Settings: an invitation when a release is waiting, otherwise status and a check.
+struct UpdateSettingsGroup: View {
+    @Environment(Updates.self) private var updates
+    var body: some View {
+        SettingsGroup(title: L10n.text("Software Update")) {
+            if let latest = updates.available.first {
+                row(action: updates.show) {
+                    SettingsRow(symbol: "gift.fill", tint: Brand.accent, title: L10n.text("Yingxia %@ is available", latest.version),
+                                subtitle: L10n.text("New features are waiting for you.")) {
+                        HStack(spacing: 10) { NewBadge(); chevron }
+                    }
+                }
+            } else {
+                SettingsRow(symbol: "checkmark.circle.fill", tint: .green, title: L10n.text("Yingxia is up to date"),
+                            subtitle: updates.lastChecked.map { L10n.text("Last checked %@", $0.formatted(date: .abbreviated, time: .shortened)) }) {
+                    Button { Task { await updates.check(manual: true) } } label: {
+                        HStack(spacing: 6) {
+                            if updates.checking { ProgressView().controlSize(.mini) }
+                            Text(L10n.text(updates.checking ? "Checking…" : "Check Now"))
+                        }
+                    }
+                    .settingsButton().disabled(updates.checking)
+                }
+            }
+            if !updates.currentNotes.isEmpty {
+                row(action: updates.showCurrentNotes) {
+                    SettingsRow(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.current)) { chevron }
+                }
+            }
+        }
+    }
+    private var chevron: some View {
+        Image(systemName: "chevron.right").font(.system(size: SettingsStyle.chevron, weight: .semibold)).foregroundStyle(.tertiary)
+    }
+    /// A whole row that presents a sheet, styled like the rows that push a page.
+    @ViewBuilder private func row(action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
+        let button = Button(action: action, label: label)
+        #if os(tvOS)
+        button
+        #else
+        button.buttonStyle(SettingsRowStyle())
+        #endif
+    }
+}
+
+/// The small "New" capsule on the Settings entry while an update waits.
+struct NewBadge: View {
+    var body: some View {
+        Text(L10n.text("New"))
+            .font(.caption2.weight(.bold)).foregroundStyle(Brand.onAccent)
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(Brand.accent, in: Capsule())
+    }
+}
+
+extension View {
+    /// Presents release sheets and update-check results, holding them back while a video plays.
+    func updatePresentation(_ updates: Updates, playing: Bool) -> some View {
+        @Bindable var updates = updates
+        let item = Binding(get: { playing ? nil : updates.sheet }, set: { updates.sheet = $0 })
+        #if os(macOS)
+        let presented = sheet(item: item) { ReleaseNotesView(sheet: $0) }
+        #else
+        let presented = fullScreenCover(item: item) { ReleaseNotesView(sheet: $0) }
+        #endif
+        return presented
+        .alert(L10n.text("Software Update"), isPresented: Binding(get: { !playing && updates.message != nil }, set: { if !$0 { updates.message = nil } })) {
+            Button(L10n.text("OK"), role: .cancel) { updates.message = nil }
+        } message: { Text(updates.message ?? "") }
+    }
+}
+
+enum QRCode {
+    static func image(_ text: String) -> CGImage? {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(text.utf8)
+        filter.correctionLevel = "M"
+        guard let output = filter.outputImage else { return nil }
+        return CIContext().createCGImage(output, from: output.extent)
+    }
+}

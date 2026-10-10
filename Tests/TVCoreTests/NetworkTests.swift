@@ -28,6 +28,10 @@ private final class MockProtocol: URLProtocol, @unchecked Sendable {
             status = 200; body = #"{"parse":0,"url":"","errMsg":"未扫码登录无法观看"}"#
         } else if path == "/qualities" {
             status = 200; body = #"{"parse":0,"url":["480P","https://example.com/480.mp4","360P","https://example.com/360.mp4"]}"#
+        } else if path == "/paged" {
+            // Three pages of search results; the last page repeats, as some sources do.
+            let page = min(3, Int(query.first(where: { $0.name == "pg" })?.value ?? "1") ?? 1)
+            status = 200; body = #"{"pagecount":4,"list":[{"vod_id":"p\#(page)a","vod_name":"A"},{"vod_id":"p\#(page)b","vod_name":"B"}]}"#
         } else if path == "/bili" {
             status = 200; body = #"{"parse":0,"url":["480P","http://127.0.0.1:-1/proxy?do=bili&aid=123&cid=456&qn=32&type=mpd"]}"#
         } else if query.contains(where: { $0.name == "play" }) {
@@ -257,4 +261,21 @@ private final class OfflineProtocol: URLProtocol, @unchecked Sendable {
     #expect(config.origin.host == "xn--z7x900a.net")
     let (browserData, _) = try await client().get(url)
     #expect(String(decoding: browserData, as: UTF8.self).contains("Landing page"))
+}
+
+@MainActor @Test func searchResultsLoadLaterPagesUntilASourceRunsDry() async throws {
+    let base = URL(string: "https://example.com/config.json")!
+    let config = try Subscription.parse(Data(#"{"sites":[{"key":"p","type":4,"api":"/paged"}]}"#.utf8), origin: base)
+    let model = SearchModel(http: client())
+    func settle() async throws { for _ in 0..<200 where model.busy || model.loadingMore { try await Task.sleep(for: .milliseconds(20)) } }
+    model.search("x", config: config)
+    try await settle()
+    #expect(model.videos(for: "p").map(\.id) == ["p1a", "p1b"])
+    #expect(model.canLoadMore(nil))
+    model.loadMore(nil, config: config); try await settle()
+    model.loadMore("p", config: config); try await settle()
+    #expect(model.videos(for: "p").map(\.id) == ["p1a", "p1b", "p2a", "p2b", "p3a", "p3b"])
+    // Page 4 repeats page 3: nothing new, so the source is done although it claimed four pages.
+    model.loadMore("p", config: config); try await settle()
+    #expect(!model.canLoadMore("p") && model.batches.count == 2)
 }

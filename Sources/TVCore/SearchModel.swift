@@ -13,6 +13,15 @@ import Observation
     /// Paused because the viewer left the results, not by Stop; `resumeSuspended` continues it.
     public private(set) var suspended = false
     public var scrollID: String?
+    /// Later result pages, in the order they arrived, so the grid only ever grows at its end.
+    public private(set) var batches: [SearchBatch] = []
+    public private(set) var loadingMore = false
+    /// The next page to ask each source for; `Int.max` once a source has no more.
+    private var nextPage: [String: Int] = [:]
+    private var moreTask: Task<Void, Never>?
+    /// Changes only with a new search, unlike `generation`, which pausing also changes.
+    private var runID = UUID()
+    private static let sourceKey = "searchSource"
     /// When the current run began and how many sources were already done, for a time estimate.
     public private(set) var runStart: (date: Date, completed: Int)?
     private var generation = UUID()
@@ -37,7 +46,60 @@ import Observation
             return left == right ? lhs.offset < rhs.offset : left < right
         }.map(\.element)
     }
-    public var videoCount: Int { matches.reduce(0) { $0 + Set(($1.page?.videos ?? []).map(\.id)).count } }
+    public var videoCount: Int { matches.reduce(0) { $0 + Set(videos(for: $1.id).map(\.id)).count } }
+
+    /// A source's results so far: its first page, then each later page.
+    public func videos(for source: String) -> [Video] {
+        (results.first { $0.id == source }?.page?.videos ?? []) + batches.filter { $0.source == source }.flatMap(\.videos)
+    }
+
+    /// Shows one source's results (nil: every source). The choice carries over to later searches.
+    public func select(_ source: String?) {
+        selectedSource = source; scrollID = nil
+        UserDefaults.standard.set(source, forKey: Self.sourceKey)
+    }
+
+    /// Whether a source (nil: any matching source) has another page of results.
+    public func canLoadMore(_ source: String?) -> Bool {
+        let candidates = source.map { id in matches.filter { $0.id == id } } ?? matches
+        return candidates.contains { result in (nextPage[result.id] ?? 2) <= (result.page?.pageCount ?? 1) }
+    }
+
+    /// Fetches the next page of a source (nil: of every matching source that has one) and appends
+    /// what is new; a source that answers nothing new is done.
+    public func loadMore(_ source: String?, config: Subscription) {
+        guard !loadingMore, !keyword.isEmpty else { return }
+        let targets = (source.map { id in matches.filter { $0.id == id } } ?? matches)
+            .filter { (nextPage[$0.id] ?? 2) <= ($0.page?.pageCount ?? 1) }
+        guard !targets.isEmpty else { return }
+        loadingMore = true
+        let run = runID, keyword = keyword, http = http
+        moreTask = Task {
+            await withTaskGroup(of: (String, Int, CatalogPage?).self) { group in
+                for result in targets.prefix(6) {
+                    let page = nextPage[result.id] ?? 2
+                    let site = result.site
+                    group.addTask {
+                        let client = CatalogClient(site: site, origin: config.origin, http: http, jarURL: config.spiderURL)
+                        return (site.id, page, try? await client.list(category: nil, query: keyword, page: page))
+                    }
+                }
+                for await (id, page, answer) in group {
+                    guard self.runID == run else { continue }
+                    let known = Set(self.videos(for: id).map(\.id))
+                    let fresh = (answer?.videos ?? []).filter { !known.contains($0.id) }
+                    self.nextPage[id] = fresh.isEmpty ? Int.max : page + 1
+                    if !fresh.isEmpty { self.batches.append(SearchBatch(source: id, page: page, videos: fresh)) }
+                }
+            }
+            if self.runID == run { self.loadingMore = false }
+        }
+    }
+
+    private func clearPages() {
+        moreTask?.cancel(); moreTask = nil
+        batches = []; nextPage = [:]; loadingMore = false; runID = UUID()
+    }
 
     public func stop() {
         generation = UUID()
@@ -65,6 +127,7 @@ import Observation
         stop()
         draft = ""; keyword = ""; results = []; completed = 0; total = 0
         selectedSource = nil; scrollID = nil; stopped = false
+        clearPages()
         cache = [:]; subscriptionID = nil
     }
 
@@ -76,8 +139,11 @@ import Observation
         if busy && keyword == value { return }
         stop()
         keyword = value; draft = value; results = []; completed = 0
-        selectedSource = nil; scrollID = nil
+        clearPages()
         let sites = config.sites.filter { $0.searchable && $0.canBrowse(jarURL: config.spiderURL) }
+        // The source chosen last time stays chosen while it is searched.
+        let preferred = UserDefaults.standard.string(forKey: Self.sourceKey)
+        selectedSource = sites.contains { $0.id == preferred } ? preferred : nil; scrollID = nil
         rank = Dictionary(SourceStrategy.arrange(sites) { _ in true }.enumerated().map { ($1.id, $0) }) { first, _ in first }
         total = sites.count
         if let hit = cache[value], Date().timeIntervalSince(hit.created) < 300 {
@@ -112,7 +178,9 @@ import Observation
             warm = await LocalJarHost.shared.reusableSourceKeys()
             #endif
             let arranged = SourceStrategy.arrange(sites) { _ in true }
-            let ordered = arranged.filter { warm.contains($0.key) } + arranged.filter { !warm.contains($0.key) }
+            // Built-in sources answer first: they are quick and the ones most often filtered to.
+            let ordered = (arranged.filter { warm.contains($0.key) } + arranged.filter { !warm.contains($0.key) })
+                .enumerated().sorted { ($0.element.isBuiltIn ? 0 : 1, $0.offset) < ($1.element.isBuiltIn ? 0 : 1, $1.offset) }.map(\.element)
             guard self.generation == token else { return }
             await GlobalSearch.search(sites: ordered, origin: config.origin, jarURL: config.spiderURL, query: keyword, http: self.http) { result in
                 await self.receive(result, token: token)
