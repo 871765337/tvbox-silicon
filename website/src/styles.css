@@ -200,6 +200,7 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
 .how-title { font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.15; text-align: center; }
 .steps { list-style: none; padding: 0; margin: 44px 0 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 32px 28px; }
 .steps.n3 { grid-template-columns: repeat(3, 1fr); max-width: 900px; margin-inline: auto; }
+.steps.n4 { grid-template-columns: repeat(4, 1fr); }
 .step { border-top: 1px solid rgba(0, 0, 0, 0.14); padding-top: 22px; }
 .step-n { display: grid; place-items: center; width: 28px; height: 28px; margin-bottom: 16px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 14px; font-weight: 600; }
 .step h4 { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25; }
@@ -214,8 +215,21 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
 .keep-body { max-width: 38em; margin: 32px auto 0; font-size: 17px; color: var(--muted); text-wrap: pretty; }
 .keep .link-blue { display: inline-block; margin-top: 18px; }
 
-/* Install: run cider yourself, or hand an AI agent the prompt. Both cards stretch to the same height. */
+/* Install mode switcher: a segmented control under the Download button; AI agent is recommended. */
+.modes-wrap { margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.modes-label { font-size: 14px; color: var(--muted); }
+.modes { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 4px; border-radius: 999px; background: var(--card); }
+.mode { border: 0; display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 999px; font-size: 15px; font-weight: 500; color: var(--muted); transition: background-color 0.2s ease, color 0.2s ease; }
+.mode .sf { font-size: 15px; }
+.mode:hover { color: var(--ink); }
+.mode.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.mode:focus-visible { outline: 2px solid #0071e3; outline-offset: 2px; }
+.mode-rec { padding: 2px 8px; border-radius: 999px; background: #0071e3; color: #fff; font-size: 12px; font-weight: 600; }
+.how, .run-card { scroll-margin-top: 88px; }
+
+/* Install: the selected mode's card (prompt, Terminal commands or apps). */
 .run { margin-top: 72px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.run.single { grid-template-columns: 1fr; max-width: 760px; margin-inline: auto; }
 .run-card { display: flex; flex-direction: column; min-width: 0; padding: 36px 32px 28px; border-radius: 28px; background: var(--card); }
 .run-icon { display: flex; align-items: center; height: 30px; font-size: 24px; color: var(--ink); }
 .run-card h3 { margin-top: 14px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
@@ -223,15 +237,22 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
 .code { flex: 1; margin: 20px 0 0; padding: 18px 20px; border-radius: 16px; background: #fff; color: var(--ink); font: 12.5px/1.75 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; overflow-x: auto; }
 .code .cm { color: #8e8e93; }
 .code.prompt { font-family: inherit; font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
-.copy-btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 7px; margin-top: 18px; padding: 9px 18px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 15px; font-weight: 500; transition: background-color 0.2s ease; }
+.copy-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 18px; }
+.copy-note { font-size: 14px; color: #1d7d3f; }
+.run-note { margin-top: 12px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.run-note a, .apps a { color: #0066cc; }
+.run-note a:hover, .apps a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.apps { list-style: none; margin: 20px 0 0; padding: 0; border-radius: 16px; background: #fff; }
+.apps li { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; padding: 16px 20px; border-top: 1px solid var(--line); }
+.apps li:first-child { border-top: 0; }
+.apps a { font-size: 17px; font-weight: 600; }
+.apps a .sf { font-size: .7em; margin-left: 2px; }
+.apps span { font-size: 14px; color: var(--muted); }
+.copy-btn { border: 0; display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 15px; font-weight: 500; transition: background-color 0.2s ease; }
 .copy-btn:hover { background: #333336; }
 .copy-btn.done { background: #1d7d3f; }
 .copy-btn .sf { font-size: 15px; }
 .copy-btn:focus-visible { outline: 2px solid #0071e3; outline-offset: 2px; }
-.alt { margin-top: 28px; text-align: center; font-size: 15px; color: var(--muted); }
-.alt a { color: #0066cc; }
-.alt a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.alt-note { display: block; margin-top: 4px; font-size: 13px; }
 :lang(ja) .run-card h3, :lang(ko) .run-card h3, :lang(zh-Hant) .run-card h3 { letter-spacing: 0; }
 
 /* Motion */
@@ -250,7 +271,7 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
 @media (max-width: 860px) {
   .nav-links { display: none; }
   .grid { grid-template-columns: 1fr 1fr; }
-  .steps, .steps.n3 { grid-template-columns: 1fr 1fr; }
+  .steps, .steps.n3, .steps.n4 { grid-template-columns: 1fr 1fr; }
   .how { margin-top: 88px; }
   .keep { padding: 44px 20px 40px; }
   .run { grid-template-columns: 1fr; }
@@ -265,7 +286,7 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
   .grid { grid-template-columns: 1fr; }
   .tab { padding: 0 12px 12px; font-size: 12px; }
   .tab.on::after { left: 8px; right: 8px; }
-  .steps, .steps.n3 { grid-template-columns: 1fr; gap: 24px; }
+  .steps, .steps.n3, .steps.n4 { grid-template-columns: 1fr; gap: 24px; }
   .product-req { font-size: 17px; }
   .actions { gap: 18px; }
   .hero-stage { margin-top: 48px; }

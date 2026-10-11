@@ -8,7 +8,7 @@ We recommend **[cider](https://github.com/Battzz/cider-cli)**, a free command-li
 
 - **iPhone or iPad** with iOS / iPadOS 26 or later, or **Apple TV** with tvOS 26 or later.
 - An **Apple account**. A free account works.
-- A **Mac, Windows or Linux computer**. For Apple TV, it must be on the same local network as the TV.
+- A **Mac, Windows or Linux computer** for iPhone and iPad. For **Apple TV you need a Mac** on the same local network as the TV: installing to Apple TV over Wi-Fi isn't possible from Windows or Linux.
 - The **Yingxia IPA** for your device:
 
   | Device | IPA | Bundle identifier |
@@ -29,7 +29,17 @@ brew install cider
 curl -fsSL https://raw.githubusercontent.com/Muonagi/cider-cli/main/install.sh | sh
 ```
 
-On Windows, download `cider-x86_64-pc-windows-msvc.zip` from the [releases](https://github.com/Muonagi/cider-cli/releases) and install Apple's device drivers (iTunes or Apple Devices). On Linux, `usbmuxd` must be running. Building cider from source currently fails because one of its dependencies was removed from GitHub, so use a release build.
+On **Windows**, first install **iTunes** or **Apple Devices** from the Microsoft Store (cider uses Apple's device driver), then in PowerShell:
+
+```powershell
+$dir = "$env:LOCALAPPDATA\cider"
+New-Item -ItemType Directory -Force $dir | Out-Null
+curl.exe -L -o "$env:TEMP\cider.zip" https://github.com/Muonagi/cider-cli/releases/latest/download/cider-x86_64-pc-windows-msvc.zip
+Expand-Archive "$env:TEMP\cider.zip" $dir -Force
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$dir", "User")
+```
+
+Open a new PowerShell window afterwards so `cider` is on the PATH. On **Linux**, `usbmuxd` must be running. Building cider from source currently fails because one of its dependencies was removed from GitHub, so use a release build.
 
 Then sign in once:
 
@@ -59,9 +69,9 @@ cider account team    # only if your account belongs to several teams
 
 ## Install on Apple TV
 
-Apple TV 4K has no USB data connection, so cider installs to it over the network.
+Apple TV 4K has no USB data connection, so cider installs to it over the network. This needs a **Mac** on the same network.
 
-1. Connect your computer and Apple TV to the same local network.
+1. Connect your Mac and Apple TV to the same local network.
 2. On Apple TV, open **Settings → Remotes and Devices → Remote App and Devices**, and keep that screen open.
 3. Pair it, typing the PIN the TV shows:
    ```sh
@@ -78,9 +88,9 @@ If cider can't install to your Apple TV (for example, a provisioning profile or 
 
 ## Let an AI agent install it
 
-If you use Claude Code, Codex or another coding agent on your computer, paste a prompt like this:
+If you use Claude Code, Codex or another coding agent on your computer, choose **AI agent** under "How to install" on the [website](https://yingxia.getmegaportal.com/#install-ios): it copies a prompt like this one for your device. Or paste it yourself:
 
-> Install Yingxia on my Apple TV. First read https://raw.githubusercontent.com/jo32/tvbox-silicon/main/.agents/skills/install-yingxia/SKILL.md and follow it. Use cider to sign the latest Apple TV IPA with my Apple account and install it over Wi-Fi. Let me type my own password, and ask me before anything that could revoke a certificate.
+> Install Yingxia on my Apple TV from this Mac. First read https://raw.githubusercontent.com/jo32/tvbox-silicon/main/.agents/skills/install-yingxia/SKILL.md and follow it. Use cider to sign the latest Apple TV IPA with my Apple account and install it over Wi-Fi. Let me type my own password, and ask me before anything that could revoke a certificate.
 
 The agent reads the [install skill](../.agents/skills/install-yingxia/SKILL.md), which covers downloads, cider, pairing and the known problems. Type your Apple account password into cider yourself; never paste it into the chat.
 

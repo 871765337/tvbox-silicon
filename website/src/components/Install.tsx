@@ -1,7 +1,7 @@
 import { SFSymbol } from "./SFSymbol";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useI18n } from "../i18n/I18nProvider";
-import { INSTALL, type InstallCopy, type Platform, type Sideload } from "../i18n/install-strings";
+import { INSTALL, type InstallCopy, type Mode, type Platform, type Sideload } from "../i18n/install-strings";
 import { CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, SIDELOADLY } from "./controls";
 import { AppleTVIcon, IPhoneIPadIcon, MacIcon } from "./icons-devices";
 import { Reveal } from "./Reveal";
@@ -15,6 +15,13 @@ const PLATFORMS: { id: Platform; Icon: ComponentType }[] = [
   { id: "tv", Icon: AppleTVIcon },
 ];
 
+/** Ways to sideload, recommended first. */
+const MODES: { id: Mode; icon: string }[] = [
+  { id: "agent", icon: "sparkles" },
+  { id: "cli", icon: "terminal" },
+  { id: "app", icon: "laptopcomputer.and.iphone" },
+];
+
 // Links like /#install-tv open a specific tab.
 function hashPlatform(): Platform | null {
   const match = /^#install-(mac|ios|tv)$/.exec(location.hash);
@@ -26,11 +33,38 @@ function initialPlatform(): Platform {
   return hashPlatform() ?? (/iPhone|iPad|iPod/.test(navigator.userAgent) ? "ios" : "mac");
 }
 
+/** The prompt for an AI agent: it reads the install skill, then runs cider. */
+function agentPrompt(copy: InstallCopy, platform: Sideload) {
+  return copy.agent.prompt[platform].replace("{skill}", INSTALL_SKILL).replace("{ipa}", DOWNLOADS[platform]);
+}
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Older browsers and non-secure contexts: copy through a hidden selection.
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.append(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+}
+
 export function Install() {
   const { lang, locale } = useI18n();
   const copy = INSTALL[lang];
   // Starts on the Mac tab, as prerendered, then picks the visitor's tab after hydration.
   const [platform, setPlatform] = useState<Platform>("mac");
+  const [mode, setMode] = useState<Mode>("agent");
+  // Set when a mode is picked: scroll to its content (the prompt for AI agent, else the steps).
+  const [jump, setJump] = useState<{ mode: Mode; at: number } | null>(null);
+  const [autoCopied, setAutoCopied] = useState(0);
+  const promptRef = useRef<HTMLDivElement>(null);
+  const howRef = useRef<HTMLDivElement>(null);
   const sideload = platform !== "mac";
 
   useEffect(() => {
@@ -42,6 +76,25 @@ export function Install() {
     addEventListener("hashchange", onHash);
     return () => removeEventListener("hashchange", onHash);
   }, []);
+
+  useEffect(() => {
+    if (!jump) return;
+    const target = jump.mode === "agent" ? promptRef.current : howRef.current;
+    target?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: jump.mode === "agent" ? "center" : "start" });
+  }, [jump]);
+
+  const choose = (next: Mode) => {
+    if (!sideload) return;
+    setMode(next);
+    // AI agent is the shortcut: picking it copies the prompt, so the visitor can paste it straight away.
+    if (next === "agent") {
+      void copyText(agentPrompt(copy, platform));
+      setAutoCopied(Date.now());
+    }
+    setJump({ mode: next, at: Date.now() });
+  };
+
+  const steps = !sideload ? copy.steps.mac : mode === "agent" ? copy.agentSteps[platform] : mode === "app" ? copy.appSteps[platform] : copy.steps[platform];
 
   return (
     <section className="section install" id="install">
@@ -90,18 +143,27 @@ export function Install() {
             <a className="btn-blue" href={DOWNLOADS[platform]}>
               {copy.get}
             </a>
-            {sideload && (
-              <a className="link-blue" href={CIDER} target="_blank" rel="noreferrer">
-                {copy.cider} <SFSymbol name="chevron.right" />
-              </a>
-            )}
           </div>
+          {sideload && (
+            <div className="modes-wrap">
+              <p className="modes-label" id="install-mode-label">{copy.modes.label}</p>
+              <div className="modes" role="radiogroup" aria-labelledby="install-mode-label">
+                {MODES.map(({ id, icon }) => (
+                  <button key={id} type="button" role="radio" aria-checked={mode === id} className={mode === id ? "mode on" : "mode"} onClick={() => choose(id)}>
+                    <SFSymbol name={icon} />
+                    <span>{copy.modes[id]}</span>
+                    {id === "agent" && <span className="mode-rec">{copy.modes.rec}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="how">
+        <div className="how" ref={howRef}>
           <h3 className="how-title">{copy.how}</h3>
-          <ol className={`steps n${copy.steps[platform].length}`} key={platform}>
-            {copy.steps[platform].map((step, i) => (
+          <ol className={`steps n${steps.length}`} key={`${platform}-${mode}`}>
+            {steps.map((step, i) => (
               <li className="step" key={i}>
                 <span className="step-n">{i + 1}</span>
                 <h4>{step.t}</h4>
@@ -111,7 +173,19 @@ export function Install() {
           </ol>
         </div>
 
-        {sideload && <RunCards copy={copy} platform={platform} />}
+        {sideload && mode === "agent" && (
+          <div className="run single">
+            <div className="run-card" ref={promptRef}>
+              <span className="run-icon"><SFSymbol name="sparkles" /></span>
+              <h3>{copy.agent.t}</h3>
+              <p>{copy.agent.b}</p>
+              <p className="code prompt">{agentPrompt(copy, platform)}</p>
+              <CopyButton text={agentPrompt(copy, platform)} copy={copy} flash={autoCopied} note={copy.copiedPrompt} />
+            </div>
+          </div>
+        )}
+        {sideload && mode === "cli" && <TerminalCard copy={copy} platform={platform} />}
+        {sideload && mode === "app" && <AppsCard copy={copy} />}
 
         {sideload && (
           <div className="keep">
@@ -150,74 +224,88 @@ function commands(copy: InstallCopy, platform: Sideload) {
   ];
 }
 
-/** "Run it yourself" (the cider commands) beside "Let your AI agent do it" (a prompt that points at the install skill). */
-function RunCards({ copy, platform }: { copy: InstallCopy; platform: Sideload }) {
+function TerminalCard({ copy, platform }: { copy: InstallCopy; platform: Sideload }) {
   const blocks = commands(copy, platform);
   const script = blocks.map(([comment, ...lines]) => [`# ${comment}`, ...lines].join("\n")).join("\n");
-  const prompt = copy.agent.prompt[platform].replace("{skill}", INSTALL_SKILL).replace("{ipa}", DOWNLOADS[platform]);
   return (
-    <>
-      <div className="run">
-        <div className="run-card">
-          <span className="run-icon"><SFSymbol name="terminal" /></span>
-          <h3>{copy.cli.t}</h3>
-          <p>{copy.cli.b}</p>
-          <pre className="code">
-            {blocks.map(([comment, ...lines]) => (
-              <span key={comment}>
-                <span className="cm"># {comment}</span>
-                {"\n" + lines.join("\n") + "\n"}
-              </span>
-            ))}
-          </pre>
-          <CopyButton text={script} copy={copy} />
-        </div>
-        <div className="run-card">
-          <span className="run-icon"><SFSymbol name="sparkles" /></span>
-          <h3>{copy.agent.t}</h3>
-          <p>{copy.agent.b}</p>
-          <p className="code prompt">{prompt}</p>
-          <CopyButton text={prompt} copy={copy} />
-        </div>
+    <div className="run single">
+      <div className="run-card">
+        <span className="run-icon"><SFSymbol name="terminal" /></span>
+        <h3>{copy.cli.t}</h3>
+        <p>{copy.cli.b}</p>
+        <pre className="code">
+          {blocks.map(([comment, ...lines]) => (
+            <span key={comment}>
+              <span className="cm"># {comment}</span>
+              {"\n" + lines.join("\n") + "\n"}
+            </span>
+          ))}
+        </pre>
+        <p className="run-note">
+          {copy.cli.win}{" "}
+          <a href={CIDER} target="_blank" rel="noreferrer">cider</a>
+        </p>
+        <CopyButton text={script} copy={copy} />
       </div>
-      <p className="alt">
-        {copy.alt.t}{" "}
-        <a href={IMPACTOR} target="_blank" rel="noreferrer">Impactor</a> ·{" "}
-        <a href={ILOADER} target="_blank" rel="noreferrer">iloader</a> ·{" "}
-        <a href={SIDELOADLY} target="_blank" rel="noreferrer">Sideloadly</a>
-        <span className="alt-note">{copy.alt.note}</span>
-      </p>
-    </>
+    </div>
   );
 }
 
-function CopyButton({ text, copy }: { text: string; copy: InstallCopy }) {
-  const [done, setDone] = useState(false);
-  useEffect(() => {
-    if (!done) return;
-    const timer = setTimeout(() => setDone(false), 2000);
-    return () => clearTimeout(timer);
-  }, [done]);
-  const onClick = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // Older browsers and non-secure contexts: copy through a hidden selection.
-      const area = document.createElement("textarea");
-      area.value = text;
-      area.style.position = "fixed";
-      area.style.opacity = "0";
-      document.body.append(area);
-      area.select();
-      document.execCommand("copy");
-      area.remove();
-    }
-    setDone(true);
-  };
+function AppsCard({ copy }: { copy: InstallCopy }) {
+  const apps = [
+    { name: "Impactor", href: IMPACTOR, note: copy.apps.impactor },
+    { name: "iloader", href: ILOADER, note: copy.apps.iloader },
+    { name: "Sideloadly", href: SIDELOADLY, note: copy.apps.sideloadly },
+  ];
   return (
-    <button type="button" className={done ? "copy-btn done" : "copy-btn"} onClick={onClick}>
-      <SFSymbol name={done ? "checkmark" : "doc.on.doc"} />
-      <span aria-live="polite">{done ? copy.copied : copy.copy}</span>
-    </button>
+    <div className="run single">
+      <div className="run-card">
+        <span className="run-icon"><SFSymbol name="laptopcomputer.and.iphone" /></span>
+        <h3>{copy.apps.t}</h3>
+        <p>{copy.apps.b}</p>
+        <ul className="apps">
+          {apps.map((app) => (
+            <li key={app.name}>
+              <a href={app.href} target="_blank" rel="noreferrer">
+                {app.name} <SFSymbol name="chevron.right" />
+              </a>
+              <span>{app.note}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/** Copies on click; `flash` (a timestamp) shows the copied state when something else copied the same text. */
+function CopyButton({ text, copy, flash = 0, note }: { text: string; copy: InstallCopy; flash?: number; note?: string }) {
+  const [doneAt, setDoneAt] = useState(0);
+  useEffect(() => {
+    if (flash) setDoneAt(flash);
+  }, [flash]);
+  useEffect(() => {
+    if (!doneAt) return;
+    const timer = setTimeout(() => setDoneAt(0), 2500);
+    return () => clearTimeout(timer);
+  }, [doneAt]);
+  const done = doneAt > 0;
+  return (
+    <div className="copy-row">
+      <button
+        type="button"
+        className={done ? "copy-btn done" : "copy-btn"}
+        onClick={async () => {
+          await copyText(text);
+          setDoneAt(Date.now());
+        }}
+      >
+        <SFSymbol name={done ? "checkmark" : "doc.on.doc"} />
+        <span>{done ? copy.copied : copy.copy}</span>
+      </button>
+      <span className="copy-note" aria-live="polite">
+        {done && note ? note : ""}
+      </span>
+    </div>
   );
 }
