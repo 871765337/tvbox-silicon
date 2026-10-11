@@ -161,6 +161,11 @@ import TVCore
         return catalog(for: channel)?.playlist.next(after: context)
     }
 
+    func previousEpisode(before channel: Channel) -> Episode? {
+        guard let context = channel.historyContext else { return nil }
+        return catalog(for: channel)?.playlist.previous(before: context)
+    }
+
     func selectEpisode(_ episode: Episode, from channel: Channel) {
         guard playing == channel, let catalog = catalog(for: channel),
               catalog.video.episodes.contains(episode) else { return }

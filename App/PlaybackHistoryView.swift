@@ -25,12 +25,7 @@ struct PlaybackHistoryView: View {
             }
         }
         .screenBackdrop()
-        #if os(tvOS)
-        // The tab bar already names the page.
-        .toolbar(.hidden, for: .navigationBar)
-        #else
-        .screenTitle(L10n.text("Playback History"))
-        #endif
+        .tabTitle(L10n.text("Playback History"))
         .onChange(of: history.entries.isEmpty) { _, empty in if empty { managing = false; selected.removeAll() } }
         .confirmationDialog(L10n.text("Remove selected history and its cached content?"), isPresented: $confirmsDelete, titleVisibility: .visible) {
             Button(L10n.text("Remove from history"), role: .destructive) {
@@ -49,26 +44,12 @@ struct PlaybackHistoryView: View {
                     StatusNotice(text: L10n.text("Unable to save playback history: %@", error))
                 }
                 header
-                LazyVStack(alignment: .leading, spacing: HistoryMetrics.rowSpacing) {
+                LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
                     ForEach(entries) { entry in
-                        Button { tap(entry) } label: {
-                            HistoryRow(entry: entry, selection: managing ? selected.contains(entry.id) : nil,
-                                       resuming: store.resumingHistoryID == entry.id)
-                        }
-                        .historyRow()
-                        .disabled(!managing && store.resumingHistoryID != nil)
-                        .accessibilityIdentifier((managing ? "history.select." : "history.resume.") + entry.context.videoID)
-                        .contextMenu {
-                            Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) {
-                                deletionIDs = [entry.id]; confirmsDelete = true
-                            }
-                        }
+                        HistoryCard(entry: entry, selection: managing ? selected.contains(entry.id) : nil, details: true) { tap(entry) }
+                            .accessibilityIdentifier((managing ? "history.select." : "history.resume.") + entry.context.videoID)
                     }
                 }
-                .glassRowInsets()
-                #if os(tvOS)
-                .padding(.horizontal, -40)
-                #endif
                 .tvFocusSection()
             }
             .pageContainer()
@@ -125,67 +106,14 @@ struct PlaybackHistoryView: View {
 }
 
 enum HistoryMetrics {
+    /// Continue Watching card width on Watch Now; the History page lets the grid size its cards.
     #if os(tvOS)
-    static let thumb: CGFloat = 96, rowSpacing: CGFloat = 4, card: CGFloat = 240
+    static let card: CGFloat = 240
     #elseif os(macOS)
-    static let thumb: CGFloat = 52, rowSpacing: CGFloat = 10, card: CGFloat = 150
+    static let card: CGFloat = 150
     #else
-    static let thumb: CGFloat = 52, rowSpacing: CGFloat = 10, card: CGFloat = 120
+    static let card: CGFloat = 120
     #endif
-}
-
-private extension View {
-    /// Glass row on tvOS; a quiet panel elsewhere, like the download queue.
-    @ViewBuilder func historyRow() -> some View {
-        #if os(tvOS)
-        glassRow()
-        #else
-        buttonStyle(.plain)
-        #endif
-    }
-}
-
-/// Poster, title, episode and source, how far you got, and when.
-private struct HistoryRow: View {
-    let entry: PlaybackHistoryEntry
-    /// Whether the row is selected while managing; nil outside managing.
-    let selection: Bool?
-    let resuming: Bool
-    var body: some View {
-        HStack(spacing: 16) {
-            if let selection {
-                Image(systemName: selection ? "checkmark.circle.fill" : "circle")
-                    .font(.title2).foregroundStyle(selection ? AnyShapeStyle(Brand.accent) : AnyShapeStyle(.secondary))
-                    .contentTransition(.symbolEffect(.replace))
-                    .accessibilityHidden(true)
-            }
-            Color.clear.aspectRatio(2.0 / 3.0, contentMode: .fit).frame(width: HistoryMetrics.thumb)
-                .overlay { PosterImage(url: entry.context.poster, headers: entry.context.posterHeaders ?? [:]) }
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            VStack(alignment: .leading, spacing: 6) {
-                Text(entry.context.videoName).font(.headline).foregroundStyle(.primary).lineLimit(1)
-                Text("\(entry.context.episodeName) · \(SourceLabel(entry.context.sourceName).text)")
-                    .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
-                if entry.duration > 0 { ProgressView(value: entry.progress).tint(Brand.accent) }
-                HStack(spacing: 6) {
-                    Text(HistoryFormat.status(entry)).monospacedDigit()
-                    Text("·")
-                    Text(entry.updatedAt, style: .relative)
-                }
-                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if resuming { ProgressView() }
-            else if selection == nil { Image(systemName: "play.fill").foregroundStyle(Brand.accent).accessibilityHidden(true) }
-        }
-        #if !os(tvOS)
-        .padding(12)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        #endif
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(selection == true ? [.isSelected] : [])
-    }
 }
 
 enum HistoryFormat {
@@ -194,13 +122,22 @@ enum HistoryFormat {
     }
 }
 
-/// Watch Now's Continue Watching card: the poster with progress along its foot, like the poster grid.
+/// A watched title as a poster card, with progress along the poster's foot. Continue Watching shows
+/// the episode; the History page (`details`) adds the source and where playback resumes.
 struct HistoryCard: View {
     @Environment(Store.self) private var store
     @Environment(\.stripDrag) private var drag
     let entry: PlaybackHistoryEntry
+    /// Whether the card is selected while managing history; nil outside managing.
+    var selection: Bool? = nil
+    var details = false
+    /// Replaces resuming, for managing.
+    var action: (() -> Void)? = nil
     var body: some View {
-        Button { if drag?.active != true { Task { await store.resumeHistory(entry) } } } label: {
+        Button {
+            guard drag?.active != true else { return }
+            if let action { action() } else { Task { await store.resumeHistory(entry) } }
+        } label: {
             VStack(alignment: .leading, spacing: 8) {
                 Color.clear.aspectRatio(2.0 / 3.0, contentMode: .fit)
                     .overlay { PosterImage(url: entry.context.poster, headers: entry.context.posterHeaders ?? [:]) }
@@ -213,21 +150,38 @@ struct HistoryCard: View {
                             .frame(height: 5).padding(10)
                         }
                     }
+                    .overlay(alignment: .topTrailing) {
+                        if let selection {
+                            Image(systemName: selection ? "checkmark.circle.fill" : "circle")
+                                .font(.title2).symbolRenderingMode(.palette)
+                                .foregroundStyle(selection ? Brand.onAccent : .white, selection ? Brand.accent : .black.opacity(0.35))
+                                .contentTransition(.symbolEffect(.replace))
+                                .padding(8)
+                        }
+                    }
                     .overlay {
                         if store.resumingHistoryID == entry.id { ProgressView().controlSize(.large) }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .opacity(selection == false ? 0.6 : 1)
                 Text(entry.context.videoName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
-                // The bar on the poster already says how far; the line names the episode.
-                Text(entry.context.episodeName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                if details {
+                    Text("\(entry.context.episodeName) · \(SourceLabel(entry.context.sourceName).text)")
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(HistoryFormat.status(entry)).font(.caption).monospacedDigit().foregroundStyle(.tertiary).lineLimit(1)
+                } else {
+                    // The bar on the poster already says how far; the line names the episode.
+                    Text(entry.context.episodeName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
             }
-            .frame(width: HistoryMetrics.card)
+            .frame(width: details ? nil : HistoryMetrics.card)
+            .frame(maxWidth: details ? .infinity : nil, alignment: .leading)
         }
         .cardButton()
-        .disabled(store.resumingHistoryID != nil)
+        .disabled(action == nil && store.resumingHistoryID != nil)
+        .accessibilityAddTraits(selection == true ? [.isSelected] : [])
         .contextMenu {
             Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) { store.playbackHistory.remove(entry.id) }
         }
-        .accessibilityIdentifier("history.resume.\(entry.context.videoID)")
     }
 }

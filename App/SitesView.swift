@@ -19,7 +19,7 @@ struct SitesView: View {
             } else { ContentUnavailableView(L10n.text("No Sources Yet"), systemImage: "square.grid.2x2", description: Text(L10n.text("Add a TVBox subscription in Settings."))) }
         }
         .screenBackdrop()
-        .catalogSearchable(text: $query, prompt: L10n.text("Find a source")).screenTitle(L10n.text("Sources"))
+        .catalogSearchable(text: $query, prompt: L10n.text("Find a source")).tabTitle(L10n.text("Sources"))
     }
 }
 
@@ -28,15 +28,25 @@ struct SiteCard: View {
     let site: Site
     var body: some View {
         let label = SourceLabel(site.name)
+        let pinned = store.subscription.map { store.pinnedSources.contains(site, origin: $0.origin) } ?? false
         HStack(spacing: 14) {
             // Most sources work, so only the exceptions carry a badge.
-            if site.isBuiltIn { BilibiliMark(size: 46) }
-            else { IconTile(symbol: site.native ? "film.stack" : "puzzlepiece.extension.fill", tint: site.native ? Brand.terracotta : Brand.amber, size: 46) }
+            Group {
+                if site.isBuiltIn { BilibiliMark(size: 46) }
+                else { IconTile(symbol: site.native ? "film.stack" : "puzzlepiece.extension.fill", tint: site.native ? Brand.terracotta : Brand.amber, size: 46) }
+            }
+            // A badge on the icon, not another line, so pinned cards keep the grid's height.
+            .overlay(alignment: .bottomTrailing) {
+                if pinned {
+                    Image(systemName: "pin.fill").font(.system(size: 11, weight: .bold)).foregroundStyle(Brand.onAccent)
+                        .frame(width: 22, height: 22).background(Brand.accent, in: Circle())
+                        .overlay { Circle().strokeBorder(.black.opacity(0.35), lineWidth: 1) }
+                        .offset(x: 6, y: 6)
+                        .accessibilityLabel(L10n.text("Pinned"))
+                }
+            }
             VStack(alignment: .leading, spacing: 6) {
                 CardTitle(text: label.text)
-                if let origin = store.subscription?.origin, store.pinnedSources.contains(site, origin: origin) {
-                    Label(L10n.text("Pinned"), systemImage: "pin.fill").font(.caption).foregroundStyle(Brand.accent)
-                }
                 if site.isBuiltIn { Pill(text: site.compatibility, tint: BilibiliMark.blue) }
                 else if !site.native { Pill(text: site.compatibility, tint: Brand.amber) }
             }

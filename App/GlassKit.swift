@@ -5,15 +5,9 @@ import TVCore
 extension View {
     @ViewBuilder func catalogSearchable(text: Binding<String>, prompt: String) -> some View {
         #if os(tvOS)
-        safeAreaInset(edge: .top, spacing: 0) {
-            HStack(spacing: 18) {
-                Image(systemName: "magnifyingglass").font(.system(size: 26)).foregroundStyle(.secondary)
-                TextField(prompt, text: text).submitLabel(.search).font(.system(size: 28))
-            }
-            .padding(20).background(TVStyle.surface, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, Layout.gutter).padding(.bottom, 24)
-            .background(TVStyle.background)
-        }
+        // The system search, as in the TV app and Global Search: a large search line over the keyboard row.
+        // A text field of our own sat in a corner the remote could not reach from the content below.
+        searchable(text: text, prompt: Text(prompt))
         #elseif os(iOS)
         searchable(text: text, placement: .navigationBarDrawer(displayMode: .always), prompt: Text(prompt))
         #else
@@ -122,6 +116,16 @@ extension View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+        #endif
+    }
+
+    /// A tab's root page: titled on iPhone, iPad and Mac, untitled on tvOS, where the tab bar already
+    /// names the page and a second title under it only repeats it.
+    @ViewBuilder func tabTitle(_ title: String) -> some View {
+        #if os(tvOS)
+        toolbar(.hidden, for: .navigationBar)
+        #else
+        screenTitle(title)
         #endif
     }
 
@@ -499,8 +503,9 @@ struct PosterCard: View {
                             .glassEffect(.regular.tint(.black.opacity(0.45)), in: Capsule()).padding(8)
                     }
                 }
+            // One line, cut with an ellipsis: a title that wrapped made its card taller than the rest of the row.
             Text(name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-                .lineLimit(2).multilineTextAlignment(.leading)
+                .lineLimit(1).truncationMode(.tail)
         }
     }
 }

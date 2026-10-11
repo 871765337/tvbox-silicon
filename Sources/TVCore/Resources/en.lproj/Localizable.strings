@@ -592,3 +592,7 @@
 "%lld titles" = "%lld titles";
 "Removing a title also clears its cached content and skip times." = "Removing a title also clears its cached content and skip times.";
 "Auto-play next episode" = "Auto-play next episode";
+
+// Player episodes
+"Previous Episode" = "Previous Episode";
+"Next Episode" = "Next Episode";

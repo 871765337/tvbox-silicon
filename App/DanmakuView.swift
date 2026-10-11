@@ -49,6 +49,11 @@ final class DanmakuEngine: @unchecked Sendable {
     private var next = 0
     private var active: [Active] = []
     private var lastTime = -1.0
+    /// Rendered text, reused: busy tracks repeat the same few words, and drawing text is the costly part.
+    private var images: [String: CGImage] = [:]
+    /// Dense tracks (Dandanplay merges several sites, up to 30,000 comments) would otherwise measure and draw
+    /// dozens of comments in one frame and stall it; the rest wait a frame, and those a second late are dropped.
+    private static let perFrame = 4, onScreen = 150
 
     func load(_ comments: [Danmaku]) {
         lock.withLock {
@@ -66,14 +71,18 @@ final class DanmakuEngine: @unchecked Sendable {
             // A new size, or a seek (any jump the clock would not make by itself), starts over at `time`.
             if layout == nil || size != self.size || time < lastTime - 0.3 || time > lastTime + 2 { restart(at: time, size: size) }
             lastTime = time
+            var budget = Self.perFrame
             while next < comments.count, comments[next].time <= time {
-                let comment = comments[next]; next += 1
-                // Comments passed over (a stall, a skipped frame) are not shown late.
-                guard time - comment.time < 1, var layout else { continue }
+                let comment = comments[next]
+                // Comments passed over (a stall, a skipped frame, a burst) are not shown late.
+                guard time - comment.time < 1, active.count < Self.onScreen, var layout else { next += 1; continue }
+                guard budget > 0 else { break }
+                budget -= 1; next += 1
                 let font = fontSize * comment.scale
                 let width = DanmakuText.width(comment.text, size: font)
-                guard let placement = layout.place(comment, width: width, at: comment.time),
-                      let image = DanmakuText.image(comment.text, color: comment.color, size: font, scale: scale) else { self.layout = layout; continue }
+                // Placed at `time`, not the comment's own time, so a comment that waited a frame doesn't start off-screen.
+                guard let placement = layout.place(comment, width: width, at: time),
+                      let image = image(comment, size: font, scale: scale) else { self.layout = layout; continue }
                 self.layout = layout
                 active.append(Active(placement: placement, image: image, size: CGSize(width: CGFloat(image.width) / scale, height: CGFloat(image.height) / scale)))
             }
@@ -94,6 +103,15 @@ final class DanmakuEngine: @unchecked Sendable {
         }
     }
 
+    private func image(_ comment: Danmaku, size: CGFloat, scale: CGFloat) -> CGImage? {
+        let key = "\(comment.color):\(size):\(scale):\(comment.text)"
+        if let image = images[key] { return image }
+        guard let image = DanmakuText.image(comment.text, color: comment.color, size: size, scale: scale) else { return nil }
+        if images.count >= 400 { images.removeAll(keepingCapacity: true) }
+        images[key] = image
+        return image
+    }
+
     private func restart(at time: Double, size: CGSize) {
         self.size = size
         // About 43pt on a 1080p TV, 22pt in a small Mac window.
@@ -108,9 +126,15 @@ final class DanmakuEngine: @unchecked Sendable {
 
 /// Comment text as an image: semibold system type with a thin contrasting outline, as Bilibili draws it.
 enum DanmakuText {
+    // NSCache is thread-safe; comments are drawn on the main thread anyway.
+    nonisolated(unsafe) private static let fonts = NSCache<NSNumber, CTFont>()
+    /// Creating the font is far slower than laying out a line, and every comment is measured: keep one per size.
     private static func font(_ size: CGFloat) -> CTFont {
+        if let font = fonts.object(forKey: size as NSNumber) { return font }
         let base = CTFontCreateUIFontForLanguage(.system, size, nil) ?? CTFontCreateWithName("Helvetica" as CFString, size, nil)
-        return CTFontCreateCopyWithSymbolicTraits(base, size, nil, .traitBold, .traitBold) ?? base
+        let font = CTFontCreateCopyWithSymbolicTraits(base, size, nil, .traitBold, .traitBold) ?? base
+        fonts.setObject(font, forKey: size as NSNumber)
+        return font
     }
     private static func line(_ text: String, _ attributes: [NSAttributedString.Key: Any]) -> CTLine {
         CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: attributes))

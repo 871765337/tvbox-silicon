@@ -592,3 +592,7 @@
 "%lld titles" = "%lld 部影片";
 "Removing a title also clears its cached content and skip times." = "刪除記錄也會清理該劇的快取與跳過時間。";
 "Auto-play next episode" = "自動播放下一集";
+
+// Player episodes
+"Previous Episode" = "上一集";
+"Next Episode" = "下一集";

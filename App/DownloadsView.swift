@@ -21,12 +21,7 @@ struct DownloadsView: View {
             }
         }
         .screenBackdrop()
-        #if os(tvOS)
-        // The tab bar already names the page; a second title under it only repeats it.
-        .toolbar(.hidden, for: .navigationBar)
-        #else
-        .screenTitle(L10n.text("Downloads"))
-        #endif
+        .tabTitle(L10n.text("Downloads"))
         .task { await library.measure() }
         .onChange(of: library.items.filter { $0.status == .completed }.count) { Task { await library.measure() } }
         .confirmationDialog(L10n.text("Delete all downloaded episodes of %@?", deleting?.title ?? ""),

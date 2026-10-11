@@ -592,3 +592,7 @@
 "%lld titles" = "%lld作品";
 "Removing a title also clears its cached content and skip times." = "履歴を削除すると、その作品のキャッシュとスキップ時間も削除します。";
 "Auto-play next episode" = "次のエピソードを自動再生";
+
+// Player episodes
+"Previous Episode" = "前のエピソード";
+"Next Episode" = "次のエピソード";

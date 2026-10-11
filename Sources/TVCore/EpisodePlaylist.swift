@@ -16,4 +16,10 @@ public struct EpisodePlaylist: Sendable {
               line.indices.contains(index + 1) else { return nil }
         return line[index + 1]
     }
+    public func previous(before context: PlaybackHistoryContext) -> Episode? {
+        let line = episodes(for: context.episodeFlag)
+        guard let current = context.episode(in: line), let index = line.firstIndex(of: current),
+              line.indices.contains(index - 1) else { return nil }
+        return line[index - 1]
+    }
 }

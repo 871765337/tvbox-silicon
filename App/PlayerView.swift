@@ -22,7 +22,8 @@ struct PlaybackView: View {
             if session.error == nil {
                 NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
                                  qualities: session.qualities, quality: session.quality, choose: { session.choose(quality: $0) },
-                                 live: session.isLive).ignoresSafeArea()
+                                 live: session.isLive, previous: episodeAction(store.previousEpisode(before: channel)),
+                                 next: episodeAction(store.nextEpisode(after: channel))).ignoresSafeArea()
             }
             #else
             NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision).ignoresSafeArea()
@@ -61,6 +62,14 @@ struct PlaybackView: View {
         .onDisappear { hideTask?.cancel(); store.cancelEpisodeSelection(); session.stop() }
     }
 
+    #if os(tvOS)
+    private func episodeAction(_ episode: Episode?) -> EpisodeAction? {
+        episode.map { episode in
+            EpisodeAction(name: episode.name, busy: store.resolvingEpisode != nil) { store.selectEpisode(episode, from: channel) }
+        }
+    }
+    #endif
+
     #if !os(tvOS)
     private var chrome: some View {
         VStack {
@@ -69,6 +78,22 @@ struct PlaybackView: View {
                     .padding(.horizontal, 18).padding(.vertical, 11)
                     .glassEffect(.regular, in: Capsule())
                 Spacer(minLength: 0)
+                if let previous = store.previousEpisode(before: channel) {
+                    Button { store.selectEpisode(previous, from: channel) } label: {
+                        Image(systemName: "backward.end.fill").font(.headline).frame(width: 22, height: 22)
+                    }
+                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
+                    .disabled(store.resolvingEpisode != nil)
+                    .accessibilityLabel(L10n.text("Previous Episode")).help(previous.name)
+                }
+                if let next = store.nextEpisode(after: channel) {
+                    Button { store.selectEpisode(next, from: channel) } label: {
+                        Image(systemName: "forward.end.fill").font(.headline).frame(width: 22, height: 22)
+                    }
+                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
+                    .disabled(store.resolvingEpisode != nil)
+                    .accessibilityLabel(L10n.text("Next Episode")).help(next.name)
+                }
                 CatalogPlaybackActions(channel: channel, session: session)
                 if session.qualities.count > 1 {
                     Menu {
@@ -286,6 +311,12 @@ private final class TitleSafePlayerController: AVPlayerViewController {
     }
 }
 
+struct EpisodeAction {
+    let name: String
+    let busy: Bool
+    let play: @MainActor () -> Void
+}
+
 /// AVPlayerViewController itself, for its transport-bar menu: the Danmaku switch lives there, next to
 /// subtitles and audio, where a remote can reach it. Comments draw in the content overlay, under the controls.
 private struct NativePlayerView: UIViewControllerRepresentable {
@@ -298,6 +329,9 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     var quality: Int? = nil
     var choose: @MainActor (Int?) -> Void = { _ in }
     var live = false
+    /// The neighbouring episodes of a catalog video, as transport-bar buttons beside the menus.
+    var previous: EpisodeAction? = nil
+    var next: EpisodeAction? = nil
     final class Coordinator { var host: UIHostingController<AnyView>?; var listed = "" }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIViewController(context: Context) -> AVPlayerViewController {
@@ -349,6 +383,14 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             let options = [UIAction(title: L10n.text("Auto"), state: quality == nil ? .on : .off) { _ in choose(nil) }]
                 + qualities.map { option in UIAction(title: option.label, state: quality == option.id ? .on : .off) { _ in choose(option.id) } }
             items.append(UIMenu(title: L10n.text("Quality") + " · " + current, image: UIImage(systemName: "sparkles.tv"), children: options))
+        }
+        if let previous {
+            items.insert(UIAction(title: L10n.text("Previous Episode"), subtitle: previous.name, image: UIImage(systemName: "backward.end.fill"),
+                                  attributes: previous.busy ? [.disabled] : []) { _ in previous.play() }, at: 0)
+        }
+        if let next {
+            items.insert(UIAction(title: L10n.text("Next Episode"), subtitle: next.name, image: UIImage(systemName: "forward.end.fill"),
+                                  attributes: next.busy ? [.disabled] : []) { _ in next.play() }, at: previous == nil ? 0 : 1)
         }
         controller.transportBarCustomMenuItems = items
     }
