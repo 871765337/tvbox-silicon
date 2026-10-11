@@ -95,7 +95,7 @@ public actor LocalJarHost {
                     let request = job.appendingPathComponent("request.json")
                     try JSONSerialization.data(withJSONObject: input).write(to: request)
                     let host = resources.appendingPathComponent(runtime == .python ? "PythonHost" : script ? "ScriptHost" : "JavaHost")
-                    return try LocalJarProcess(host: host, job: job, request: request, context: "source=\(site.key) session=\(job.lastPathComponent)", runtime: runtime)
+                    return try LocalJarProcess(host: host, job: job, request: request, cacheRoot: root, profile: root.appendingPathComponent("Profiles/" + profileKey), context: "source=\(site.key) session=\(job.lastPathComponent)", runtime: runtime)
                 } catch { try? FileManager.default.removeItem(at: job); throw error }
             }
             entry = Entry(task, sourceKey: site.key); sessions[key] = entry
@@ -168,7 +168,7 @@ final class LocalJarProcess: @unchecked Sendable {
         return Date().timeIntervalSince(date) < 300
     }
 
-    init(host: URL, job: URL, request: URL, context: String, timeout: TimeInterval = 60, runtime: SourceRuntime = .jar) throws {
+    init(host: URL, job: URL, request: URL, cacheRoot: URL, profile: URL, context: String, timeout: TimeInterval = 60, runtime: SourceRuntime = .jar) throws {
         self.job = job; self.context = context; self.timeout = timeout
         self.startupTimeout = runtime == .jar ? max(timeout, 180) : timeout
         let capturedOutput = DiagnosticOutput(context: context)
@@ -182,6 +182,18 @@ final class LocalJarProcess: @unchecked Sendable {
             // -I ignores user site-packages and PYTHON* variables; -B keeps the signed bundle unmodified.
             process.executableURL = host.appendingPathComponent("python/bin/python3")
             process.arguments = ["-I", "-B", "-u", host.appendingPathComponent("host.py").path, "--serve", request.path]
+        }
+        // Keep every runtime's temp files inside this session (the only writable area under the
+        // sandbox); Java's tmpdir is a JVM property rather than an env var.
+        var environment = ProcessInfo.processInfo.environment
+        environment["TMPDIR"] = job.path
+        process.environment = environment
+        if runtime == .jar { process.arguments?.insert("-Djava.io.tmpdir=\(job.path)", at: 0) }
+        // Confine the child to the kernel Seatbelt sandbox (no-op on fallback). macOS only.
+        if let executable = process.executableURL {
+            let confined = SpiderSandbox.wrap(executable: executable, arguments: process.arguments ?? [], host: host, cacheRoot: cacheRoot, job: job, profile: profile)
+            process.executableURL = confined.executable
+            process.arguments = confined.arguments
         }
         process.currentDirectoryURL = job
         process.standardInput = input; process.standardOutput = output; process.standardError = output

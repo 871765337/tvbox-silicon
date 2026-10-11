@@ -21,6 +21,7 @@ mkdir -p "$DEST/lib"
 # Existing source sessions may still be reading these archives. Replace atomically.
 cp Runtime/JavaHost/target/local-jar-host-0.1.0.jar "$DEST/host.jar.$$.tmp"
 mv -f "$DEST/host.jar.$$.tmp" "$DEST/host.jar"
+cp Runtime/sandbox/spider.sb "$DEST/"
 for library in Runtime/JavaHost/target/lib/*.jar; do
   target="$DEST/lib/$(basename "$library")"
   cp "$library" "$target.$$.tmp"

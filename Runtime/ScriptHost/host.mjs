@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { Worker, MessageChannel, receiveMessageOnPort } from 'node:worker_threads';
 
 const serving = process.argv[2] === '--serve';
 const input = JSON.parse(fs.readFileSync(process.argv[serving ? 3 : 2], 'utf8'));
@@ -29,6 +29,67 @@ function envelope(error) {
     return { error: String(error), errorCode: 'script_error' };
 }
 function remoteError(host, status, message) { return Object.assign(new Error(message), { remote: host, status }); }
+
+// Spiders and the module loader call HTTP synchronously (drpy's `http(url, {async: false})`,
+// `sourceFor`). Node has no synchronous `fetch`, so the real `fetch` runs on a worker thread and
+// this thread blocks on it with `Atomics.wait`, then drains the reply with `receiveMessageOnPort`.
+// This keeps HTTP in-process with no child process, so the macOS sandbox can deny all exec.
+const fetchWorkerSource = `
+'use strict';
+const { parentPort, workerData } = require('node:worker_threads');
+const { port, shared } = workerData;
+const signal = new Int32Array(shared);
+function wake(message) { port.postMessage(message); Atomics.store(signal, 0, 1); Atomics.notify(signal, 0); }
+parentPort.on('message', async (req) => {
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), req.timeout + 2000);
+        const init = { method: req.method, headers: req.headers, redirect: req.redirect, signal: controller.signal };
+        if (req.bodyBase64 !== undefined) init.body = Buffer.from(req.bodyBase64, 'base64');
+        const response = await fetch(req.url, init);
+        const chunks = []; let total = 0; let overflow = false;
+        if (response.body) {
+            const reader = response.body.getReader();
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                total += value.byteLength;
+                if (total > 20000000) { overflow = true; controller.abort(); break; }
+                chunks.push(Buffer.from(value.buffer, value.byteOffset, value.byteLength));
+            }
+        }
+        clearTimeout(timer);
+        const headers = {};
+        for (const [name, value] of response.headers) {
+            if (name.toLowerCase() === 'set-cookie') continue;
+            const key = name.toLowerCase();
+            headers[key] = headers[key] === undefined ? value : [].concat(headers[key], value);
+        }
+        const cookies = typeof response.headers.getSetCookie === 'function' ? response.headers.getSetCookie() : [];
+        if (cookies.length) headers['set-cookie'] = cookies.length === 1 ? cookies[0] : cookies;
+        if (overflow) { wake({ error: 'Script response exceeded 20 MB' }); return; }
+        wake({ status: response.status, url: response.url, headers, bodyBase64: Buffer.concat(chunks).toString('base64') });
+    } catch (error) {
+        wake({ error: String((error && error.message) || error) });
+    }
+});
+`;
+const fetchChannel = new MessageChannel();
+const fetchSignal = new Int32Array(new SharedArrayBuffer(4));
+const fetchWorker = new Worker(fetchWorkerSource, { eval: true, workerData: { port: fetchChannel.port2, shared: fetchSignal.buffer }, transferList: [fetchChannel.port2] });
+fetchWorker.unref();
+let fetchWorkerError;
+fetchWorker.on('error', error => { fetchWorkerError = error; Atomics.store(fetchSignal, 0, 1); Atomics.notify(fetchSignal, 0); });
+function syncFetch(request) {
+    if (fetchWorkerError) throw fetchWorkerError;
+    Atomics.store(fetchSignal, 0, 0);
+    fetchWorker.postMessage(request);
+    Atomics.wait(fetchSignal, 0, 0);
+    if (fetchWorkerError) throw fetchWorkerError;
+    const message = receiveMessageOnPort(fetchChannel.port1);
+    if (!message) throw new Error('The fetch worker returned no response');
+    return message.message;
+}
 
 /** Native AES/hash/HMAC, as ScriptCrypto.swift on QuickJS. Binary fields are base64. */
 function nativeCrypto(request) {
@@ -70,14 +131,9 @@ function nativeCrypto(request) {
 function request(address, options = {}) {
     const url = new URL(String(address));
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Only HTTP and HTTPS script requests are supported');
-    const id = crypto.randomUUID();
-    const headerFile = path.join(cache, id + '.headers');
-    const bodyFile = path.join(cache, id + '.body');
-    const timeout = Math.max(1, Math.min(30, Number(options.timeout || 20000) / 1000));
+    const timeout = Math.max(1000, Math.min(30000, Number(options.timeout || 20000)));
     const method = String(options.method || 'GET').toUpperCase();
     if (!/^[A-Z]+$/.test(method)) throw new Error('Invalid HTTP method');
-    const args = ['--silent', '--show-error', '--compressed', '--proto', '=http,https', '--proto-redir', '=http,https', '--max-redirs', '5', '--max-time', String(timeout), '--max-filesize', '20000000', '--dump-header', headerFile, '--output', bodyFile, '--write-out', '%{http_code}\n%{url_effective}', '--request', method === 'HEADER' ? 'HEAD' : method];
-    if (options.redirect !== 0 && options.redirect !== false) args.push('--location');
     let headers = { ...(options.headers || options.header || {}) };
     if (!Object.keys(headers).some(key => key.toLowerCase() === 'user-agent')) headers['User-Agent'] = 'Mozilla/5.0';
     let body = options.body;
@@ -85,29 +141,29 @@ function request(address, options = {}) {
         if (options.postType === 'json') { body = JSON.stringify(options.data); headers['Content-Type'] ||= 'application/json'; }
         else { body = new URLSearchParams(options.data).toString(); headers['Content-Type'] ||= 'application/x-www-form-urlencoded'; }
     }
+    const sendHeaders = {};
     for (const [key, value] of Object.entries(headers)) {
         if (/[\r\n]/.test(key + value)) throw new Error('Invalid HTTP header');
-        // curl drops "Name: " with an empty value; "Name;" sends it empty.
-        args.push('--header', String(value) === '' ? key + ';' : key + ': ' + String(value));
+        sendHeaders[key] = String(value);
     }
     // `bodyBase64` carries binary request bodies (for example protobuf) that a string would corrupt.
-    const input = options.bodyBase64 != null ? Buffer.from(String(options.bodyBase64), 'base64') : body == null ? undefined : String(body);
-    if (input !== undefined && method !== 'GET' && method !== 'HEAD') args.push('--data-binary', '@-');
-    args.push('--url', url.href);
+    const bodyBase64 = options.bodyBase64 != null ? String(options.bodyBase64)
+        : body == null ? undefined : Buffer.from(String(body), 'utf8').toString('base64');
+    const sendMethod = method === 'HEADER' ? 'HEAD' : method;
     try {
-        const result = spawnSync('/usr/bin/curl', args, { input, encoding: 'utf8', timeout: (timeout + 2) * 1000, maxBuffer: 1024 * 1024 });
-        if (result.status !== 0) throw remoteError(url.host, 0, 'Network request failed: ' + (result.stderr || result.error || result.status));
-        const [status, effective] = result.stdout.split('\n');
-        const code = Number(status);
-        const blocks = fs.readFileSync(headerFile, 'utf8').trim().split(/\r?\n\r?\n/);
-        const responseHeaders = {};
-        for (const line of (blocks.at(-1) || '').split(/\r?\n/).slice(1)) {
-            const colon = line.indexOf(':');
-            if (colon < 1) continue;
-            const name = line.slice(0, colon).toLowerCase(), value = line.slice(colon + 1).trim();
-            responseHeaders[name] = responseHeaders[name] === undefined ? value : [].concat(responseHeaders[name], value);
-        }
-        const bytes = fs.readFileSync(bodyFile);
+        const result = syncFetch({
+            url: url.href,
+            method: sendMethod,
+            headers: sendHeaders,
+            bodyBase64: (sendMethod === 'GET' || sendMethod === 'HEAD') ? undefined : bodyBase64,
+            // `fetch` only ever follows http(s) redirects; 'manual' returns the 3xx untouched.
+            redirect: (options.redirect !== 0 && options.redirect !== false) ? 'follow' : 'manual',
+            timeout
+        });
+        if (result.error) throw remoteError(url.host, 0, 'Network request failed: ' + result.error);
+        const code = result.status;
+        const responseHeaders = result.headers || {};
+        const bytes = Buffer.from(result.bodyBase64 || '', 'base64');
         if (bytes.length > 20_000_000) throw new Error('Script response exceeded 20 MB');
         let content;
         if (options.buffer === 1) content = Array.from(bytes);
@@ -117,7 +173,7 @@ function request(address, options = {}) {
         log('SCRIPT_HTTP', url.host + url.pathname, code);
         if (code >= 400) lastFailure = remoteError(url.host, code, `The source ${url.host} returned HTTP ${code}`);
         else if (lastFailure?.remote === url.host) lastFailure = undefined;
-        const response = { code, headers: responseHeaders, content, url: effective || url.href };
+        const response = { code, headers: responseHeaders, content, url: result.url || url.href };
         if (typeof options.complete === 'function') options.complete(response);
         return response;
     } catch (error) {
@@ -126,8 +182,6 @@ function request(address, options = {}) {
         const response = { code: 0, headers: {}, content: '', url: url.href };
         if (typeof options.complete === 'function') options.complete(response);
         return response;
-    } finally {
-        fs.rmSync(headerFile, { force: true }); fs.rmSync(bodyFile, { force: true });
     }
 }
 

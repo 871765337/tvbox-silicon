@@ -80,7 +80,18 @@ final class PluginProcess: @unchecked Sendable {
         process.arguments = ["--add-opens", "java.base/java.lang=ALL-UNNAMED", "--add-opens", "java.base/sun.net.www.protocol.jar=ALL-UNNAMED",
                              "-Dtvbox.lazyDex=true", "-Dorg.slf4j.simpleLogger.defaultLogLevel=error",
                              "-cp", host.appendingPathComponent("host.jar").path + ":" + host.appendingPathComponent("lib/*").path,
+                             "-Djava.io.tmpdir=\(root.path)",
                              "tvbox.runtime.ProcessHost", root.path]
+        // Keep temp files inside the host root (the writable area under the sandbox).
+        var environment = ProcessInfo.processInfo.environment
+        environment["TMPDIR"] = root.path
+        process.environment = environment
+        // Confine the JVM to the kernel Seatbelt sandbox (no-op on fallback). macOS only.
+        if let executable = process.executableURL {
+            let confined = SpiderSandbox.wrap(executable: executable, arguments: process.arguments ?? [], host: host, cacheRoot: root, job: root, profile: root)
+            process.executableURL = confined.executable
+            process.arguments = confined.arguments
+        }
         process.currentDirectoryURL = root
         process.standardInput = started.input
         process.standardOutput = started.output
