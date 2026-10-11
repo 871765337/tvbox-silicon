@@ -1,6 +1,23 @@
 # Plan: sandbox hardening against malicious subscription spiders
 
-Status: future work, not started · Updated: October 10, 2026
+Status: core implemented and committed (`00bc735`); Phases 6-7 deferred · Updated: October 11, 2026
+
+## Progress
+
+- **Done & committed (`00bc735`):** Decision 1 (curl -> in-process synchronous `fetch`)
+  and Phase 1 (the Seatbelt sandbox: `Runtime/sandbox/spider.sb`, `SpiderSandbox.swift`,
+  routing in `LocalJarProcess.init` / `PluginProcess.start`, profile bundled by the three
+  `build-*-host.sh`). Verified on Node, Python, and Java under the live profile: DNS/HTTPS
+  and cache writes work; reading/stat'ing/listing `$HOME` and executing any binary are
+  denied. The macOS app builds with it all bundled and linked.
+- **Partially covered by Phase 1:** Phases 3 and 4 — the sandbox already confines Python
+  and Java and temp dirs are redirected into the session (`-Djava.io.tmpdir`, `TMPDIR`);
+  the runtime-specific extras below (Python `sys.path`/`-S`, the Java `System.load` guard
+  and reflection audit) are not yet done.
+- **Not implemented (deferred by request):** Phases 6 and 7.
+- **Not committed as a harness:** the Phase 0 fixtures. The Phase 0 gate was instead
+  validated ad hoc with per-runtime probes and `Scripts/test-sources.py`; adding the
+  committed `Tests/Security/` fixtures + runner remains worthwhile.
 
 ## Objective and threat model
 
@@ -40,7 +57,7 @@ macOS `java` / `node` / `python3` child processes.
    Mach-O to build, sign, and notarize.
 3. **No HTTPS enforcement.** The transport-hardening phase is dropped.
 
-## Phase 0 — Baseline and red-team fixtures (measure first)
+## Phase 0 — Baseline and red-team fixtures (measure first) — validated ad hoc; committed harness pending
 
 - Add one hostile-spider fixture per runtime (JS, Python, JAR) under `Tests/Security/`,
   shaped so each host loads it (JS: `export default () => ({ home, … })`; Python:
@@ -60,7 +77,7 @@ macOS `java` / `node` / `python3` child processes.
 after Phase 1 every probe must be DENIED ("after"), with the source sweep unchanged (no
 functional loss).
 
-## Phase 1 — macOS: Seatbelt sandbox for the spider children (the core fix)
+## Phase 1 — macOS: Seatbelt sandbox for the spider children (the core fix) — DONE (`00bc735`)
 
 Confine only the child host processes, not the GUI app (sandboxing the app would conflict
 with the JIT / `disable-library-validation` entitlements and the Developer ID model).
@@ -89,13 +106,13 @@ with the JIT / `disable-library-validation` entitlements and the Developer ID mo
 Files: add `Runtime/sandbox/spider.sb` and `Sources/TVCore/SpiderSandbox.swift`; edit
 `PluginProcess.swift`, `LocalJarHost.swift`, and `host.mjs`.
 
-## Phase 3 — Python child tightening (defense-in-depth)
+## Phase 3 — Python child tightening (defense-in-depth) — base containment DONE; extras pending
 
 Already `-I -B`. Containment is the Phase 1 sandbox (Python has no permission model).
 Verify `sys.path` never includes the writable `profile/modules` directory; consider `-S`
 if it does not break `requests`/`certifi`.
 
-## Phase 4 — Java child and native guards
+## Phase 4 — Java child and native guards — base containment DONE; native guards pending
 
 - No `SecurityManager` exists in modern Java, so rely on Phase 1. Launch with a minimal
   environment and `-Djava.io.tmpdir=<session>`.
@@ -104,14 +121,14 @@ if it does not break `requests`/`certifi`.
   `NativeLibraries` through unidbg, and reject any real `dlopen` of a jar-dropped Mach-O.
   Audit `BytecodeCompatibility` and `ReflectionDiagnostics` for bypasses.
 
-## Phase 6 — Integrity and consent (app-side, low risk)
+## Phase 6 — Integrity and consent (app-side, low risk) — NOT IMPLEMENTED (deferred)
 
 - `PluginChecksum` is a cache key only today; add trust-on-first-use: record each spider's
   hash on first fetch and warn/log when the hash changes for the same source.
 - A one-time, per-subscription-origin consent prompt: "This subscription runs custom code
   (N sources)."
 
-## Phase 7 — Secret scoping (app-side, low risk)
+## Phase 7 — Secret scoping (app-side, low risk) — NOT IMPLEMENTED (deferred)
 
 - Stop giving spiders filesystem access to secrets: do not include the `cloudAccounts`
   *path* in child-visible input or in the sandbox read-list for non-cloud sessions. The
