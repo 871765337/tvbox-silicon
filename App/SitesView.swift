@@ -209,6 +209,9 @@ struct VideoDetailView: View {
     /// A failed or blocked playback attempt, shown as an inline banner beside the artwork.
     @State private var playbackIssue: PlaybackIssue?
     @State private var signingIn: CloudDrive?
+    @State private var choosingDownloads = false
+    /// How many episodes were just queued, shown briefly under the header.
+    @State private var queuedNotice: Int?
     private var flags: [String] {
         var seen = Set<String>()
         return (detail?.episodes ?? []).map(\.flag).filter { seen.insert($0).inserted }
@@ -265,7 +268,13 @@ struct VideoDetailView: View {
         .overlay(alignment: .bottom) { if splitLayout { loadingCard } }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
         .screenBackdrop()
-        .screenTitle(video.name).task { if detail == nil { await loadDetail() } }
+        .screenTitle(video.name).task {
+            if detail == nil { await loadDetail() }
+            #if DEBUG
+            // `-qaDownloadPicker 1` opens the episode picker, for screenshots.
+            if UserDefaults.standard.bool(forKey: "qaDownloadPicker") { choosingDownloads = true }
+            #endif
+        }
         .onChange(of: choosingQuality) { _, open in if !open && !busy { loadingEpisode = nil } }
         // Sign in where playback failed, then resume the episode that needed the account.
         #if os(macOS)
@@ -284,6 +293,14 @@ struct VideoDetailView: View {
             }
         }
         #endif
+        .downloadPicker(isPresented: $choosingDownloads) {
+            DownloadPicker(video: video, site: client.site, flag: activeFlag,
+                           episodes: (detail?.episodes ?? []).filter { $0.flag == activeFlag }) { count in
+                guard count > 0 else { return }
+                withAnimation(.smooth(duration: 0.2)) { queuedNotice = count }
+                Task { try? await Task.sleep(for: .seconds(6)); withAnimation(.smooth(duration: 0.2)) { queuedNotice = nil } }
+            }
+        }
         .confirmationDialog(L10n.text("Choose quality"), isPresented: $choosingQuality, titleVisibility: .visible) {
             if let plan = pendingPlan, let episode = pendingEpisode {
                 ForEach(plan.choices) { choice in
@@ -302,6 +319,17 @@ struct VideoDetailView: View {
         }
     }
     @ViewBuilder private var playbackBanner: some View {
+        if let count = queuedNotice {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.down.circle.fill").foregroundStyle(Brand.accent)
+                Text(count == 1 ? L10n.text("1 episode added to Downloads.") : L10n.text("%lld episodes added to Downloads.", count)).font(.subheadline.weight(.medium))
+                Spacer(minLength: 8)
+                Button(L10n.text("Show Downloads")) { store.section = .downloads }.settingsButton()
+            }
+            .padding(14)
+            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
         if let issue = playbackIssue {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: issue.drive != nil ? "person.crop.circle.badge.exclamationmark.fill" : "exclamationmark.triangle.fill")
@@ -429,14 +457,20 @@ struct VideoDetailView: View {
     @ViewBuilder private var playControl: some View {
         if let detail {
             if let first = detail.episodes.first(where: { $0.flag == activeFlag }) ?? detail.episodes.first {
-                Button { Task { await play(first) } } label: {
-                    HStack(spacing: 8) {
-                        if loadingEpisode == first.id { ProgressView().controlSize(.small) } else { Image(systemName: "play.fill") }
-                        Text(L10n.text("Play"))
+                HStack(spacing: 10) {
+                    Button { Task { await play(first) } } label: {
+                        HStack(spacing: 8) {
+                            if loadingEpisode == first.id { ProgressView().controlSize(.small) } else { Image(systemName: "play.fill") }
+                            Text(L10n.text("Play"))
+                        }
+                        .font(.headline).padding(.horizontal, 8)
                     }
-                    .font(.headline).padding(.horizontal, 8)
+                    .controlButton(prominent: true).tint(Brand.accent).controlSize(.large)
+                    Button { choosingDownloads = true } label: {
+                        Label(L10n.text("Download"), systemImage: "arrow.down.circle").font(.headline)
+                    }
+                    .controlButton().controlSize(.large)
                 }
-                .controlButton(prominent: true).tint(Brand.accent).controlSize(.large)
             }
         } else if error == nil {
             SkeletonBlock(cornerRadius: 10).frame(width: 150, height: 40)
@@ -543,13 +577,34 @@ struct VideoDetailView: View {
         let longNames = isWide || (items.map { $0.name.count }.max() ?? 0) > 9
         return LazyVGrid(columns: longNames ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: episodeMin), spacing: 8)], spacing: longNames ? 4 : 8) {
             ForEach(items) { episode in
-                if longNames {
-                    EpisodeRow(name: episode.name, loading: loadingEpisode == episode.id) { Task { await play(episode) } }
-                } else {
-                    Chip(title: episode.name, selected: loadingEpisode == episode.id, fill: true) { Task { await play(episode) } }
+                let saved = download(episode)
+                Group {
+                    if longNames {
+                        EpisodeRow(name: episode.name, loading: loadingEpisode == episode.id, download: saved) { Task { await play(episode) } }
+                    } else {
+                        Chip(title: episode.name, selected: loadingEpisode == episode.id, fill: true) { Task { await play(episode) } }
+                            .overlay(alignment: .topTrailing) { if saved?.status == .completed { DownloadedBadge() } }
+                    }
+                }
+                .contextMenu {
+                    if saved == nil || saved?.status == .failed {
+                        Button(L10n.text("Download"), systemImage: "arrow.down.circle") {
+                            DownloadLibrary.shared.download(DownloadSource(site: client.site, videoID: video.id, episode: episode),
+                                                            title: video.name, poster: video.poster, posterHeaders: video.posterHeaders)
+                        }
+                    } else if let saved {
+                        Button(L10n.text(saved.status == .completed ? "Delete Download" : "Cancel Download"), systemImage: "trash", role: .destructive) {
+                            DownloadLibrary.shared.remove([saved.id])
+                        }
+                    }
                 }
             }
-        }.tvFocusSection()
+        }
+        #if os(tvOS)
+        // Room for the focused glass row, which grows toward the trailing edge.
+        .padding(.trailing, 16).padding(.vertical, 6)
+        #endif
+        .tvFocusSection()
     }
     private var episodeMin: CGFloat {
         #if os(tvOS)
@@ -558,8 +613,16 @@ struct VideoDetailView: View {
         74
         #endif
     }
+    private func download(_ episode: Episode) -> DownloadItem? {
+        DownloadLibrary.shared.item(for: DownloadSource(site: client.site, videoID: video.id, episode: episode))
+    }
     private func play(_ episode: Episode, skipAccountCheck: Bool = false) async {
         guard !busy else { return }
+        // A downloaded episode plays from the device: no link to fetch, and it works offline.
+        if let saved = download(episode), saved.status == .completed {
+            store.playing = DownloadLibrary.shared.channel(for: saved)
+            return
+        }
         // Cloud-drive plugins wait for an in-app login that cannot appear on this platform,
         // which surfaces only as a 60-second timeout. Ask for the account up front instead.
         if !skipAccountCheck, let drive = CloudDrive.missingLogin(forFlag: episode.flag) {
@@ -647,6 +710,7 @@ private enum CloudDrive: String, Identifiable {
 private struct EpisodeRow: View {
     let name: String
     let loading: Bool
+    var download: DownloadItem? = nil
     let action: () -> Void
     @State private var hovering = false
     static func split(_ name: String) -> (title: String, detail: String?) {
@@ -657,7 +721,7 @@ private struct EpisodeRow: View {
     /// Row type and height per platform: a Mac list size is unreadable from a sofa.
     private static var metrics: (text: CGFloat, icon: CGFloat, height: CGFloat, inset: CGFloat) {
         #if os(tvOS)
-        (28, 18, 42, 0) // TVControlStyle adds its own padding and focus fill
+        (28, 18, 42, 0) // GlassRowStyle adds its own padding and focus glass
         #elseif os(iOS)
         (15, 11, 44, 14)
         #else
@@ -680,6 +744,7 @@ private struct EpisodeRow: View {
                 if let detail = parts.detail {
                     Text(detail).font(.caption).monospacedDigit().foregroundStyle(.secondary).lineLimit(1)
                 }
+                if let download { DownloadState(item: download) }
             }
             .padding(.horizontal, Self.metrics.inset).frame(minHeight: Self.metrics.height)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -691,7 +756,7 @@ private struct EpisodeRow: View {
         }
         .accessibilityLabel(name)
         #if os(tvOS)
-        button.controlButton().buttonBorderShape(.roundedRectangle(radius: 14))
+        button.glassRow()
         #else
         button.buttonStyle(.plain)
             .onHover { hovering = $0 }

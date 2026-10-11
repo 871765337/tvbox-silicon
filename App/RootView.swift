@@ -2,7 +2,7 @@ import SwiftUI
 import TVCore
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case home = "Watch Now", live = "Live TV", search = "Global Search", sites = "Sources", favorites = "Favorites", settings = "Settings", more = "More"
+    case home = "Watch Now", live = "Live TV", search = "Global Search", sites = "Sources", favorites = "Favorites", downloads = "Downloads", settings = "Settings", more = "More"
     var id: String { rawValue }
     var title: String { L10n.text(rawValue) }
     /// Where Software Update lives: Settings, or More when Settings is folded into it.
@@ -14,6 +14,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .live: "dot.radiowaves.left.and.right"
         case .sites: "square.grid.2x2.fill"
         case .favorites: "heart.fill"
+        case .downloads: "arrow.down.circle.fill"
         case .settings: "slider.horizontal.3"
         case .more: "ellipsis"
         }
@@ -36,7 +37,7 @@ struct RootView: View {
         #if os(iOS)
         if sizeClass == .compact { return [.home, .live, .search, .sites, .more] }
         #endif
-        return [.home, .live, .search, .sites, .favorites, .settings]
+        return [.home, .live, .search, .sites, .favorites, .downloads, .settings]
     }
     var body: some View {
         @Bindable var store = store
@@ -63,6 +64,8 @@ struct RootView: View {
     }
 
     #if !os(macOS)
+    /// Sections a phone reaches through More.
+    private static let inMore: [AppSection] = [.favorites, .downloads, .settings]
     private var platformTabs: some View {
         @Bindable var store = store
         return TabView(selection: $store.section) {
@@ -72,8 +75,11 @@ struct RootView: View {
                             NavigationStack(path: $morePath) {
                                 content(.more).routeDestinations()
                                     .navigationDestination(for: AppSection.self) { destination in
-                                        if destination == .favorites { FavoritesView() }
-                                        else { SettingsView() }
+                                        switch destination {
+                                        case .favorites: FavoritesView()
+                                        case .downloads: DownloadsView()
+                                        default: SettingsView()
+                                        }
                                     }
                             }
                         } else { NavigationStack { content(item).tvDefaultControls().routeDestinations() } }
@@ -88,14 +94,14 @@ struct RootView: View {
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
             .onChange(of: store.section) { _, section in
-                if sizeClass == .compact && (section == .favorites || section == .settings) {
+                if sizeClass == .compact && Self.inMore.contains(section) {
                     moreSection = section; morePath = NavigationPath([section])
                     store.section = .more
                 }
             }
             .onChange(of: sizeClass) { _, size in
                 if size != .compact && store.section == .more { store.section = morePath.isEmpty ? .settings : moreSection }
-                else if size == .compact && (store.section == .favorites || store.section == .settings) {
+                else if size == .compact && Self.inMore.contains(store.section) {
                     moreSection = store.section; morePath = NavigationPath([store.section]); store.section = .more
                 }
             }
@@ -119,10 +125,12 @@ struct RootView: View {
         case .live: LiveView()
         case .sites: SitesView()
         case .favorites: FavoritesView()
+        case .downloads: DownloadsView()
         case .settings: SettingsView()
         case .more:
             List {
                 NavigationLink(value: AppSection.favorites) { Label(AppSection.favorites.title, systemImage: AppSection.favorites.icon) }
+                NavigationLink(value: AppSection.downloads) { Label(AppSection.downloads.title, systemImage: AppSection.downloads.icon) }
                 NavigationLink(value: AppSection.settings) { Label(AppSection.settings.title, systemImage: AppSection.settings.icon) }
                     #if os(iOS)
                     .badge(updates.available.isEmpty ? nil : Text(L10n.text("New")))
@@ -158,12 +166,12 @@ private struct PlayerPresentation: ViewModifier {
 }
 
 #if os(macOS)
-/// Content-first sidebar: grouped rows, neutral selection, and ⌘1–⌘6 to switch sections.
+/// Content-first sidebar: grouped rows, neutral selection, and ⌘1–⌘7 to switch sections.
 private struct MacSidebar: View {
     @Environment(Store.self) private var store
     @Environment(Updates.self) private var updates
     private var groups: [(title: String, items: [AppSection])] {
-        [(L10n.text("Browse"), [.home, .search, .live, .sites]), (L10n.text("Library"), [.favorites, .settings])]
+        [(L10n.text("Browse"), [.home, .search, .live, .sites]), (L10n.text("Library"), [.favorites, .downloads, .settings])]
     }
 
     var body: some View {

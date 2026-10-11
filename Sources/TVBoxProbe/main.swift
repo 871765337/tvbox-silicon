@@ -3,11 +3,64 @@ import AVFoundation
 import TVCore
 
 @main struct Probe {
+    @MainActor static func download(_ target: String, folder: URL, pauseAfter: Double?) async throws {
+        let library = DownloadLibrary(root: folder, defaults: UserDefaults(suiteName: "probe-downloads")!)
+        library.resolver = { _ in
+            guard target.hasPrefix("bili:") else { return Channel(name: "probe", url: URL(string: target)!) }
+            let parts = target.split(separator: ":").map(String.init)
+            let client = CatalogClient(site: .bilibili, origin: URL(string: "https://example.invalid/")!)
+            let video = try await client.detail(parts[1])
+            let channel = try await client.playback(video.episodes[min(parts.count > 2 ? Int(parts[2]) ?? 0 : 0, video.episodes.count - 1)])
+            print("resolved \(channel.url.absoluteString.prefix(100))")
+            return channel
+        }
+        let episode = Episode(id: target, name: "Probe", address: target, flag: "probe")
+        let item = library.download(DownloadSource(site: .bilibili, videoID: target, episode: episode), title: "Probe", poster: nil)
+        let started = Date()
+        var paused = false
+        while true {
+            try await Task.sleep(for: .seconds(1))
+            guard let current = library.item(id: item.id) else { return }
+            let rate = library.rates[item.id].map { ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file) + "/s" } ?? "-"
+            print("\(Int(Date().timeIntervalSince(started)))s \(current.status.rawValue) kind=\(current.kind?.rawValue ?? "-") \(current.quality ?? "") \(String(format: "%.1f%%", current.fraction * 100)) \(current.received)/\(current.expected ?? -1) parts=\(current.completedParts)/\(current.totalParts) \(rate) \(current.failure ?? "")")
+            if let pauseAfter, !paused, Date().timeIntervalSince(started) > pauseAfter {
+                paused = true
+                library.pause(item.id); print("paused")
+                try await Task.sleep(for: .seconds(2))
+                library.resume(item.id); print("resumed")
+            }
+            if current.status == .failed { return }
+            if current.status == .completed { break }
+        }
+        await library.measure()
+        print("usage downloads=\(library.usage.downloads) free=\(library.usage.available ?? -1) capacity=\(library.usage.capacity ?? -1)")
+        let address = try await library.playbackAddress(for: library.channel(for: library.item(id: item.id)!).url)
+        print("playing \(address)")
+        let player = AVPlayer(playerItem: AVPlayerItem(url: address))
+        player.isMuted = true; player.play()
+        for second in 1...5 {
+            try await Task.sleep(for: .seconds(1))
+            let current = player.currentItem!
+            print("t=\(second) status=\(current.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) size=\(Int(current.presentationSize.width))x\(Int(current.presentationSize.height)) tracks=\(current.tracks.count) error=\(current.error.map { "\($0)" } ?? "-")")
+        }
+        if let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 30 {
+            await player.seek(to: CMTime(seconds: duration - 10, preferredTimescale: 600))
+            try await Task.sleep(for: .seconds(2))
+            print("after seek duration=\(Int(duration)) time=\(String(format: "%.1f", player.currentTime().seconds))")
+        }
+    }
     static func main() async throws {
         let args = CommandLine.arguments
         guard args.count >= 2 else {
             print("Usage: TVBoxProbe <jar path> [class descriptor] [static int method]")
             print("       TVBoxProbe --subscription-check <URL> [...]")
+            return
+        }
+        if args[1] == "--download", args.count >= 4 {
+            // --download <media URL | bili:<BV>[:part]> <folder> [pause after seconds]: the download queue end to end,
+            // optionally paused and resumed partway, then the result played through AVPlayer.
+            setvbuf(stdout, nil, _IONBF, 0)
+            try await download(args[2], folder: URL(filePath: args[3]), pauseAfter: args.count > 4 ? Double(args[4]) : nil)
             return
         }
         if args[1] == "--cast-upgrade", args.count >= 4, let cid = Int(args[2]) {

@@ -241,6 +241,39 @@ private struct FilterChipStyle: ButtonStyle {
 }
 #endif
 
+#if os(tvOS)
+/// Liquid Glass filter chip: clear glass at rest, brand-tinted glass for the selection, and a bright
+/// white glass lift on focus.
+private struct TVChipStyle: ButtonStyle {
+    let selected: Bool
+    func makeBody(configuration: Configuration) -> some View { Plate(configuration: configuration, selected: selected) }
+    private struct Plate: View {
+        let configuration: ButtonStyleConfiguration
+        let selected: Bool
+        @Environment(\.isFocused) private var focused
+        @Environment(\.isEnabled) private var enabled
+        var body: some View {
+            configuration.label
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(focused ? Color.black : selected ? Brand.onAccent : Color.white)
+                .padding(.horizontal, 22).padding(.vertical, 13)
+                .frame(minHeight: 58)
+                .glassEffect(glass, in: Capsule())
+                .opacity(enabled ? 1 : 0.4)
+                .scaleEffect(configuration.isPressed ? 0.97 : focused ? 1.06 : 1)
+                .shadow(color: .black.opacity(focused ? 0.35 : 0), radius: 16, y: 10)
+                .animation(.easeOut(duration: 0.18), value: focused)
+                .animation(.smooth(duration: 0.2), value: selected)
+        }
+        private var glass: Glass {
+            if focused { return .regular.tint(.white.opacity(0.9)).interactive() }
+            if selected { return .regular.tint(Brand.accent).interactive() }
+            return .regular.interactive()
+        }
+    }
+}
+#endif
+
 /// Neutral filters reserve high contrast for the current selection.
 /// Set by `ScrollStrip` while the user drags it, so the chip under the pointer ignores the mouse-up.
 @MainActor final class StripDrag { var active = false }
@@ -252,7 +285,8 @@ struct ChipRow<Content: View>: View {
     @ViewBuilder let content: Content
     var body: some View {
         #if os(tvOS)
-        ScrollView(.horizontal, showsIndicators: false) { content }
+        // Unclipped so a focused chip's lift and glow aren't cut at the row's ends.
+        ScrollView(.horizontal, showsIndicators: false) { content.padding(.vertical, 8) }.scrollClipDisabled()
         #else
         ScrollStrip { content }
         #endif
@@ -270,13 +304,12 @@ struct Chip: View {
     var body: some View {
         let button = Button { if drag?.active != true { action() } } label: {
             HStack(spacing: 5) {
-                if selected { Image(systemName: "checkmark").font(.caption.weight(.bold)) }
                 if mark { BilibiliGlyph(size: 22).foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(BilibiliMark.blue)) }
                 Text(title).lineLimit(1)
             }.padding(.horizontal, 4).frame(maxWidth: fill ? .infinity : nil)
         }.accessibilityAddTraits(selected ? [.isSelected] : [])
         #if os(tvOS)
-        button.controlButton(prominent: selected)
+        button.buttonStyle(TVChipStyle(selected: selected))
         #else
         button.buttonStyle(FilterChipStyle(selected: selected))
         #endif
@@ -788,6 +821,47 @@ private struct TVControlStyle: ButtonStyle {
     }
 }
 #endif
+
+#if os(tvOS)
+/// A list row on tvOS: the focused row floats on a Liquid Glass capsule, never a square plate, padded so
+/// its leading content never meets the edge. It grows from the leading edge so rows stay in line;
+/// scroll views holding these rows pad their content (`glassRowInsets`) so the lift isn't clipped.
+struct GlassRowStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { Plate(configuration: configuration) }
+    private struct Plate: View {
+        let configuration: ButtonStyleConfiguration
+        @Environment(\.isFocused) private var focused
+        @Environment(\.isEnabled) private var enabled
+        var body: some View {
+            configuration.label
+                .padding(.horizontal, 28).padding(.vertical, 12)
+                .glassEffect(focused ? .regular.tint(.white.opacity(0.22)).interactive() : .identity, in: Capsule())
+                .opacity(enabled ? 1 : 0.5)
+                .scaleEffect(configuration.isPressed ? 0.99 : focused ? 1.02 : 1, anchor: .leading)
+                .animation(.easeOut(duration: 0.15), value: focused)
+        }
+    }
+}
+#endif
+
+extension View {
+    /// List-row buttons: the Liquid Glass row on tvOS, plain elsewhere.
+    @ViewBuilder func glassRow() -> some View {
+        #if os(tvOS)
+        buttonStyle(GlassRowStyle())
+        #else
+        buttonStyle(.plain)
+        #endif
+    }
+    /// Room around rows using `glassRow()` inside a scroll view, for the focused row's lift.
+    @ViewBuilder func glassRowInsets() -> some View {
+        #if os(tvOS)
+        padding(.horizontal, 40).padding(.vertical, 24)
+        #else
+        self
+        #endif
+    }
+}
 
 extension View {
     @ViewBuilder func tvDefaultControls() -> some View {

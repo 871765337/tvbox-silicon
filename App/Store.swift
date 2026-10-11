@@ -27,6 +27,22 @@ import TVCore
             defaults.removeObject(forKey: "subscription")
         }
         if let data = defaults.data(forKey: "favorites") { favorites = (try? JSONDecoder().decode([Channel].self, from: data)) ?? [] }
+        DownloadLibrary.shared.resolver = { [weak self] item in
+            guard let self else { throw CancellationError() }
+            return try await self.resolveDownload(item)
+        }
+    }
+    /// The current media address of a downloading episode, from its source; the queue asks again when a link expires.
+    private func resolveDownload(_ item: DownloadItem) async throws -> Channel {
+        let config = subscription
+        guard let site = config?.sites.first(where: { $0.key == item.source.siteKey })
+                ?? (item.source.siteKey == Site.bilibili.key ? Site.bilibili : nil) else {
+            throw TVError.unsupported(L10n.text("%@ is no longer in your subscription, so this download can't continue.", item.source.siteName))
+        }
+        let client = CatalogClient(site: site, origin: config?.origin ?? URL(string: "https://example.invalid/")!, jarURL: config?.spiderURL)
+            .with(parses: config?.parseServices ?? [])
+        let plan = try await client.preparePlayback(item.source.episode)
+        return try await client.resolvePlayback(plan, choice: plan.choices[0])
     }
     /// Large subscriptions run to megabytes, past the defaults size limit that aborts tvOS apps,
     /// so the parsed subscription lives in a file. tvOS only offers Caches, which the system may purge;

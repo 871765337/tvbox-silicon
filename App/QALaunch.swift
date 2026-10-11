@@ -15,6 +15,7 @@ enum QALaunch {
         case "search": .search
         case "sites": .sites
         case "favorites": .favorites
+        case "downloads": .downloads
         case "settings": .settings
         case "more": .more
         default: nil
@@ -26,6 +27,7 @@ enum QALaunch {
 
     @MainActor static func start(_ store: Store) async {
         guard section != nil || page != nil || UserDefaults.standard.string(forKey: "qaPlay") != nil
+                || UserDefaults.standard.string(forKey: "qaDownload") != nil
                 || UserDefaults.standard.string(forKey: "qaPlayLive") != nil else { return }
         if let subscription = UserDefaults.standard.string(forKey: "qaSubscription") { await store.importSubscription(address: subscription) }
         else if store.subscription == nil { await store.importSubscription() }
@@ -49,6 +51,19 @@ enum QALaunch {
                     let video = try await client.detail(parts[1])
                     let index = min(parts.count > 2 ? Int(parts[2]) ?? 0 : 0, max(0, video.episodes.count - 1))
                     if video.episodes.indices.contains(index) { store.playing = try await client.playback(video.episodes[index]) }
+                } catch { store.error = error.localizedDescription }
+            }
+        }
+        // `-qaDownload <site key>:<video id>[:<count>]` queues that video's first episodes (2 by default).
+        if let target = UserDefaults.standard.string(forKey: "qaDownload"), let config = store.subscription {
+            let parts = target.split(separator: ":", maxSplits: 2).map(String.init)
+            if parts.count >= 2, let site = config.sites.first(where: { $0.key == parts[0] }) {
+                do {
+                    let video = try await CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL).detail(parts[1])
+                    for episode in video.episodes.prefix(parts.count > 2 ? Int(parts[2]) ?? 2 : 2) {
+                        DownloadLibrary.shared.download(DownloadSource(site: site, videoID: parts[1], episode: episode), title: video.name,
+                                                        poster: video.poster, posterHeaders: video.posterHeaders)
+                    }
                 } catch { store.error = error.localizedDescription }
             }
         }

@@ -46,6 +46,10 @@ import TVCore
                     if phase == .background { BilibiliCastController.shared.stop() }
                     if phase == .active { BilibiliCastController.shared.start(store) }
                     #endif
+                    #if !os(macOS)
+                    if phase == .background { DownloadsLifecycle.enteredBackground() }
+                    if phase == .active { DownloadsLifecycle.becameActive() }
+                    #endif
                     // Apple TV and Mac sessions run for days; look again when the app comes back.
                     if phase == .active { Task { await updates.check() } }
                 }

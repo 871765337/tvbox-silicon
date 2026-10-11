@@ -136,8 +136,16 @@ import TVCore
                 }
             }
             var address = channel.url
+            // A downloaded episode plays from disk: its file, or its HLS through a loopback server.
+            if address.scheme == DownloadLibrary.scheme {
+                do { address = try await DownloadLibrary.shared.playbackAddress(for: address) }
+                catch {
+                    guard self.generation == activeGeneration, !Task.isCancelled else { return }
+                    self.error = error.localizedDescription; self.loading = false; return
+                }
+            }
             #if os(macOS)
-            if address.pathExtension.lowercased() == "m3u8", address.scheme != BilibiliStreams.scheme {
+            if address.pathExtension.lowercased() == "m3u8", address.scheme != BilibiliStreams.scheme, channel.url.scheme != DownloadLibrary.scheme {
                 let adapter = HLSProxy(headers: channel.headers)
                 self.proxy = adapter
                 do { address = try await adapter.start(url: address) }

@@ -506,6 +506,9 @@ struct RecommendationsView: View {
     @State private var revision = 0
     @State private var forceRefresh = false
     @State private var choosingSource = false
+    #if os(tvOS)
+    @FocusState private var focusedSource: String?
+    #endif
     /// The source category shown instead of its recommendations; nil shows the recommendations.
     @State private var category: String?
     @State private var categoryPage = 1
@@ -530,19 +533,33 @@ struct RecommendationsView: View {
                 .accessibilityLabel(L10n.text("Recommendation Source"))
                 .sheet(isPresented: $choosingSource) {
                     NavigationStack {
-                        List(sites) { candidate in
-                            Button {
-                                sourceKey = candidate.key
-                                revision = 0
-                                forceRefresh = false
-                                choosingSource = false
-                            } label: {
-                                HStack {
-                                    Text(candidate.name)
-                                    Spacer()
-                                    if candidate.key == site.key { Image(systemName: "checkmark") }
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                LazyVStack(alignment: .leading, spacing: 4) {
+                                    ForEach(sites) { candidate in
+                                        Button {
+                                            sourceKey = candidate.key
+                                            revision = 0
+                                            forceRefresh = false
+                                            choosingSource = false
+                                        } label: {
+                                            HStack {
+                                                Text(candidate.name).lineLimit(1)
+                                                Spacer()
+                                                if candidate.key == site.key { Image(systemName: "checkmark").foregroundStyle(Brand.accent) }
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                        }
+                                        .glassRow()
+                                        .focused($focusedSource, equals: candidate.key)
+                                        .id(candidate.key)
+                                    }
                                 }
+                                .glassRowInsets()
                             }
+                            // Open on the current source rather than the top of a long list.
+                            .defaultFocus($focusedSource, site.key)
+                            .onAppear { proxy.scrollTo(site.key, anchor: .center) }
                         }
                         .screenTitle(L10n.text("Recommendation Source"))
                         .screenBackdrop()
@@ -640,6 +657,10 @@ struct RecommendationsView: View {
             }
         }
         .task(id: requestID) {
+            #if DEBUG && os(tvOS)
+            // `-qaSourcePicker 1` opens the recommendation source picker, for screenshots.
+            if UserDefaults.standard.bool(forKey: "qaSourcePicker"), fixedSite == nil { choosingSource = true }
+            #endif
             guard let site else { model.reset(); return }
             let refresh = forceRefresh; forceRefresh = false
             await model.load(client: CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL), subscriptionDate: config.importedAt, force: refresh)

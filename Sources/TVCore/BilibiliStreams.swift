@@ -14,6 +14,16 @@ public enum BilibiliStreams {
     /// The qualities a stream from `stream` can be switched to, best first; empty for any other address.
     public static func qualities(for url: URL) -> [StreamQuality] { url.scheme == scheme ? PlaylistStore.shared.qualities(url) : [] }
 
+    /// The DASH files behind an address from `stream`: the quality its playlist names (a single-quality
+    /// master), else `quality`, else the best. Nil for any other address.
+    public static func files(for url: URL, quality: Int? = nil) -> DashFiles? {
+        guard url.scheme == scheme else { return nil }
+        let sources = PlaylistStore.shared.sources(url)
+        let named = url.lastPathComponent.firstMatch(of: /^master-(\d+)\.m3u8$/).flatMap { Int($0.1) }
+        if let wanted = named ?? quality, let match = sources.first(where: { $0.quality == wanted }) { return match }
+        return named == nil ? sources.first : nil
+    }
+
     /// An asset for an address from `stream`, or nil for any other address.
     public static func asset(for url: URL) -> AVURLAsset? {
         guard url.scheme == scheme else { return nil }
@@ -69,6 +79,7 @@ public enum BilibiliStreams {
         // Each quality also gets a master of its own, which the player switches to when it is chosen.
         let header = master
         var qualities: [StreamQuality] = []
+        var streamInfo: [Int: String] = [:]
         for (position, (item, index)) in video.enumerated() {
             let name = "video-\(position).m3u8"
             files[name] = media(index)
@@ -78,6 +89,7 @@ public enum BilibiliStreams {
                               "RESOLUTION=\(item.width)x\(item.height)", "VIDEO-RANGE=\(item.quality == 125 ? "PQ" : "SDR")"]
             if let rate = item.frameRate { attributes.append(String(format: "FRAME-RATE=%.3f", rate)) }
             if sound != nil { attributes.append("AUDIO=\"audio\"") }
+            streamInfo[item.quality] = attributes.joined(separator: ",")
             let variant = ["#EXT-X-STREAM-INF:" + attributes.joined(separator: ","), address(name)]
             master += variant
             let single = "master-\(item.quality).m3u8"
@@ -85,10 +97,19 @@ public enum BilibiliStreams {
             if let url = URL(string: address(single)) { qualities.append(StreamQuality(id: item.quality, label: StreamQuality.label(item.quality, height: item.height), url: url)) }
         }
         files["master.m3u8"] = master.joined(separator: "\n") + "\n"
-        PlaylistStore.shared.add(files, token: token, qualities: qualities)
+        let duration = info["timelength"]?.int.map { Double($0) / 1000 } ?? dash["duration"]?.int.map(Double.init)
+        // The files themselves, for downloads: the address whose index answered first.
+        let sources = video.map { item, index in
+            DashFiles(quality: item.quality, label: StreamQuality.label(item.quality, height: item.height),
+                      video: [index.url] + item.urls.filter { $0 != index.url },
+                      audio: sound.map { audio, index in [index.url] + audio.urls.filter { $0 != index.url } } ?? [],
+                      videoInitialization: item.initialization, videoIndex: item.index,
+                      audioInitialization: sound?.0.initialization, audioIndex: sound?.0.index,
+                      streamInfo: streamInfo[item.quality] ?? "", cid: cid, duration: duration)
+        }
+        PlaylistStore.shared.add(files, token: token, qualities: qualities, sources: sources)
         Diagnostics.shared.record(.info, "bilibili", "dash aid=\(aid) cid=\(cid) qualities=\(video.map { "\($0.0.quality)/\($0.0.codecs)" }.joined(separator: ",")) audio=\(sound?.0.codecs ?? "-") host=\(video[0].1.url.host() ?? "-")")
         guard let master = URL(string: address("master.m3u8")) else { return nil }
-        let duration = info["timelength"]?.int.map { Double($0) / 1000 } ?? dash["duration"]?.int.map(Double.init)
         DanmakuSource.register(master, bilibiliCID: cid, duration: duration)
         return master
     }
@@ -148,7 +169,7 @@ public enum BilibiliStreams {
             .sorted { $0.quality > $1.quality }
     }
 
-    private static func media(_ index: SegmentIndex) -> String {
+    static func media(_ index: SegmentIndex) -> String {
         let address = index.url.absoluteString
         let longest = index.references.map { Double($0.duration) / Double(index.timescale) }.max() ?? 1
         var lines = ["#EXTM3U", "#EXT-X-VERSION:7", "#EXT-X-TARGETDURATION:\(max(1, Int(longest.rounded(.up))))", "#EXT-X-MEDIA-SEQUENCE:0",
@@ -205,6 +226,24 @@ public struct StreamQuality: Sendable, Hashable, Identifiable {
         default: height > 0 ? "\(height)P" : "\(quality)"
         }
     }
+}
+
+/// One quality's DASH files: video and audio, each with its mirror addresses in the order to try them.
+public struct DashFiles: Sendable, Hashable {
+    public let quality: Int
+    public let label: String
+    public let video: [URL]
+    /// Empty when the stream has no separate audio.
+    public let audio: [URL]
+    /// Where each file's initialization section and `sidx` index lie, to describe the files as HLS again.
+    let videoInitialization: ClosedRange<Int>
+    let videoIndex: ClosedRange<Int>
+    let audioInitialization: ClosedRange<Int>?
+    let audioIndex: ClosedRange<Int>?
+    /// The master playlist's EXT-X-STREAM-INF attributes for this quality.
+    let streamInfo: String
+    public let cid: String
+    public let duration: Double?
 }
 
 /// A DASH representation from playurl (`data.dash.video[]` / `audio[]`).
@@ -301,15 +340,20 @@ final class PlaylistStore: @unchecked Sendable {
     private let lock = NSLock()
     private var streams: [String: [String: String]] = [:]
     private var choices: [String: [StreamQuality]] = [:]
+    private var files: [String: [DashFiles]] = [:]
     private var order: [String] = []
 
     /// A new playback's identity, used as the playlist addresses' host.
     static func token() -> String { UUID().uuidString.lowercased().replacingOccurrences(of: "-", with: "") }
-    func add(_ files: [String: String], token: String, qualities: [StreamQuality] = []) {
+    func add(_ playlists: [String: String], token: String, qualities: [StreamQuality] = [], sources: [DashFiles] = []) {
         lock.withLock {
-            streams[token] = files; choices[token] = qualities; order.append(token)
-            while order.count > 4 { let old = order.removeFirst(); streams[old] = nil; choices[old] = nil }
+            streams[token] = playlists; choices[token] = qualities; files[token] = sources; order.append(token)
+            while order.count > 4 { let old = order.removeFirst(); streams[old] = nil; choices[old] = nil; files[old] = nil }
         }
+    }
+    func sources(_ url: URL) -> [DashFiles] {
+        guard let token = url.host() else { return [] }
+        return lock.withLock { files[token] ?? [] }
     }
     func qualities(_ url: URL) -> [StreamQuality] {
         guard let token = url.host() else { return [] }

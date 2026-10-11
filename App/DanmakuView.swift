@@ -169,11 +169,11 @@ struct DanmakuListView: View {
                     LazyVStack(alignment: .leading, spacing: 4) {
                         ForEach(shown, id: \.offset) { item in
                             Button { jump(to: item.element) } label: { row(item.element) }
-                                .buttonStyle(DanmakuRowStyle())
+                                .glassRow()
                                 .id(item.offset)
                         }
                     }
-                    .padding(.horizontal, 40).padding(.vertical, 24)
+                    .glassRowInsets()
                 }
                 .onAppear { scrollToNow(proxy) }
                 #else
@@ -211,22 +211,3 @@ struct DanmakuListView: View {
         chosen()
     }
 }
-
-#if os(tvOS)
-/// The focused row floats on a Liquid Glass capsule, padded so the leading time never meets its edge.
-private struct DanmakuRowStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View { Plate(configuration: configuration) }
-    private struct Plate: View {
-        let configuration: ButtonStyleConfiguration
-        @Environment(\.isFocused) private var focused
-        var body: some View {
-            configuration.label
-                .padding(.horizontal, 28).padding(.vertical, 12)
-                .glassEffect(focused ? .regular.tint(.white.opacity(0.22)).interactive() : .identity, in: Capsule())
-                // Rows are full width: grow from the leading edge so the time stays in line with the others.
-                .scaleEffect(configuration.isPressed ? 0.99 : focused ? 1.02 : 1, anchor: .leading)
-                .animation(.easeOut(duration: 0.15), value: focused)
-        }
-    }
-}
-#endif
