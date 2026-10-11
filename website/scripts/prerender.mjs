@@ -55,7 +55,7 @@ function head(lang) {
     image,
     inLanguage: lang,
     applicationCategory: "MultimediaApplication",
-    operatingSystem: "macOS 26, iOS 26, iPadOS 26, tvOS 26",
+    operatingSystem: "macOS 15, iOS 18, iPadOS 18, tvOS 26",
     softwareVersion: VERSION,
     downloadUrl: MAC_DOWNLOAD,
     installUrl: `${url}#install`,

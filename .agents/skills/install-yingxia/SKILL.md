@@ -41,8 +41,8 @@ curl.exe -LO https://download.getmegaportal.com/yingxia/<version>/Yingxia-<versi
 
 | Device | Requirement | File | Bundle ID |
 | --- | --- | --- | --- |
-| Mac | macOS 26+, Apple silicon | `…-macos-arm64.dmg` | `com.tvbox.yingxia.mac` |
-| iPhone / iPad | iOS / iPadOS 26+ | `…-ios.ipa` | `com.tvbox.yingxia.ios` |
+| Mac | macOS 15+, Apple silicon | `…-macos-arm64.dmg` | `com.tvbox.yingxia.mac` |
+| iPhone / iPad | iOS / iPadOS 18+ | `…-ios.ipa` | `com.tvbox.yingxia.ios` |
 | Apple TV | tvOS 26+ (Apple TV 4K) | `…-tvos.ipa` | `com.tvbox.yingxia.tv` |
 
 The iOS and tvOS IPAs are not interchangeable.
@@ -191,7 +191,7 @@ Read cider's error before doing anything else. Apple's errors usually arrive wra
 | Symptom | Fix |
 | --- | --- |
 | "maximum number of installed apps using a free developer profile" | Free accounts can have 3 sideloaded apps on a device. Delete one, then retry. |
-| `DeviceOSVersionTooLow` | Yingxia needs iOS / iPadOS / tvOS 26. Update the device. |
+| `DeviceOSVersionTooLow` | Yingxia needs iOS / iPadOS 18 or tvOS 26. Update the device. |
 | `ApplicationVerificationFailed` | The signature or profile was rejected: usually an expired or revoked certificate. Sign and install again. Also check that the IPA matches the device (iOS vs tvOS). |
 | Apple TV install fails with a provisioning-profile or platform error | Not yet verified that cider can sign tvOS apps. Use Sideloadly on the Mac (below). |
 | Install seems stuck on Apple TV | It's copying ~11,000 files over Wi-Fi; give it 5–10 minutes. |
