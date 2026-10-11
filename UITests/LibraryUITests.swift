@@ -67,11 +67,14 @@ final class LibraryUITests: XCTestCase {
         XCTAssertTrue(app.buttons["history.resume.2"].waitForExistence(timeout: 15))
         app.buttons["history.manage"].tap(); app.buttons["history.select.1"].tap()
         app.buttons["history.deleteSelected"].tap()
-        XCTAssertTrue(app.alerts.buttons["history.confirmDelete"].waitForExistence(timeout: 10))
-        app.alerts.buttons["history.confirmDelete"].firstMatch.tap()
+        // A confirmation dialog: an action sheet on iPhone, a popover on iPad, so not under `alerts`.
+        let confirm = app.buttons["history.confirmDelete"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        confirm.tap()
         expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["history.resume.1"])
         waitForExpectations(timeout: 10)
-        XCTAssertTrue(app.buttons["history.resume.2"].exists); app.terminate()
+        // Deleting keeps the page in manage mode, where the remaining title is a selection button.
+        XCTAssertTrue(app.buttons["history.select.2"].exists || app.buttons["history.resume.2"].exists); app.terminate()
         app = launch("settings", page: "cache")
         XCTAssertTrue(app.buttons["cache.clear"].waitForExistence(timeout: 20))
         app.buttons["cache.clear"].tap(); app.buttons["cache.confirmClear"].firstMatch.tap()
