@@ -1,6 +1,126 @@
 {
   "releases": [
     {
+      "version": "1.1",
+      "date": "2026-10-11",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "play.rectangle.fill",
+          "title": {
+            "en": "Bilibili, built in",
+            "zh-Hans": "内置哔哩哔哩",
+            "zh-Hant": "內建嗶哩嗶哩",
+            "ja": "ビリビリを内蔵"
+          },
+          "detail": {
+            "en": "A built-in source with recommendations, rankings, zones and search, playing in up to 1080P.",
+            "zh-Hans": "内置片源，包含推荐、排行榜、分区和搜索，最高 1080P 播放。",
+            "zh-Hant": "內建片源，包含推薦、排行榜、分區和搜尋，最高 1080P 播放。",
+            "ja": "おすすめ、ランキング、ゾーン、検索を備えた内蔵ソース。最大 1080P で再生できます。"
+          }
+        },
+        {
+          "symbol": "text.bubble.fill",
+          "title": {
+            "en": "Danmaku",
+            "zh-Hans": "弹幕",
+            "zh-Hant": "彈幕",
+            "ja": "弾幕コメント"
+          },
+          "detail": {
+            "en": "Comments fly across the video without covering each other. Turn them off from the player, or browse them all and jump to any moment.",
+            "zh-Hans": "弹幕从画面上飞过，互不遮挡。可在播放器里关闭，也能浏览全部弹幕并跳到任意时刻。",
+            "zh-Hant": "彈幕從畫面上飛過，互不遮擋。可在播放器裡關閉，也能瀏覽全部彈幕並跳到任意時刻。",
+            "ja": "コメントが重ならずに映像の上を流れます。プレーヤーでオフにしたり、一覧から好きな場面へジャンプしたりできます。"
+          }
+        },
+        {
+          "symbol": "dot.radiowaves.left.and.right",
+          "title": {
+            "en": "Bilibili Live",
+            "zh-Hans": "哔哩哔哩直播",
+            "zh-Hant": "嗶哩嗶哩直播",
+            "ja": "ビリビリ生配信"
+          },
+          "detail": {
+            "en": "Browse live rooms by area and watch them with live danmaku.",
+            "zh-Hans": "按分区浏览直播间，边看直播边看弹幕。",
+            "zh-Hant": "按分區瀏覽直播間，邊看直播邊看彈幕。",
+            "ja": "エリアごとにライブルームを探して、弾幕付きで視聴できます。"
+          }
+        },
+        {
+          "symbol": "qrcode",
+          "title": {
+            "en": "Sign in with a QR code",
+            "zh-Hans": "扫码登录",
+            "zh-Hant": "掃碼登入",
+            "ja": "QR コードでサインイン"
+          },
+          "detail": {
+            "en": "Scan with the Bilibili app to see your feed, Watch Later, history, favorites and followed shows.",
+            "zh-Hans": "用哔哩哔哩 App 扫码，即可查看动态、稍后再看、历史记录、收藏夹和追番。",
+            "zh-Hant": "用嗶哩嗶哩 App 掃碼，即可查看動態、稍後再看、歷史紀錄、收藏夾和追番。",
+            "ja": "ビリビリアプリでスキャンすると、フィード、後で見る、履歴、お気に入り、フォロー中の番組が見られます。"
+          }
+        },
+        {
+          "symbol": "tv.and.mediabox",
+          "platforms": [
+            "tvos",
+            "macos"
+          ],
+          "title": {
+            "en": "Cast from your phone",
+            "zh-Hans": "手机投屏",
+            "zh-Hant": "手機投放",
+            "ja": "スマホからキャスト"
+          },
+          "detail": {
+            "en": "Tap the TV button in the Bilibili app and the video plays here in HD, with danmaku.",
+            "zh-Hans": "在哔哩哔哩 App 里点投屏，视频就会以高清带弹幕在这里播放。",
+            "zh-Hant": "在嗶哩嗶哩 App 裡點投放，影片就會以高畫質帶彈幕在這裡播放。",
+            "ja": "ビリビリアプリでテレビボタンをタップすると、弾幕付きの HD でここで再生されます。"
+          }
+        },
+        {
+          "symbol": "magnifyingglass",
+          "title": {
+            "en": "Better search",
+            "zh-Hans": "更好的搜索",
+            "zh-Hant": "更好的搜尋",
+            "ja": "検索の改善"
+          },
+          "detail": {
+            "en": "Results keep loading as you scroll, and the source you filter by is remembered.",
+            "zh-Hans": "滚动时持续加载更多结果，并记住你选择的片源筛选。",
+            "zh-Hant": "捲動時持續載入更多結果，並記住你選擇的片源篩選。",
+            "ja": "スクロールすると結果が続けて読み込まれ、絞り込んだソースも記憶されます。"
+          }
+        },
+        {
+          "symbol": "arrow.down.circle.fill",
+          "title": {
+            "en": "Software Update",
+            "zh-Hans": "软件更新",
+            "zh-Hant": "軟體更新",
+            "ja": "ソフトウェア・アップデート"
+          },
+          "detail": {
+            "en": "Yingxia now tells you when a new version is out, and shows what’s new after you update.",
+            "zh-Hans": "有新版本时映匣会提醒你，更新后还会展示新功能。",
+            "zh-Hant": "有新版本時映匣會提醒你，更新後還會展示新功能。",
+            "ja": "新しいバージョンが出るとお知らせし、アップデート後に新機能を紹介します。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.0.1",
       "date": "2026-10-09",
       "links": {
@@ -26,7 +146,9 @@
         },
         {
           "symbol": "hand.draw.fill",
-          "platforms": ["macos"],
+          "platforms": [
+            "macos"
+          ],
           "title": {
             "en": "Drag to browse chip rows",
             "zh-Hans": "拖动浏览标签栏",
