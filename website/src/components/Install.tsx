@@ -79,8 +79,10 @@ export function Install() {
 
   useEffect(() => {
     if (!jump) return;
-    const target = jump.mode === "agent" ? promptRef.current : howRef.current;
-    target?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: jump.mode === "agent" ? "center" : "start" });
+    // Side by side (wide screens), the steps and the card show together; stacked, jump to the prompt itself.
+    const toPrompt = jump.mode === "agent" && !matchMedia("(min-width: 861px)").matches;
+    const target = toPrompt ? promptRef.current : howRef.current;
+    target?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: toPrompt ? "center" : "start" });
   }, [jump]);
 
   const choose = (next: Mode) => {
@@ -160,41 +162,44 @@ export function Install() {
           )}
         </div>
 
-        <div className="how" ref={howRef}>
+        <div className={sideload ? "how split" : "how"} ref={howRef}>
           <h3 className="how-title">{copy.how}</h3>
-          <ol className={`steps n${steps.length}`} key={`${platform}-${mode}`}>
-            {steps.map((step, i) => (
-              <li className="step" key={i}>
-                <span className="step-n">{i + 1}</span>
-                <h4>{step.t}</h4>
-                <p>{step.b}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
+          {/* Sideloads show the steps on the left and the selected mode's card beside them. */}
+          <div className="how-grid">
+            <ol className={`steps n${steps.length}`} key={`${platform}-${mode}`}>
+              {steps.map((step, i) => (
+                <li className="step" key={i}>
+                  <span className="step-n">{i + 1}</span>
+                  <h4>{step.t}</h4>
+                  <p>{step.b}</p>
+                </li>
+              ))}
+            </ol>
 
-        {sideload && mode === "agent" && (
-          <div className="run single">
-            <div className="run-card" ref={promptRef}>
-              <span className="run-icon"><SFSymbol name="sparkles" /></span>
-              <h3>{copy.agent.t}</h3>
-              <p>{copy.agent.b}</p>
-              <div className="agents">
-                <span className="agents-label">{copy.agent.works}</span>
-                {AGENTS.map((agent) => (
-                  <a key={agent.name} className="agent-chip" href={agent.href} target="_blank" rel="noreferrer">
-                    {(lang === "ja" || lang === "zh-Hant") && agent.cjk ? agent.cjk : agent.name}
-                  </a>
-                ))}
+            {sideload && mode === "agent" && (
+              <div className="run single">
+                <div className="run-card" ref={promptRef}>
+                  <span className="run-icon"><SFSymbol name="sparkles" /></span>
+                  <h3>{copy.agent.t}</h3>
+                  <p>{copy.agent.b}</p>
+                  <div className="agents">
+                    <span className="agents-label">{copy.agent.works}</span>
+                    {AGENTS.map((agent) => (
+                      <a key={agent.name} className="agent-chip" href={agent.href} target="_blank" rel="noreferrer">
+                        {(lang === "ja" || lang === "zh-Hant") && agent.cjk ? agent.cjk : agent.name}
+                      </a>
+                    ))}
+                  </div>
+                  <p className="code prompt">{agentPrompt(copy, platform)}</p>
+                  <CopyButton text={agentPrompt(copy, platform)} copy={copy} flash={autoCopied} note={copy.copiedPrompt} />
+                  <p className="run-note">{copy.agent.web}</p>
+                </div>
               </div>
-              <p className="code prompt">{agentPrompt(copy, platform)}</p>
-              <CopyButton text={agentPrompt(copy, platform)} copy={copy} flash={autoCopied} note={copy.copiedPrompt} />
-              <p className="run-note">{copy.agent.web}</p>
-            </div>
+            )}
+            {sideload && mode === "cli" && <TerminalCard copy={copy} platform={platform} />}
+            {sideload && mode === "app" && <AppsCard copy={copy} />}
           </div>
-        )}
-        {sideload && mode === "cli" && <TerminalCard copy={copy} platform={platform} />}
-        {sideload && mode === "app" && <AppsCard copy={copy} />}
+        </div>
 
         {sideload && (
           <div className="keep">

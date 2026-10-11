@@ -205,6 +205,17 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
 .step-n { display: grid; place-items: center; width: 28px; height: 28px; margin-bottom: 16px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 14px; font-weight: 600; }
 .step h4 { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25; }
 .step p { margin-top: 8px; font-size: 15px; line-height: 1.5; color: var(--muted); }
+/* Sideloads: steps as a vertical list on the left, the mode's card on the right, kept in view while scrolling. */
+.how-grid { display: block; }
+.how.split .how-grid { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 48px; align-items: start; margin-top: 44px; }
+.how.split .steps { margin: 0; display: block; max-width: none; }
+.how.split .step { display: grid; grid-template-columns: 28px 1fr; column-gap: 18px; padding: 22px 0; }
+.how.split .step:first-child { border-top: 0; padding-top: 4px; }
+.how.split .step-n { grid-row: span 2; margin-bottom: 0; }
+.how.split .step h4 { align-self: center; }
+.how.split .step p { grid-column: 2; margin-top: 6px; }
+.how.split .run { position: sticky; top: 88px; margin: 0; max-width: none; }
+.how.split .agents-label { flex-basis: 100%; }
 :lang(ja) .step h4, :lang(ko) .step h4, :lang(zh-Hant) .step h4, :lang(ja) .product, :lang(ko) .product, :lang(zh-Hant) .product, :lang(ja) .how-title, :lang(ko) .how-title, :lang(zh-Hant) .how-title { letter-spacing: 0; }
 
 .keep { margin-top: 72px; padding: 56px 40px 48px; border-radius: 28px; background: var(--card); text-align: center; }
@@ -280,6 +291,8 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
   .keep { padding: 44px 20px 40px; }
   .run { grid-template-columns: 1fr; }
   .run-card { padding: 32px 20px 24px; }
+  .how.split .how-grid { grid-template-columns: 1fr; gap: 32px; }
+  .how.split .run { position: static; }
   .card { padding: 40px 20px 20px; border-radius: 28px; }
   .section { padding-top: 104px; }
 }
