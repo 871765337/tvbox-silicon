@@ -165,11 +165,15 @@ struct DanmakuListView: View {
             ScrollViewReader { proxy in
                 List(shown, id: \.offset) { item in
                     Button { jump(to: item.element) } label: { row(item.element) }
+                        #if os(tvOS)
+                        .buttonStyle(DanmakuRowStyle())
+                        .listRowInsets(EdgeInsets())
+                        #endif
                         .id(item.offset)
                 }
                 #if os(tvOS)
-                // A focused row grows past its frame; inset the rows so the info panel does not cut it off.
-                .contentMargins(.horizontal, 56, for: .scrollContent)
+                // Rows draw their own padded focus plate (DanmakuRowStyle); keep room for its lift.
+                .contentMargins(.horizontal, 40, for: .scrollContent)
                 .contentMargins(.vertical, 24, for: .scrollContent)
                 #endif
                 .onAppear {
@@ -199,3 +203,24 @@ struct DanmakuListView: View {
         chosen()
     }
 }
+
+#if os(tvOS)
+/// The system list-row focus effect scales the full-width row with no inner padding, so the leading time
+/// sat on the plate's edge and looked cut off. This plate pads the text and lifts only slightly.
+private struct DanmakuRowStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { Plate(configuration: configuration) }
+    private struct Plate: View {
+        let configuration: ButtonStyleConfiguration
+        @Environment(\.isFocused) private var focused
+        var body: some View {
+            configuration.label
+                .padding(.horizontal, 24).padding(.vertical, 12)
+                .environment(\.colorScheme, focused ? .light : .dark)
+                .background(.white.opacity(focused ? 1 : 0), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .scaleEffect(configuration.isPressed ? 0.98 : (focused ? 1.02 : 1))
+                .shadow(color: .black.opacity(focused ? 0.25 : 0), radius: 12, y: 6)
+                .animation(.easeOut(duration: 0.15), value: focused)
+        }
+    }
+}
+#endif
