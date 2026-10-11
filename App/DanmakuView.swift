@@ -8,6 +8,8 @@ import TVCore
 struct DanmakuOverlay: View {
     let player: AVPlayer
     let comments: [Danmaku]
+    var opacity = 0.9
+    var revision = ""
     @State private var engine = DanmakuEngine()
     @Environment(\.displayScale) private var scale
 
@@ -23,11 +25,11 @@ struct DanmakuOverlay: View {
                 }
             }
         }
-        .opacity(0.9)
+        .opacity(opacity)
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .task(id: comments.count) { engine.load(comments) }
+        .task(id: "\(revision):\(comments.count)") { engine.load(comments) }
     }
 }
 

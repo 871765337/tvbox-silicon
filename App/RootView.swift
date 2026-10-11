@@ -2,7 +2,7 @@ import SwiftUI
 import TVCore
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case home = "Watch Now", live = "Live TV", search = "Global Search", sites = "Sources", favorites = "Favorites", settings = "Settings", more = "More"
+    case home = "Watch Now", live = "Live TV", search = "Global Search", sites = "Sources", favorites = "Favorites", history = "Playback History", settings = "Settings", more = "More"
     var id: String { rawValue }
     var title: String { L10n.text(rawValue) }
     /// Where Software Update lives: Settings, or More when Settings is folded into it.
@@ -14,6 +14,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .live: "dot.radiowaves.left.and.right"
         case .sites: "square.grid.2x2.fill"
         case .favorites: "heart.fill"
+        case .history: "clock.arrow.circlepath"
         case .settings: "slider.horizontal.3"
         case .more: "ellipsis"
         }
@@ -36,7 +37,7 @@ struct RootView: View {
         #if os(iOS)
         if sizeClass == .compact { return [.home, .live, .search, .sites, .more] }
         #endif
-        return [.home, .live, .search, .sites, .favorites, .settings]
+        return [.home, .live, .search, .sites, .history, .favorites, .settings]
     }
     var body: some View {
         @Bindable var store = store
@@ -72,7 +73,8 @@ struct RootView: View {
                             NavigationStack(path: $morePath) {
                                 content(.more).routeDestinations()
                                     .navigationDestination(for: AppSection.self) { destination in
-                                        if destination == .favorites { FavoritesView() }
+                                        if destination == .history { PlaybackHistoryView() }
+                                        else if destination == .favorites { FavoritesView() }
                                         else { SettingsView() }
                                     }
                             }
@@ -88,14 +90,14 @@ struct RootView: View {
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
             .onChange(of: store.section) { _, section in
-                if sizeClass == .compact && (section == .favorites || section == .settings) {
+                if sizeClass == .compact && (section == .history || section == .favorites || section == .settings) {
                     moreSection = section; morePath = NavigationPath([section])
                     store.section = .more
                 }
             }
             .onChange(of: sizeClass) { _, size in
                 if size != .compact && store.section == .more { store.section = morePath.isEmpty ? .settings : moreSection }
-                else if size == .compact && (store.section == .favorites || store.section == .settings) {
+                else if size == .compact && (store.section == .history || store.section == .favorites || store.section == .settings) {
                     moreSection = store.section; morePath = NavigationPath([store.section]); store.section = .more
                 }
             }
@@ -119,9 +121,11 @@ struct RootView: View {
         case .live: LiveView()
         case .sites: SitesView()
         case .favorites: FavoritesView()
+        case .history: PlaybackHistoryView()
         case .settings: SettingsView()
         case .more:
             List {
+                NavigationLink(value: AppSection.history) { Label(AppSection.history.title, systemImage: AppSection.history.icon) }
                 NavigationLink(value: AppSection.favorites) { Label(AppSection.favorites.title, systemImage: AppSection.favorites.icon) }
                 NavigationLink(value: AppSection.settings) { Label(AppSection.settings.title, systemImage: AppSection.settings.icon) }
                     #if os(iOS)
@@ -138,6 +142,7 @@ struct RootView: View {
 }
 
 private struct PlayerPresentation: ViewModifier {
+    @Environment(Store.self) private var store
     @Binding var playing: Channel?
     #if os(macOS)
     @State private var playerWindow = PlayerWindowController()
@@ -146,7 +151,7 @@ private struct PlayerPresentation: ViewModifier {
         #if os(macOS)
         content.onChange(of: playing, initial: true) { _, channel in
             if let channel {
-                playerWindow.present(channel) { playing = nil }
+                playerWindow.present(channel, store: store) { playing = nil }
             } else {
                 playerWindow.close()
             }
@@ -163,7 +168,7 @@ private struct MacSidebar: View {
     @Environment(Store.self) private var store
     @Environment(Updates.self) private var updates
     private var groups: [(title: String, items: [AppSection])] {
-        [(L10n.text("Browse"), [.home, .search, .live, .sites]), (L10n.text("Library"), [.favorites, .settings])]
+        [(L10n.text("Browse"), [.home, .search, .live, .sites]), (L10n.text("Library"), [.history, .favorites, .settings])]
     }
 
     var body: some View {

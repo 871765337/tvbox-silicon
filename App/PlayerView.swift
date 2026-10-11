@@ -5,6 +5,7 @@ import TVCore
 struct PlaybackView: View {
     let channel: Channel
     @Environment(\.dismiss) private var dismiss
+    @Environment(Store.self) private var store
     @State private var session = PlaybackSession()
     @State private var showsChrome = true
     @State private var hideTask: Task<Void, Never>?
@@ -19,17 +20,31 @@ struct PlaybackView: View {
             #if os(tvOS)
             // Remove the native focus environment while recovery controls are shown.
             if session.error == nil {
-                NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku,
+                NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
                                  qualities: session.qualities, quality: session.quality, choose: { session.choose(quality: $0) },
                                  live: session.isLive).ignoresSafeArea()
             }
             #else
-            NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku).ignoresSafeArea()
+            NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision).ignoresSafeArea()
             #endif
             #if !os(tvOS)
             chrome.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
             #endif
             status
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "qaPlaybackProbe") {
+                VStack {
+                    Text(session.catalogDanmaku.automaticState)
+                        .accessibilityIdentifier("player.qa.danmaku")
+                        .accessibilityValue("\(session.danmaku.count)")
+                    Text("Playback position").accessibilityIdentifier("player.qa.position")
+                        .accessibilityValue("\(session.position)")
+                }
+                .font(.caption2).foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .allowsHitTesting(false)
+            }
+            #endif
         }
         .preferredColorScheme(.dark)
         #if os(macOS)
@@ -39,8 +54,11 @@ struct PlaybackView: View {
         .onContinuousHover { _ in poke() }
         .simultaneousGesture(TapGesture().onEnded { poke() })
         #endif
-        .onAppear { session.start(channel); poke() }
-        .onDisappear { hideTask?.cancel(); session.stop() }
+        .onAppear { startCatalogPlayback(session, channel: channel, store: store); poke() }
+        .onChange(of: channel) { _, channel in startCatalogPlayback(session, channel: channel, store: store); poke() }
+        .onChange(of: showsDanmaku) { _, value in session.catalogDanmaku.enabled = value }
+        .onChange(of: session.catalogDanmaku.enabled) { _, value in showsDanmaku = value }
+        .onDisappear { hideTask?.cancel(); store.cancelEpisodeSelection(); session.stop() }
     }
 
     #if !os(tvOS)
@@ -51,6 +69,7 @@ struct PlaybackView: View {
                     .padding(.horizontal, 18).padding(.vertical, 11)
                     .glassEffect(.regular, in: Capsule())
                 Spacer(minLength: 0)
+                CatalogPlaybackActions(channel: channel, session: session)
                 if session.qualities.count > 1 {
                     Menu {
                         QualityPicker(session: session)
@@ -85,6 +104,7 @@ struct PlaybackView: View {
                 Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).frame(width: 22, height: 22) }
                     .controlButton().buttonBorderShape(.circle).controlSize(.large)
                     .accessibilityLabel(L10n.text("Close"))
+                    .accessibilityIdentifier("player.close")
                     .keyboardShortcut(.cancelAction)
             }
             .padding(16)
@@ -95,6 +115,10 @@ struct PlaybackView: View {
     private func poke() {
         showsChrome = true
         hideTask?.cancel()
+        #if DEBUG
+        // Keep screenshot/interaction QA stable while XCTest waits for AVKit to idle.
+        if UserDefaults.standard.bool(forKey: "qaPlayerControls") { return }
+        #endif
         hideTask = Task {
             try? await Task.sleep(for: .seconds(3.5))
             if !Task.isCancelled { withAnimation(.smooth(duration: 0.35)) { showsChrome = false } }
@@ -108,14 +132,14 @@ struct PlaybackView: View {
         if let error = session.error {
             #if os(tvOS)
             TVPlaybackFailureView(channelName: channel.name, details: error,
-                                  retry: { session.start(channel) }, goBack: { dismiss() })
+                                  retry: { startCatalogPlayback(session, channel: channel, store: store) }, goBack: { dismiss() })
             #else
             VStack(spacing: 18) {
                 Image(systemName: "exclamationmark.triangle.fill").font(.largeTitle).foregroundStyle(Brand.amber)
                 Text(error).multilineTextAlignment(.center).frame(maxWidth: 420)
                 GlassEffectContainer(spacing: 10) {
                     HStack(spacing: 10) {
-                        Button(L10n.text("Retry")) { session.start(channel) }.controlButton(prominent: true).tint(Brand.accent)
+                        Button(L10n.text("Retry")) { startCatalogPlayback(session, channel: channel, store: store) }.controlButton(prominent: true).tint(Brand.accent)
                         Button(L10n.text("Close")) { dismiss() }.controlButton()
                     }
                 }.controlSize(.large)
@@ -213,10 +237,12 @@ private struct NativePlayerView: View {
     let player: AVPlayer
     let comments: [Danmaku]
     @Binding var showsDanmaku: Bool
+    var opacity = 0.9
+    var revision = ""
     var body: some View {
         ZStack {
             PlayerSurface(player: player)
-            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments) }
+            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) }
         }
     }
 }
@@ -236,10 +262,12 @@ private struct NativePlayerView: View {
     let player: AVPlayer
     let comments: [Danmaku]
     @Binding var showsDanmaku: Bool
+    var opacity = 0.9
+    var revision = ""
     var body: some View {
         // The overlay sits between the video and the playback controls.
         VideoPlayer(player: player) {
-            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments) }
+            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) }
         }
     }
 }
@@ -264,11 +292,13 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     let player: AVPlayer
     let comments: [Danmaku]
     @Binding var showsDanmaku: Bool
+    var opacity = 0.9
+    var revision = ""
     var qualities: [StreamQuality] = []
     var quality: Int? = nil
     var choose: @MainActor (Int?) -> Void = { _ in }
     var live = false
-    final class Coordinator { var host: UIHostingController<AnyView>?; var listed = -1 }
+    final class Coordinator { var host: UIHostingController<AnyView>?; var listed = "" }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = TitleSafePlayerController()
@@ -297,8 +327,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         if controller.requiresLinearPlayback != live { controller.requiresLinearPlayback = live }
         context.coordinator.host?.rootView = overlay
         // The comment list is a tab in the info panel (swipe down), beside the video's own info.
-        if context.coordinator.listed != comments.count {
-            context.coordinator.listed = comments.count
+        if context.coordinator.listed != "\(revision):\(comments.count)" {
+            context.coordinator.listed = "\(revision):\(comments.count)"
             if comments.isEmpty { controller.customInfoViewControllers = [] }
             else {
                 let list = UIHostingController(rootView: DanmakuListView(player: player, comments: comments))
@@ -323,7 +353,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         controller.transportBarCustomMenuItems = items
     }
     private var overlay: AnyView {
-        AnyView(Group { if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments) } })
+        AnyView(Group { if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) } })
     }
 }
 #endif
@@ -335,7 +365,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     private let session = PlaybackSession()
     private var onClose: (() -> Void)?
 
-    func present(_ channel: Channel, onClose: @escaping () -> Void) {
+    func present(_ channel: Channel, store: Store, onClose: @escaping () -> Void) {
         self.onClose = onClose
         let target: PlaybackWindow
         if let window { target = window }
@@ -357,8 +387,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             window = target
         }
         target.title = channel.name
-        target.contentView = NSHostingView(rootView: DesktopPlaybackView(channel: channel, session: session, window: target))
-        session.start(channel)
+        target.contentView = NSHostingView(rootView: DesktopPlaybackView(channel: channel, session: session, window: target).environment(store))
+        startCatalogPlayback(session, channel: channel, store: store)
         target.makeKeyAndOrderFront(nil)
     }
 
@@ -444,6 +474,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
 }
 
 private struct DesktopPlaybackView: View {
+    @Environment(Store.self) private var store
     let channel: Channel
     @Bindable var session: PlaybackSession
     let window: PlaybackWindow
@@ -460,12 +491,12 @@ private struct DesktopPlaybackView: View {
             ZStack {
                 Color.black
                 DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame)
-                if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku) }
+                if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision) }
                 if let error = session.error {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle").font(.largeTitle)
                         Text(error).multilineTextAlignment(.center).textSelection(.enabled)
-                        Button(L10n.text("Retry")) { session.start(channel) }.buttonStyle(.borderedProminent)
+                        Button(L10n.text("Retry")) { startCatalogPlayback(session, channel: channel, store: store) }.buttonStyle(.borderedProminent)
                     }
                     .padding(24).frame(maxWidth: 440)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18)).padding()
@@ -482,6 +513,8 @@ private struct DesktopPlaybackView: View {
         }
         .preferredColorScheme(.dark)
         .ignoresSafeArea()
+        .onChange(of: showsDanmaku) { _, value in session.catalogDanmaku.enabled = value }
+        .onChange(of: session.catalogDanmaku.enabled) { _, value in showsDanmaku = value }
         .onChange(of: floats) { _, value in window.level = value ? .floating : .normal }
         .onChange(of: showsChrome) { _, value in setTrafficLights(visible: value) }
         .onAppear { floats = window.level == .floating; idle.attach(window) }
@@ -506,6 +539,7 @@ private struct DesktopPlaybackView: View {
                 HStack(spacing: 8) {
                     barButton("gobackward.10", L10n.text("Back 10 seconds (←)")) { session.skip(-10) }
                     barButton("goforward.10", L10n.text("Forward 10 seconds (→)")) { session.skip(10) }
+                    CatalogPlaybackActions(channel: channel, session: session)
                     optionsMenu
                     barButton("arrow.up.left.and.arrow.down.right", L10n.text("Enter / Exit Full Screen")) { window.toggleFullScreen(nil) }
                 }
@@ -541,7 +575,7 @@ private struct DesktopPlaybackView: View {
             }
             Divider()
             Button(L10n.text("Enter / Exit Full Screen")) { window.toggleFullScreen(nil) }
-            Button(L10n.text("Retry")) { session.start(channel) }
+            Button(L10n.text("Retry")) { startCatalogPlayback(session, channel: channel, store: store) }
             Divider()
             Text(L10n.text("Space: Play / Pause"))
             Text(L10n.text("← / →: Seek 10s · Shift: 60s"))
@@ -595,3 +629,21 @@ private struct QualityPicker: View {
     }
 }
 #endif
+
+/// Shared setup leaves the native AVKit controls and Bilibili resolution intact.
+@MainActor private func startCatalogPlayback(_ session: PlaybackSession, channel: Channel, store: Store) {
+    session.history = store.playbackHistory
+    session.skipDefaults = store.playbackDefaults
+    session.catalogDanmaku.enabled = UserDefaults.standard.object(forKey: DanmakuPreference.key) == nil
+        || UserDefaults.standard.bool(forKey: DanmakuPreference.key)
+    session.start(channel)
+    session.onPlaybackEnded = { [weak store] in
+        guard let store, store.autoPlayNext, let next = store.nextEpisode(after: channel) else { return }
+        store.selectEpisode(next, from: channel)
+    }
+    if let context = channel.historyContext, let next = store.nextEpisode(after: channel),
+       let catalog = store.catalog(for: channel), context.sourceKey != Bilibili.siteKey {
+        session.catalogDanmaku.prefetch(PlaybackHistoryContext(origin: context.origin, site: catalog.client.site,
+            video: catalog.video, episode: next))
+    }
+}

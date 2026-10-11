@@ -1,0 +1,57 @@
+#if !os(tvOS)
+import SwiftUI
+import TVCore
+
+/// Catalog-only actions alongside the existing native transport controls.
+struct CatalogPlaybackActions: View {
+    let channel: Channel
+    let session: PlaybackSession
+    @Environment(Store.self) private var store
+    @State private var showsSkip = false
+    @State private var showsDanmaku = false
+
+    var body: some View {
+        if channel.historyContext != nil {
+            Menu {
+                if let catalog = store.catalog(for: channel) {
+                    Toggle(L10n.text("Auto-play next episode"), isOn: Binding(
+                        get: { store.autoPlayNext }, set: { store.autoPlayNext = $0 }))
+                    Menu(L10n.text("Episodes")) {
+                        ForEach(catalog.playlist.flags, id: \.self) { flag in
+                            Menu(flag) {
+                                ForEach(catalog.playlist.episodes(for: flag)) { episode in
+                                    Button(episode.name) { store.selectEpisode(episode, from: channel) }
+                                }
+                            }
+                        }
+                    }
+                    .disabled(store.resolvingEpisode != nil)
+                }
+                Toggle(L10n.text("Automatically skip intro and outro"), isOn: Binding(
+                    get: { session.skipSettings.enabled },
+                    set: { value in
+                        var settings = session.skipSettings
+                        settings.enabled = value
+                        session.applySkipSettings(settings)
+                    }))
+                Button(L10n.text("Skip intro / outro")) { showsSkip = true }
+                    .accessibilityIdentifier("player.skip")
+                if channel.historyContext?.sourceKey != Bilibili.siteKey {
+                    Button(L10n.text("Danmaku")) { showsDanmaku = true }
+                        .accessibilityIdentifier("player.danmaku")
+                }
+                if let error = store.episodeError { Text(error) }
+            } label: {
+                Image(systemName: "ellipsis.circle").font(.headline).frame(width: 22, height: 22)
+            }
+            .controlButton().buttonBorderShape(.circle).controlSize(.large)
+            .accessibilityLabel(L10n.text("Playback Options"))
+            .accessibilityIdentifier("player.catalogOptions")
+            .sheet(isPresented: $showsSkip) { EpisodeSkipSettingsView(session: session) }
+            .sheet(isPresented: $showsDanmaku) {
+                CatalogDanmakuSettingsView(model: session.catalogDanmaku, channelName: channel.name)
+            }
+        }
+    }
+}
+#endif

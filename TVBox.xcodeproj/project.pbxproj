@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		01D530B7370C1CB5CFA657BE /* TVBoxApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2BB58B1720E9D6D85F93F4 /* TVBoxApp.swift */; };
+		024BC7DE6E06F79B6511FC89 /* PlaybackHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 334B106CCFB47B5E27376A16 /* PlaybackHistoryView.swift */; };
 		089C2D01F3B95CB1738D9AD9 /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6876ACF1E9D9F80BBC4F22C4 /* PlaybackView.swift */; };
 		090916F463B64788E8F69468 /* Updates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D706229ED242AE96AE52F8 /* Updates.swift */; };
 		0AF3C56A9798DD0C68EC63D8 /* QALaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B842401113B0BDFA7B532B4 /* QALaunch.swift */; };
@@ -20,7 +21,9 @@
 		15E3F2F86594F2B8A9CF0175 /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 181C983C0018A97F2A086298 /* DiscoveryView.swift */; };
 		16517407D53F4E6410E93AC7 /* BilibiliMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0A2914C1B5B5ABA5F4B25A7 /* BilibiliMark.swift */; };
 		17CDC06DD8AD8CE47973B982 /* TVBoxApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2BB58B1720E9D6D85F93F4 /* TVBoxApp.swift */; };
+		1903E9CDD9B2628A63C19FF3 /* CacheSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4EB0D74F8DB73E33CC129F8 /* CacheSettingsView.swift */; };
 		197B66B980AC69849F199D41 /* BilibiliAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B684AAD2C1CD8AC3699FB446 /* BilibiliAccountView.swift */; };
+		19D2D88AB805DCF59BA312D6 /* CacheSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4EB0D74F8DB73E33CC129F8 /* CacheSettingsView.swift */; };
 		1B37488D192798EC135198F8 /* Unicorn-GPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = B61DBAA2E8637B976A160D47 /* Unicorn-GPL2.txt */; };
 		1B6DFFAF679C5BAD70F09875 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7E929CDDC1F085C6B55693 /* HomeView.swift */; };
 		1E4B0163BABCB43BA85836D6 /* TVCore in Frameworks */ = {isa = PBXBuildFile; productRef = 758A0D5359D0622060D86C20 /* TVCore */; };
@@ -40,6 +43,7 @@
 		34349D95E4EC0176C10862E2 /* HLSProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44CBA0E5BBD1D129D5D64E3 /* HLSProxy.swift */; };
 		34A7CB6F4A24249F52079A4D /* runtime-probe.jar in Resources */ = {isa = PBXBuildFile; fileRef = E19FE970E68D278C15E8DBF8 /* runtime-probe.jar */; };
 		36506AEA4D6F2E1541C1BCD1 /* AppleRuntime.m in Sources */ = {isa = PBXBuildFile; fileRef = FFE4BA19E4F4F2797D929A6F /* AppleRuntime.m */; };
+		37B3CD8A4542A1B2304DBB75 /* CatalogDanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */; };
 		3917D120CB9602531FA0D44E /* Updates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D706229ED242AE96AE52F8 /* Updates.swift */; };
 		3AAEF47B755581ED6BE517CF /* OpenJDK-additional.txt in Resources */ = {isa = PBXBuildFile; fileRef = 49F3577BBD5630331F34E84E /* OpenJDK-additional.txt */; };
 		3BD1DFEF3A75B43935EB2185 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C911ACB6C027C8F9A096409 /* RootView.swift */; };
@@ -50,13 +54,16 @@
 		3F2E64D0FAA75B78026F115A /* RuntimeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2075419FEF0E1C161A31A9F0 /* RuntimeView.swift */; };
 		45ECD9E8EE6888748AC6D46E /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = A3012FC04D8DAD058B1A5168 /* ThirdPartyNotices.txt */; };
 		4861B86C4B02394CE7FF3DC0 /* PythonHost in Resources */ = {isa = PBXBuildFile; fileRef = 0558AED26E6028C2881DD044 /* PythonHost */; };
+		49FAE12E9DA2ED063E9C4754 /* PlaybackHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 334B106CCFB47B5E27376A16 /* PlaybackHistoryView.swift */; };
 		4C65106175D517040E98330B /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D1010816125FBC3792AF838 /* Store.swift */; };
 		4ECE8586E27A017017F26EDC /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 181C983C0018A97F2A086298 /* DiscoveryView.swift */; };
 		4FF55220DBC7080B2E95C5A8 /* BilibiliCastController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7B1CEF969E4F3D3301A8D61 /* BilibiliCastController.swift */; };
+		51E4D236D0D94E65A7881D6C /* EpisodeSkipSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B451E5612B33CF005EEAAE08 /* EpisodeSkipSettingsView.swift */; };
 		522603702A50B36D66B9470E /* Keystone-GPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 084C8344E2997DB3ED8FE974 /* Keystone-GPL2.txt */; };
 		53F697A2DD9E8D5443E43646 /* SitesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75124CC2471CF95C1FFB168A /* SitesView.swift */; };
 		58C0162322E0B17F1652E0AD /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = A3012FC04D8DAD058B1A5168 /* ThirdPartyNotices.txt */; };
 		59953BBDD74AED0A292F7079 /* CloudDriveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE19E104EAA6C4F620B8E53 /* CloudDriveView.swift */; };
+		5E064141ADA8E6A4E7A97D0B /* EpisodeSkipSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B451E5612B33CF005EEAAE08 /* EpisodeSkipSettingsView.swift */; };
 		5F05B8FEB75498291DBE83CB /* TVCore in Frameworks */ = {isa = PBXBuildFile; productRef = 150E7485ED76FF29A84D7C1D /* TVCore */; };
 		6012B7CF185E20A26CC68CD0 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7E929CDDC1F085C6B55693 /* HomeView.swift */; };
 		635ADE133C7284D6EF1677C8 /* OpenJDK.txt in Resources */ = {isa = PBXBuildFile; fileRef = BD71FD8B3E72803C426D91CC /* OpenJDK.txt */; };
@@ -65,12 +72,15 @@
 		6B5A97E3471CFF8086F15EB7 /* JNA-Apache2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8320284C7FB9590C44BA7102 /* JNA-Apache2.txt */; };
 		6B8A35576F3B6D86ACA87047 /* Unicorn-LGPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 77D75493765469B6134467AE /* Unicorn-LGPL2.txt */; };
 		6B940ABF210E7EE756826526 /* OpenJDK-assembly-exception.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4EF42E1957EFE569C0D2CF7D /* OpenJDK-assembly-exception.txt */; };
+		6BD7887B6DFF159358B27ACD /* CatalogDanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */; };
 		6CE6FB43EF6031C2E216DF33 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F25432F6424C7931768C7B6F /* Assets.xcassets */; };
 		6D108420BB72BBDA68011E7C /* OpenJDK-additional.txt in Resources */ = {isa = PBXBuildFile; fileRef = 49F3577BBD5630331F34E84E /* OpenJDK-additional.txt */; };
 		6D9AB8463C9D2249C0B908FF /* unidbg.txt in Resources */ = {isa = PBXBuildFile; fileRef = 995F5F0DB35FE66B4F90B4FF /* unidbg.txt */; };
 		6DBF1FDBD1FD2889D191197E /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6876ACF1E9D9F80BBC4F22C4 /* PlaybackView.swift */; };
 		6F3F7DE9D8CB73FC2C1592D9 /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 181C983C0018A97F2A086298 /* DiscoveryView.swift */; };
 		72448F6E6FFCC74EE5950C1A /* Keystone-GPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 084C8344E2997DB3ED8FE974 /* Keystone-GPL2.txt */; };
+		762AAE7DEDF6675A62474B19 /* CatalogPlaybackActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */; };
+		78CE336AE6714726DFDFDB43 /* CatalogPlaybackActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */; };
 		7FB9AB1705559DD6C22EEFAE /* LiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7459A3EBEF2E7C346B508738 /* LiveView.swift */; };
 		7FEEB776C67CD0BCB58D1BA1 /* BilibiliLiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E45A9F3834179C66B0892F /* BilibiliLiveView.swift */; };
 		8253F7BDC07638BD6F654962 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A90392B70C28DA6CC7497B9F /* Assets.xcassets */; };
@@ -90,6 +100,7 @@
 		967166F494669693CFDB15B2 /* BilibiliLiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E45A9F3834179C66B0892F /* BilibiliLiveView.swift */; };
 		97DFD3224F5E543A2BE6EDE0 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CB1FA4BB4990588B428781E /* PlayerView.swift */; };
 		98A0CBECF27EE28054D96B01 /* Unicorn-GPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = B61DBAA2E8637B976A160D47 /* Unicorn-GPL2.txt */; };
+		99DDB54D60A36E748D5E8C73 /* CacheSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4EB0D74F8DB73E33CC129F8 /* CacheSettingsView.swift */; };
 		9AD1AE51475719ED2DE59664 /* libffi.txt in Resources */ = {isa = PBXBuildFile; fileRef = 06D9469858E5C5A118DED875 /* libffi.txt */; };
 		A149AE9D183C5FB64D411761 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ADB3063A14E368A71892DCEE /* Assets.xcassets */; };
 		A6CF37D3E8E26FD498A15CD1 /* JavaHost in Resources */ = {isa = PBXBuildFile; fileRef = F1B927CC6ECB2F8BDFB22287 /* JavaHost */; };
@@ -124,17 +135,21 @@
 		E8E7D31FA6802352FA66EB56 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 335A7E05458DD9DA9AA04125 /* InfoPlist.strings */; };
 		EA59E4954399A7E5BC6C2348 /* unidbg.txt in Resources */ = {isa = PBXBuildFile; fileRef = 995F5F0DB35FE66B4F90B4FF /* unidbg.txt */; };
 		ED3BFF07859A99C455624644 /* DanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5737402EC96F0FBF79243E /* DanmakuView.swift */; };
+		EE40CAB25587252D370219D3 /* PlaybackHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 334B106CCFB47B5E27376A16 /* PlaybackHistoryView.swift */; };
 		F199C77516C38F5644997AEB /* TVCore in Frameworks */ = {isa = PBXBuildFile; productRef = A72103001ACB22093291D051 /* TVCore */; };
 		F2F68C26F3FB2279B102CF52 /* BilibiliAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B684AAD2C1CD8AC3699FB446 /* BilibiliAccountView.swift */; };
 		F3B63B43988E72A87677A7AC /* GlassKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 739A64FB51780D4314D2DDF8 /* GlassKit.swift */; };
 		F418F8B8793AF0B489F83AB9 /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6876ACF1E9D9F80BBC4F22C4 /* PlaybackView.swift */; };
 		F5F92EF7AFCA773D9FF85A8A /* OpenJDK-assembly-exception.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4EF42E1957EFE569C0D2CF7D /* OpenJDK-assembly-exception.txt */; };
+		F792BA02C02390291EEE4838 /* EpisodeSkipSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B451E5612B33CF005EEAAE08 /* EpisodeSkipSettingsView.swift */; };
 		F8EB061662C5CB6EB47B41F2 /* SitesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75124CC2471CF95C1FFB168A /* SitesView.swift */; };
 		F90D633F45956BEB583BB3C8 /* LiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7459A3EBEF2E7C346B508738 /* LiveView.swift */; };
+		FC0F00688179660407FD70E1 /* CatalogPlaybackActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */; };
 		FD9721B84A06B25F362AF291 /* AppleRuntime.m in Sources */ = {isa = PBXBuildFile; fileRef = FFE4BA19E4F4F2797D929A6F /* AppleRuntime.m */; };
 		FDA61F14FE9C263521D69DD7 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CB1FA4BB4990588B428781E /* PlayerView.swift */; };
 		FF2676E385636EBBCE5C2ED2 /* runtime-probe.jar in Resources */ = {isa = PBXBuildFile; fileRef = E19FE970E68D278C15E8DBF8 /* runtime-probe.jar */; };
 		FF51906A6F86833239C53A33 /* Capstone-LLVM.txt in Resources */ = {isa = PBXBuildFile; fileRef = 08B7C43C763200E67A22E365 /* Capstone-LLVM.txt */; };
+		FFE8085D174DC6F8A20E5CD6 /* CatalogDanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -148,7 +163,9 @@
 		2075419FEF0E1C161A31A9F0 /* RuntimeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeView.swift; sourceTree = "<group>"; };
 		2278608DE7AE2FEA27EB51C9 /* TVBox-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TVBox-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D1010816125FBC3792AF838 /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
+		334B106CCFB47B5E27376A16 /* PlaybackHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackHistoryView.swift; sourceTree = "<group>"; };
 		3A398E8AF0C7E4C94787F4B3 /* Keystone-LLVM.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Keystone-LLVM.txt"; sourceTree = "<group>"; };
+		46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogPlaybackActions.swift; sourceTree = "<group>"; };
 		49F3577BBD5630331F34E84E /* OpenJDK-additional.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OpenJDK-additional.txt"; sourceTree = "<group>"; };
 		4EF42E1957EFE569C0D2CF7D /* OpenJDK-assembly-exception.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OpenJDK-assembly-exception.txt"; sourceTree = "<group>"; };
 		6876ACF1E9D9F80BBC4F22C4 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
@@ -170,14 +187,17 @@
 		9C911ACB6C027C8F9A096409 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		A0E8559808CF7D11225EB30B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A3012FC04D8DAD058B1A5168 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
+		A4EB0D74F8DB73E33CC129F8 /* CacheSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheSettingsView.swift; sourceTree = "<group>"; };
 		A90392B70C28DA6CC7497B9F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		ADB3063A14E368A71892DCEE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B442C75C212445F3786397ED /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B44CBA0E5BBD1D129D5D64E3 /* HLSProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSProxy.swift; sourceTree = "<group>"; };
+		B451E5612B33CF005EEAAE08 /* EpisodeSkipSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpisodeSkipSettingsView.swift; sourceTree = "<group>"; };
 		B61DBAA2E8637B976A160D47 /* Unicorn-GPL2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Unicorn-GPL2.txt"; sourceTree = "<group>"; };
 		B684AAD2C1CD8AC3699FB446 /* BilibiliAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BilibiliAccountView.swift; sourceTree = "<group>"; };
 		BB24E05B7991A6EC8248BB34 /* ScriptHost */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ScriptHost; path = build/ScriptHost; sourceTree = SOURCE_ROOT; };
 		BD71FD8B3E72803C426D91CC /* OpenJDK.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OpenJDK.txt; sourceTree = "<group>"; };
+		C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogDanmakuView.swift; sourceTree = "<group>"; };
 		CEE19E104EAA6C4F620B8E53 /* CloudDriveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudDriveView.swift; sourceTree = "<group>"; };
 		D7B1CEF969E4F3D3301A8D61 /* BilibiliCastController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BilibiliCastController.swift; sourceTree = "<group>"; };
 		E0A2914C1B5B5ABA5F4B25A7 /* BilibiliMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BilibiliMark.swift; sourceTree = "<group>"; };
@@ -267,14 +287,19 @@
 				D7B1CEF969E4F3D3301A8D61 /* BilibiliCastController.swift */,
 				97E45A9F3834179C66B0892F /* BilibiliLiveView.swift */,
 				E0A2914C1B5B5ABA5F4B25A7 /* BilibiliMark.swift */,
+				A4EB0D74F8DB73E33CC129F8 /* CacheSettingsView.swift */,
+				C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */,
+				46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */,
 				CEE19E104EAA6C4F620B8E53 /* CloudDriveView.swift */,
 				E78573DE76BCF27CABBB20F3 /* CloudQRLoginView.swift */,
 				7A5737402EC96F0FBF79243E /* DanmakuView.swift */,
 				181C983C0018A97F2A086298 /* DiscoveryView.swift */,
+				B451E5612B33CF005EEAAE08 /* EpisodeSkipSettingsView.swift */,
 				739A64FB51780D4314D2DDF8 /* GlassKit.swift */,
 				B44CBA0E5BBD1D129D5D64E3 /* HLSProxy.swift */,
 				9B7E929CDDC1F085C6B55693 /* HomeView.swift */,
 				7459A3EBEF2E7C346B508738 /* LiveView.swift */,
+				334B106CCFB47B5E27376A16 /* PlaybackHistoryView.swift */,
 				6876ACF1E9D9F80BBC4F22C4 /* PlaybackView.swift */,
 				8CB1FA4BB4990588B428781E /* PlayerView.swift */,
 				8B842401113B0BDFA7B532B4 /* QALaunch.swift */,
@@ -609,14 +634,19 @@
 				4FF55220DBC7080B2E95C5A8 /* BilibiliCastController.swift in Sources */,
 				7FEEB776C67CD0BCB58D1BA1 /* BilibiliLiveView.swift in Sources */,
 				16517407D53F4E6410E93AC7 /* BilibiliMark.swift in Sources */,
+				19D2D88AB805DCF59BA312D6 /* CacheSettingsView.swift in Sources */,
+				FFE8085D174DC6F8A20E5CD6 /* CatalogDanmakuView.swift in Sources */,
+				762AAE7DEDF6675A62474B19 /* CatalogPlaybackActions.swift in Sources */,
 				C6D7579CAFFAB9B441C0703C /* CloudDriveView.swift in Sources */,
 				91C07692EFFEE27619AA9FF3 /* CloudQRLoginView.swift in Sources */,
 				ED3BFF07859A99C455624644 /* DanmakuView.swift in Sources */,
 				6F3F7DE9D8CB73FC2C1592D9 /* DiscoveryView.swift in Sources */,
+				5E064141ADA8E6A4E7A97D0B /* EpisodeSkipSettingsView.swift in Sources */,
 				1050D617A22F09CD0A01DE66 /* GlassKit.swift in Sources */,
 				34349D95E4EC0176C10862E2 /* HLSProxy.swift in Sources */,
 				1B6DFFAF679C5BAD70F09875 /* HomeView.swift in Sources */,
 				7FB9AB1705559DD6C22EEFAE /* LiveView.swift in Sources */,
+				49FAE12E9DA2ED063E9C4754 /* PlaybackHistoryView.swift in Sources */,
 				6DBF1FDBD1FD2889D191197E /* PlaybackView.swift in Sources */,
 				FDA61F14FE9C263521D69DD7 /* PlayerView.swift in Sources */,
 				DF010807CD40F2180FDE6793 /* QALaunch.swift in Sources */,
@@ -638,14 +668,19 @@
 				DBC3CE787002095C1BA56C84 /* BilibiliCastController.swift in Sources */,
 				BF2C0A73FB2F54CE2C6AB710 /* BilibiliLiveView.swift in Sources */,
 				2F95C18CB44C1D8FFD03583F /* BilibiliMark.swift in Sources */,
+				1903E9CDD9B2628A63C19FF3 /* CacheSettingsView.swift in Sources */,
+				37B3CD8A4542A1B2304DBB75 /* CatalogDanmakuView.swift in Sources */,
+				FC0F00688179660407FD70E1 /* CatalogPlaybackActions.swift in Sources */,
 				D10B5A0245BDE1A5E05A6BD7 /* CloudDriveView.swift in Sources */,
 				277D741E2A86C06612A8034A /* CloudQRLoginView.swift in Sources */,
 				2EF5CCF1BA71B68F4DCF2F71 /* DanmakuView.swift in Sources */,
 				15E3F2F86594F2B8A9CF0175 /* DiscoveryView.swift in Sources */,
+				F792BA02C02390291EEE4838 /* EpisodeSkipSettingsView.swift in Sources */,
 				F3B63B43988E72A87677A7AC /* GlassKit.swift in Sources */,
 				13AB1C878E7990BF8FB16849 /* HLSProxy.swift in Sources */,
 				14E05DC952FB2705E645EAE6 /* HomeView.swift in Sources */,
 				E64F015590BDBE0DFC8A216E /* LiveView.swift in Sources */,
+				EE40CAB25587252D370219D3 /* PlaybackHistoryView.swift in Sources */,
 				089C2D01F3B95CB1738D9AD9 /* PlaybackView.swift in Sources */,
 				97DFD3224F5E543A2BE6EDE0 /* PlayerView.swift in Sources */,
 				0AF3C56A9798DD0C68EC63D8 /* QALaunch.swift in Sources */,
@@ -668,14 +703,19 @@
 				BFCFF64AE36615F3BAE33874 /* BilibiliCastController.swift in Sources */,
 				967166F494669693CFDB15B2 /* BilibiliLiveView.swift in Sources */,
 				BE6FB2873A21222464CED1D8 /* BilibiliMark.swift in Sources */,
+				99DDB54D60A36E748D5E8C73 /* CacheSettingsView.swift in Sources */,
+				6BD7887B6DFF159358B27ACD /* CatalogDanmakuView.swift in Sources */,
+				78CE336AE6714726DFDFDB43 /* CatalogPlaybackActions.swift in Sources */,
 				59953BBDD74AED0A292F7079 /* CloudDriveView.swift in Sources */,
 				31D893FEF33876FD07BB58BA /* CloudQRLoginView.swift in Sources */,
 				C10EEC4D7AED0BE564BF2246 /* DanmakuView.swift in Sources */,
 				4ECE8586E27A017017F26EDC /* DiscoveryView.swift in Sources */,
+				51E4D236D0D94E65A7881D6C /* EpisodeSkipSettingsView.swift in Sources */,
 				338825790412D642115F2BD3 /* GlassKit.swift in Sources */,
 				D1BC31CCC2FCC4A6AB834BD5 /* HLSProxy.swift in Sources */,
 				6012B7CF185E20A26CC68CD0 /* HomeView.swift in Sources */,
 				F90D633F45956BEB583BB3C8 /* LiveView.swift in Sources */,
+				024BC7DE6E06F79B6511FC89 /* PlaybackHistoryView.swift in Sources */,
 				F418F8B8793AF0B489F83AB9 /* PlaybackView.swift in Sources */,
 				C5E9C8C7F693011882FC1F22 /* PlayerView.swift in Sources */,
 				C715A188F36F0CC004231464 /* QALaunch.swift in Sources */,
