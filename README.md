@@ -21,7 +21,7 @@
 
 <p align="center">
   <img alt="SwiftUI" src="https://img.shields.io/badge/SwiftUI-native-0A84FF?logo=swift&logoColor=white">
-  <img alt="Platforms" src="https://img.shields.io/badge/tvOS%20·%20iOS%20·%20macOS-26-1c1c1e?logo=apple&logoColor=white">
+  <img alt="Platforms" src="https://img.shields.io/badge/tvOS%2026%20·%20iOS%2018%20·%20macOS%2015-1c1c1e?logo=apple&logoColor=white">
   <img alt="Version" src="https://img.shields.io/badge/version-1.1-2dd4bf">
 </p>
 
@@ -57,9 +57,9 @@ Yingxia (映匣) plays your TVBox subscriptions the way an Apple app should: liv
 
 | Platform | Status |
 | --- | --- |
-| **Mac** (macOS 26+, Apple silicon) | ✅ [Free download](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-macos-arm64.dmg), signed and notarized |
+| **Mac** (macOS 15+, Apple silicon) | ✅ [Free download](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-macos-arm64.dmg), signed and notarized |
 | **Apple TV** (tvOS 26+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-tvos.ipa) and [sideload it](Docs/INSTALL.md#install-on-apple-tv) |
-| **iPhone & iPad** (iOS 26+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad) |
+| **iPhone & iPad** (iOS 18+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad) |
 
 The iPhone, iPad and Apple TV apps aren't on the App Store yet. The [install guide](Docs/INSTALL.md) walks you through installing them with your own Apple account (a free one works), keeping them signed, and fixing common problems.
 
