@@ -1,6 +1,129 @@
 {
   "releases": [
     {
+      "version": "1.1.5",
+      "date": "2026-10-11",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.1.5/Yingxia-1.1.5-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "arrow.down.circle.fill",
+          "title": {
+            "en": "Download to watch offline",
+            "zh-Hans": "下载离线观看",
+            "zh-Hant": "下載離線觀看",
+            "ja": "ダウンロードしてオフラインで"
+          },
+          "detail": {
+            "en": "Choose episodes on a video’s page and they download in a queue you can pause and resume. Downloads pick up where they stopped, and you can see how much space they use.",
+            "zh-Hans": "在视频页选择剧集，按队列下载，可暂停、可继续。中断后从断点接着下载，还能看到占用了多少空间。",
+            "zh-Hant": "在影片頁選擇劇集，按佇列下載，可暫停、可繼續。中斷後從中斷處接著下載，還能看到佔用了多少空間。",
+            "ja": "動画ページでエピソードを選ぶと、一時停止・再開できるキューでダウンロードされます。中断しても続きから再開し、使用容量も確認できます。"
+          }
+        },
+        {
+          "symbol": "clock.arrow.circlepath",
+          "title": {
+            "en": "Continue Watching",
+            "zh-Hans": "继续观看",
+            "zh-Hant": "繼續觀看",
+            "ja": "続きを観る"
+          },
+          "detail": {
+            "en": "Videos remember where you stopped. Pick up from Watch Now, or browse, search and clear everything you’ve watched in History.",
+            "zh-Hans": "视频会记住你看到哪里。在“现在观看”里接着看，也可以在“播放历史”里浏览、搜索和清除看过的内容。",
+            "zh-Hant": "影片會記住你看到哪裡。在「現在觀看」裡接著看，也可以在「播放歷史」裡瀏覽、搜尋和清除看過的內容。",
+            "ja": "動画は停止した位置を記憶します。「今すぐ観る」から続きを再生したり、「再生履歴」で検索・削除したりできます。"
+          }
+        },
+        {
+          "symbol": "text.bubble.fill",
+          "title": {
+            "en": "Danmaku for every show",
+            "zh-Hans": "片源也有弹幕",
+            "zh-Hant": "片源也有彈幕",
+            "ja": "どの番組でも弾幕"
+          },
+          "detail": {
+            "en": "Shows from your sources now find their comments automatically, so danmaku fly by without any setup.",
+            "zh-Hans": "订阅片源里的剧集会自动匹配弹幕，无需设置就能边看边吐槽。",
+            "zh-Hant": "訂閱片源裡的劇集會自動配對彈幕，無需設定就能邊看邊吐槽。",
+            "ja": "ソースの番組がコメントを自動で見つけるので、設定なしで弾幕が流れます。"
+          }
+        },
+        {
+          "symbol": "forward.end.fill",
+          "title": {
+            "en": "Next episode",
+            "zh-Hans": "下一集",
+            "zh-Hant": "下一集",
+            "ja": "次のエピソード"
+          },
+          "detail": {
+            "en": "The next episode starts when one ends, and Previous and Next Episode buttons sit in the player.",
+            "zh-Hans": "一集播完自动播放下一集，播放器里也有“上一集”和“下一集”按钮。",
+            "zh-Hant": "一集播完自動播放下一集，播放器裡也有「上一集」和「下一集」按鈕。",
+            "ja": "エピソードが終わると次が始まり、プレーヤーには前へ・次へのボタンもあります。"
+          }
+        },
+        {
+          "symbol": "pin.fill",
+          "title": {
+            "en": "Pin your sources",
+            "zh-Hans": "置顶片源",
+            "zh-Hant": "置頂片源",
+            "ja": "ソースをピン留め"
+          },
+          "detail": {
+            "en": "Pin the sources you use most and they appear first, right on Watch Now.",
+            "zh-Hans": "把常用片源置顶，它们会排在最前面，并直接出现在“现在观看”里。",
+            "zh-Hant": "把常用片源置頂，它們會排在最前面，並直接出現在「現在觀看」裡。",
+            "ja": "よく使うソースをピン留めすると先頭に並び、「今すぐ観る」にも表示されます。"
+          }
+        },
+        {
+          "symbol": "forward.fill",
+          "platforms": [
+            "ios",
+            "macos"
+          ],
+          "title": {
+            "en": "Skip intros and outros",
+            "zh-Hans": "跳过片头片尾",
+            "zh-Hant": "跳過片頭片尾",
+            "ja": "オープニングとエンディングをスキップ"
+          },
+          "detail": {
+            "en": "Set the intro and outro times for a show once, and they’re skipped in every episode.",
+            "zh-Hans": "为一部剧设好片头片尾时间，每一集都会自动跳过。",
+            "zh-Hant": "為一部劇設好片頭片尾時間，每一集都會自動跳過。",
+            "ja": "番組ごとに一度時間を設定すれば、すべてのエピソードでスキップされます。"
+          }
+        },
+        {
+          "symbol": "sparkles",
+          "platforms": [
+            "tvos"
+          ],
+          "title": {
+            "en": "A fresh look on Apple TV",
+            "zh-Hans": "Apple TV 全新外观",
+            "zh-Hant": "Apple TV 全新外觀",
+            "ja": "Apple TV の新しいデザイン"
+          },
+          "detail": {
+            "en": "Liquid Glass rows and filters, a poster-card History, and search that works like the TV app.",
+            "zh-Hans": "Liquid Glass 列表和筛选，海报卡片式的播放历史，以及和系统 TV App 一样的搜索。",
+            "zh-Hant": "Liquid Glass 列表和篩選，海報卡片式的播放歷史，以及和系統 TV App 一樣的搜尋。",
+            "ja": "Liquid Glass のリストとフィルタ、ポスターカードの再生履歴、TV アプリと同じ検索。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.1",
       "date": "2026-10-11",
       "links": {
