@@ -532,7 +532,7 @@ private struct DesktopPlaybackView: View {
         ZStack(alignment: .top) {
             ZStack {
                 Color.black
-                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame)
+                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: session.isLive)
                 if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision) }
                 if let error = session.error {
                     VStack(spacing: 16) {
@@ -579,8 +579,14 @@ private struct DesktopPlaybackView: View {
             Spacer(minLength: 12)
             GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
-                    barButton("gobackward.10", L10n.text("Back 10 seconds (←)")) { session.skip(-10) }
-                    barButton("goforward.10", L10n.text("Forward 10 seconds (→)")) { session.skip(10) }
+                    if session.isLive {
+                        // Live hides AVKit's controls (see DesktopNativePlayer), so play and mute live here.
+                        barButton(session.paused ? "play.fill" : "pause.fill", L10n.text("Play / Pause (Space)")) { session.togglePlayback() }
+                        barButton(session.muted ? "speaker.slash.fill" : "speaker.wave.2.fill", L10n.text("Mute (M)")) { session.player.isMuted.toggle() }
+                    } else {
+                        barButton("gobackward.10", L10n.text("Back 10 seconds (←)")) { session.skip(-10) }
+                        barButton("goforward.10", L10n.text("Forward 10 seconds (→)")) { session.skip(10) }
+                    }
                     CatalogPlaybackActions(channel: channel, session: session)
                     optionsMenu
                     barButton("arrow.up.left.and.arrow.down.right", L10n.text("Enter / Exit Full Screen")) { window.toggleFullScreen(nil) }
@@ -637,13 +643,17 @@ private struct DesktopPlaybackView: View {
     }
 }
 
+/// AVPlayerView without its controls for live streams. Its floating controls build a scrubber from the
+/// item's duration and seekable range; a live item has an indefinite duration and, at first, no
+/// seekable range, and AVKit traps on that range (macOS 27). tvOS avoids it with linear playback.
 private struct DesktopNativePlayer: NSViewRepresentable {
     let player: AVPlayer
     let fillsFrame: Bool
+    var live = false
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
+        view.controlsStyle = live ? .none : .floating
         view.player = player
-        view.controlsStyle = .floating
         view.showsFullScreenToggleButton = true
         view.allowsPictureInPicturePlayback = true
         view.showsSharingServiceButton = false
@@ -651,6 +661,8 @@ private struct DesktopNativePlayer: NSViewRepresentable {
         return view
     }
     func updateNSView(_ view: AVPlayerView, context: Context) {
+        let style: AVPlayerViewControlsStyle = live ? .none : .floating
+        if view.controlsStyle != style { view.controlsStyle = style }
         view.player = player
         view.videoGravity = fillsFrame ? .resizeAspectFill : .resizeAspect
     }

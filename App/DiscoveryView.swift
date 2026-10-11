@@ -767,6 +767,10 @@ struct ScrollStrip<Content: View>: View {
     let scrollTo: String?
     let leftLabel: String
     let rightLabel: String
+    /// Floats the arrows over the strip's ends instead of beside it, for strips that run edge to edge,
+    /// centred this far from the strip's top (the middle of its artwork), or on the strip when nil.
+    var overlayArrows = false
+    var arrowCenter: CGFloat?
     let content: Content
     @State private var position = ScrollPosition(idType: String.self)
     @State private var edges = Edges()
@@ -774,10 +778,12 @@ struct ScrollStrip<Content: View>: View {
     @State private var tracking = Tracking()
 
     init(scrollTo: String? = nil, leftLabel: String = "Scroll left", rightLabel: String = "Scroll right",
-         @ViewBuilder content: () -> Content) {
+         overlayArrows: Bool = false, arrowCenter: CGFloat? = nil, @ViewBuilder content: () -> Content) {
         self.scrollTo = scrollTo
         self.leftLabel = leftLabel
         self.rightLabel = rightLabel
+        self.overlayArrows = overlayArrows
+        self.arrowCenter = arrowCenter
         self.content = content()
     }
 
@@ -818,9 +824,20 @@ struct ScrollStrip<Content: View>: View {
             .environment(\.stripDrag, tracking.drag)
             #if os(macOS)
             .simultaneousGesture(dragToScroll)
+            .overlay(alignment: arrowCenter == nil ? .center : .top) {
+                if overlayArrows {
+                    HStack {
+                        if edges.leading { arrow(forward: false) }
+                        Spacer(minLength: 0)
+                        if edges.trailing { arrow(forward: true) }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.top, arrowCenter.map { max(0, $0 - 17) } ?? 0)
+                }
+            }
             #endif
             #if os(macOS)
-            if edges.leading || edges.trailing {
+            if !overlayArrows, edges.leading || edges.trailing {
                 HStack(spacing: 4) { arrow(forward: false); arrow(forward: true) }
             }
             #endif
@@ -862,9 +879,10 @@ struct ScrollStrip<Content: View>: View {
             }
         } label: {
             Image(systemName: forward ? "chevron.right" : "chevron.left")
-                .font(.system(size: 11, weight: .bold))
-                .frame(width: 26, height: 26)
+                .font(.system(size: overlayArrows ? 14 : 11, weight: .bold))
+                .frame(width: overlayArrows ? 34 : 26, height: overlayArrows ? 34 : 26)
                 .background(Color.primary.opacity(0.07), in: Circle())
+                .glassEffect(overlayArrows ? .regular.interactive() : .identity, in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

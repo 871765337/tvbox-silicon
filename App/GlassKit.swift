@@ -177,6 +177,9 @@ struct LiftButtonStyle: ButtonStyle {
                 #if !os(tvOS)
                 .onHover { hovering = $0 }
                 #endif
+                #if os(macOS)
+                .pointerStyle(.link)
+                #endif
         }
     }
 }
@@ -469,8 +472,12 @@ struct PosterImage: View {
         ZStack {
             Color(white: 0.20)
             Image(systemName: "film").font(.title2).foregroundStyle(.white.opacity(0.55))
-            if let bitmap { Image(decorative: bitmap.image, scale: 1).resizable().scaledToFill() }
+            if let bitmap { Color.clear.overlay { Image(decorative: bitmap.image, scale: 1).resizable().scaledToFill() } }
         }
+        // A filled cover is wider than its frame; clip its drawing and its hit area, or the overflow
+        // lies over the neighbouring cards and takes their clicks.
+        .clipped()
+        .contentShape(.rect)
         .task(id: resource) {
             bitmap = nil
             guard let resource else { return }

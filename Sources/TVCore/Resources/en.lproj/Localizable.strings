@@ -129,6 +129,8 @@
 
 // Desktop playback
 "Buffering…" = "Buffering…";
+"Play / Pause (Space)" = "Play / Pause (Space)";
+"Mute (M)" = "Mute (M)";
 "Back 10 seconds (←)" = "Back 10 seconds (←)";
 "Forward 10 seconds (→)" = "Forward 10 seconds (→)";
 "Loop Playback" = "Loop Playback";

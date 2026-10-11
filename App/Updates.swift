@@ -223,31 +223,37 @@ struct ReleaseNotesView: View {
     }
 
     /// One artwork card per feature, title and description underneath, as in an Apple TV shelf.
-    private var shelf: some View {
-        ScrollView(.horizontal) {
-            HStack(alignment: .top, spacing: Size.cardGap) {
-                ForEach(Array(features.enumerated()), id: \.element) { index, feature in
-                    VStack(alignment: .leading, spacing: Size.captionGap) {
-                        #if os(tvOS)
-                        // Focusable so the remote can scroll the shelf; the card lifts like a poster.
-                        Button {} label: { ReleaseArt(symbol: feature.symbol, index: index) }.buttonStyle(.card)
-                        #else
-                        ReleaseArt(symbol: feature.symbol, index: index)
-                        #endif
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(feature.title.text()).font(.system(size: Size.cardTitle, weight: .semibold)).lineLimit(1)
-                            Text(feature.detail.text()).font(.system(size: Size.cardDetail)).foregroundStyle(.white.opacity(0.6))
-                                .lineLimit(3, reservesSpace: true)
-                        }
-                        .accessibilityElement(children: .combine)
+    @ViewBuilder private var shelf: some View {
+        #if os(tvOS)
+        ScrollView(.horizontal) { cards.padding(.horizontal, Size.margin) }
+            .scrollIndicators(.hidden)
+            .scrollClipDisabled()
+        #else
+        // A mouse wheel can't scroll sideways, so the strip adds dragging and arrows floating at its ends.
+        ScrollStrip(overlayArrows: true, arrowCenter: Size.card * 9 / 32) { cards.padding(.horizontal, Size.margin) }
+        #endif
+    }
+
+    private var cards: some View {
+        HStack(alignment: .top, spacing: Size.cardGap) {
+            ForEach(Array(features.enumerated()), id: \.element) { index, feature in
+                VStack(alignment: .leading, spacing: Size.captionGap) {
+                    #if os(tvOS)
+                    // Focusable so the remote can scroll the shelf; the card lifts like a poster.
+                    Button {} label: { ReleaseArt(symbol: feature.symbol, index: index) }.buttonStyle(.card)
+                    #else
+                    ReleaseArt(symbol: feature.symbol, index: index)
+                    #endif
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(feature.title.text()).font(.system(size: Size.cardTitle, weight: .semibold)).lineLimit(1)
+                        Text(feature.detail.text()).font(.system(size: Size.cardDetail)).foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(3, reservesSpace: true)
                     }
-                    .frame(width: Size.card)
+                    .accessibilityElement(children: .combine)
                 }
+                .frame(width: Size.card)
             }
-            .padding(.horizontal, Size.margin)
         }
-        .scrollIndicators(.hidden)
-        .scrollClipDisabled()
     }
 
     #if os(iOS)

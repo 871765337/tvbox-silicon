@@ -79,6 +79,9 @@ import TVCore
     private(set) var qualities: [StreamQuality] = []
     /// A live stream: played at the live edge, without scrubbing.
     private(set) var isLive = false
+    /// Mirrors the player, for play and mute buttons drawn outside AVKit's controls.
+    private(set) var paused = false
+    private(set) var muted = false
     private(set) var quality: Int?
     private var playing: Channel?
     private var automatic: URL?
@@ -100,6 +103,7 @@ import TVCore
     private var sampler: Task<Void, Never>?
     private var endObserver: NSObjectProtocol?
     private var timeObservation: NSKeyValueObservation?
+    private var muteObservation: NSKeyValueObservation?
 
     func togglePlayback() {
         if player.timeControlStatus == .paused {
@@ -287,10 +291,16 @@ import TVCore
         }
         timeObservation = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
             let waiting = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+            let paused = player.timeControlStatus == .paused
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
                 self.buffering = waiting
+                self.paused = paused
             }
+        }
+        muteObservation = player.observe(\.isMuted, options: [.initial, .new]) { [weak self] player, _ in
+            let muted = player.isMuted
+            Task { @MainActor [weak self] in self?.muted = muted }
         }
         player.preventsDisplaySleepDuringVideoPlayback = true
         player.replaceCurrentItem(with: item)
@@ -400,6 +410,7 @@ import TVCore
         #endif
         observation = nil
         timeObservation = nil
+        muteObservation = nil
         buffering = false
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         endObserver = nil

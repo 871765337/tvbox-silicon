@@ -1,6 +1,71 @@
 {
   "releases": [
     {
+      "version": "1.2",
+      "date": "2026-10-12",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.2/Yingxia-1.2-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios"
+      },
+      "features": [
+        {
+          "symbol": "dot.radiowaves.left.and.right",
+          "platforms": [
+            "macos"
+          ],
+          "title": {
+            "en": "Bilibili Live on the Mac",
+            "zh-Hans": "Mac 上的哔哩哔哩直播",
+            "zh-Hant": "Mac 上的嗶哩嗶哩直播",
+            "ja": "Mac で bilibili ライブ"
+          },
+          "detail": {
+            "en": "Live rooms play smoothly and no longer close the app, with play, pause and mute buttons in the player.",
+            "zh-Hans": "直播间流畅播放，不再导致应用退出；播放器里也有了播放、暂停和静音按钮。",
+            "zh-Hant": "直播間流暢播放，不再導致應用程式結束；播放器裡也有了播放、暫停和靜音按鈕。",
+            "ja": "ライブ配信が安定して再生され、アプリが終了しなくなりました。プレーヤーに再生・一時停止・消音ボタンも付きました。"
+          }
+        },
+        {
+          "symbol": "lock.shield.fill",
+          "platforms": [
+            "macos"
+          ],
+          "title": {
+            "en": "Sources run in a sandbox",
+            "zh-Hans": "片源在沙盒中运行",
+            "zh-Hant": "片源在沙盒中執行",
+            "ja": "ソースはサンドボックスで実行"
+          },
+          "detail": {
+            "en": "Code that comes with a subscription can’t read your files, change them or start other programs.",
+            "zh-Hans": "订阅附带的代码无法读取或修改你的文件，也不能启动其他程序。",
+            "zh-Hant": "訂閱附帶的程式碼無法讀取或修改你的檔案，也不能啟動其他程式。",
+            "ja": "サブスクリプションに含まれるコードは、ファイルの読み取りや変更、ほかのプログラムの起動ができません。"
+          }
+        },
+        {
+          "symbol": "hand.point.up.left.fill",
+          "platforms": [
+            "ios",
+            "macos"
+          ],
+          "title": {
+            "en": "Posters open what you pick",
+            "zh-Hans": "点哪张海报就打开哪张",
+            "zh-Hant": "點哪張海報就打開哪張",
+            "ja": "選んだポスターが開きます"
+          },
+          "detail": {
+            "en": "Choosing near the edge of a poster opens that poster, not the one beside it. On the Mac, the pointer becomes a hand over posters.",
+            "zh-Hans": "点在海报边缘也会打开这张海报，而不是旁边那张。在 Mac 上，指针移到海报上会变成手形。",
+            "zh-Hant": "點在海報邊緣也會打開這張海報，而不是旁邊那張。在 Mac 上，指標移到海報上會變成手形。",
+            "ja": "ポスターの端を選んでも、隣ではなくそのポスターが開きます。Mac ではポスターの上でポインタが手の形になります。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.1.5",
       "date": "2026-10-11",
       "links": {

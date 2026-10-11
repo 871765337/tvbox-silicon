@@ -26,6 +26,9 @@ actor HLSProxy {
     private let queue = DispatchQueue(label: "tvbox.hls")
     private var listener: NWListener?
     private var routes: [String: URL] = [:]
+    /// The key each upstream URL was given. A live playlist is fetched again every few seconds and
+    /// must name its segments the same way each time; fresh names make AVPlayer fail (-12312).
+    private var keys: [URL: String] = [:]
     private var base: URL?
     private var startup: CheckedContinuation<URL, Error>?
     private var firstURL: URL?
@@ -60,11 +63,13 @@ actor HLSProxy {
         default: break
         }
     }
-    func stop() { listener?.cancel(); listener = nil; routes.removeAll() }
+    func stop() { listener?.cancel(); listener = nil; routes.removeAll(); keys.removeAll() }
     private func register(_ url: URL, playlist: Bool = false) -> URL {
+        if let key = keys[url] { return base!.appendingPathComponent(key) }
         let extensionName = playlist || url.pathExtension.lowercased() == "m3u8" ? "m3u8" : "ts"
         let key = UUID().uuidString + "." + extensionName
         routes[key] = url
+        keys[url] = key
         return base!.appendingPathComponent(key)
     }
     private func receive(_ connection: NWConnection, buffer: Data) {

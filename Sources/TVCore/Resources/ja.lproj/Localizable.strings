@@ -129,6 +129,8 @@
 
 // Desktop playback
 "Buffering…" = "バッファリング中…";
+"Play / Pause (Space)" = "再生 / 一時停止（スペース）";
+"Mute (M)" = "消音（M）";
 "Back 10 seconds (←)" = "10秒戻る（←）";
 "Forward 10 seconds (→)" = "10秒進む（→）";
 "Loop Playback" = "リピート再生";

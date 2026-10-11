@@ -129,6 +129,8 @@
 
 // Desktop playback
 "Buffering…" = "正在缓冲…";
+"Play / Pause (Space)" = "播放 / 暂停（空格）";
+"Mute (M)" = "静音（M）";
 "Back 10 seconds (←)" = "后退 10 秒（←）";
 "Forward 10 seconds (→)" = "前进 10 秒（→）";
 "Loop Playback" = "循环播放";
