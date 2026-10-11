@@ -4,12 +4,77 @@ import TVCore
 
 @MainActor @Observable final class PlaybackSession {
     let player = AVPlayer()
+    let catalogDanmaku = CatalogDanmakuModel()
+    var history = PlaybackHistory.shared
+    var skipDefaults = UserDefaults.standard
+    private var historyContext: PlaybackHistoryContext?
+    private var pendingResume: Double?
+    private var restoringPosition = false
+    private(set) var restoredPosition: Double?
+    private(set) var requestedResumePosition: Double?
+    private(set) var skipSettings = EpisodeSkipSettings()
+    private(set) var position: Double = 0
+    private(set) var duration: Double = 0
+    private var skipScope: String?
+    private var skipPass = EpisodeSkipPass()
+    private var editingSkip = false
+    private var resumeAfterEditing = false
+    private var seekingSegment = false
+
+    func beginEditingSkip() {
+        editingSkip = true
+        resumeAfterEditing = player.rate > 0
+        player.pause()
+    }
+
+    func endEditingSkip() {
+        editingSkip = false
+        if resumeAfterEditing { player.play() }
+        resumeAfterEditing = false
+    }
+
+    func applySkipSettings(_ settings: EpisodeSkipSettings) {
+        guard let skipScope else { return }
+        settings.save(scope: skipScope, defaults: skipDefaults)
+        skipSettings = settings
+        skipPass = EpisodeSkipPass()
+    }
+
+    private func updateSkipping(_ item: AVPlayerItem) {
+        let time = player.currentTime().seconds
+        position = time.isFinite ? max(0, time) : 0
+        let length = item.duration.seconds
+        duration = length.isFinite ? max(0, length) : 0
+        guard skipScope != nil, !editingSkip, !seekingSegment, pendingResume == nil, !restoringPosition,
+              item.status == .readyToPlay else { return }
+        var pass = skipPass
+        guard let target = pass.target(time: time, duration: length, playing: player.rate > 0, settings: skipSettings) else {
+            skipPass = pass
+            return
+        }
+        guard item.seekableTimeRanges.contains(where: { CMTimeRangeContainsTime($0.timeRangeValue, time: CMTime(seconds: target, preferredTimescale: 600)) }) else { return }
+        skipPass = pass
+        seekingSegment = true
+        let activeGeneration = generation
+        Diagnostics.shared.record(.info, "player", "skip segment from=\(Int(time)) to=\(Int(target))")
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.generation == activeGeneration else { return }
+                self.seekingSegment = false
+            }
+        }
+    }
+
     var error: String?
     var loading = true
     var looping = false
     var buffering = false
     /// Bullet comments for the media, when its source has them.
-    var danmaku: [Danmaku] = []
+    private var sourceDanmaku: [Danmaku] = []
+    var danmaku: [Danmaku] { sourceDanmaku.isEmpty ? catalogDanmaku.renderedComments : sourceDanmaku }
+    var danmakuOpacity: Double { sourceDanmaku.isEmpty ? catalogDanmaku.opacity : 0.9 }
+    var danmakuRevision: String { sourceDanmaku.isEmpty ? catalogDanmaku.renderedRevision : "" }
+    var onPlaybackEnded: (() -> Void)?
     /// Qualities the stream can switch between (Bilibili), and the one chosen; nil is automatic.
     private(set) var qualities: [StreamQuality] = []
     /// A live stream: played at the live edge, without scrubbing.
@@ -65,10 +130,10 @@ import TVCore
             Task { @MainActor [weak self] in
                 guard let self, self.generation == active else { return }
                 let now = self.player.currentTime().seconds
-                let time = max(now.isFinite ? now + 0.2 : 0, self.danmaku.last?.time ?? 0)
-                self.danmaku.append(Danmaku(time: time, position: position, color: color, text: text))
+                let time = max(now.isFinite ? now + 0.2 : 0, self.sourceDanmaku.last?.time ?? 0)
+                self.sourceDanmaku.append(Danmaku(time: time, position: position, color: color, text: text))
                 // Keep the recent chat; dropping the oldest restarts the overlay's layout once.
-                if self.danmaku.count > 4000 { self.danmaku.removeFirst(1000) }
+                if self.sourceDanmaku.count > 4000 { self.sourceDanmaku.removeFirst(1000) }
             }
         }
     }
@@ -118,7 +183,15 @@ import TVCore
     static weak var current: PlaybackSession?
     func start(_ channel: Channel) {
         Self.current = self
-        stop(); error = nil; loading = true; danmaku = []; qualities = []; quality = nil
+        stop(); error = nil; loading = true; sourceDanmaku = []; qualities = []; quality = nil
+        historyContext = channel.historyContext
+        requestedResumePosition = channel.resumePosition
+        pendingResume = channel.resumePosition.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        skipScope = channel.skipScope
+        skipSettings = skipScope.map { EpisodeSkipSettings.load(scope: $0, defaults: skipDefaults) } ?? EpisodeSkipSettings()
+        if !DanmakuSource.has(channel.url), channel.historyContext?.sourceKey != Bilibili.siteKey {
+            catalogDanmaku.startAutomatic(channel.historyContext)
+        }
         isLive = BilibiliLive.room(channel.url) != nil || channel.group == L10n.text("Bilibili Live")
         let activeGeneration = generation
         Diagnostics.shared.record(.info, "player", "start name=\(channel.name) group=\(channel.group) url=\(channel.url.absoluteString) headers=\(channel.headers.keys.sorted().joined(separator: ","))")
@@ -162,7 +235,7 @@ import TVCore
             self.qualities = liveQualities.isEmpty ? BilibiliStreams.qualities(for: address) : liveQualities
             self.quality = liveQuality
             if DanmakuSource.has(channel.url), let comments = await DanmakuSource.comments(for: channel.url),
-               self.generation == activeGeneration { self.danmaku = comments }
+               self.generation == activeGeneration { self.sourceDanmaku = comments }
         }
     }
     private func configure(_ channel: Channel, url: URL, generation activeGeneration: UUID) {
@@ -183,7 +256,8 @@ import TVCore
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
                 if status == .readyToPlay {
-                    self.loading = false
+                    self.restorePositionIfNeeded(item)
+                    self.loading = self.pendingResume != nil || self.restoringPosition
                     Diagnostics.shared.record(.info, "player", "ready host=\(self.transfer.host ?? channel.url.host() ?? "-")")
                 }
                 if status == .failed {
@@ -203,9 +277,12 @@ import TVCore
         }
         endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self, self.generation == activeGeneration, self.looping else { return }
-                self.player.seek(to: .zero)
-                self.player.play()
+                guard let self, self.generation == activeGeneration else { return }
+                self.saveHistory(completed: true)
+                if self.looping {
+                    self.skipPass = EpisodeSkipPass()
+                    self.player.seek(to: .zero); self.player.play()
+                } else { self.onPlaybackEnded?() }
             }
         }
         timeObservation = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
@@ -217,7 +294,7 @@ import TVCore
         }
         player.preventsDisplaySleepDuringVideoPlayback = true
         player.replaceCurrentItem(with: item)
-        player.play()
+        if pendingResume == nil { player.play() }
         #if DEBUG
         // `-qaSeek <seconds>` starts playback there, for screenshots.
         let qaSeek = UserDefaults.standard.double(forKey: "qaSeek")
@@ -237,6 +314,9 @@ import TVCore
     private func sample(_ history: inout [(date: Date, bytes: Int64)], tick: Int, origin: String?, generation activeGeneration: UUID) -> Bool {
         guard generation == activeGeneration else { return false }
         guard let item = player.currentItem else { return true }
+        restorePositionIfNeeded(item)
+        updateSkipping(item)
+        if tick % 5 == 0 { saveHistory() }
         let events = item.accessLog()?.events ?? []
         let now = Date()
         var next = Transfer(received: events.reduce(Int64(0)) { $0 + max(0, $1.numberOfBytesTransferred) })
@@ -273,6 +353,16 @@ import TVCore
             next.failure = error.errorComment ?? "\(error.errorDomain) \(error.errorStatusCode)"
         }
         transfer = next
+        #if DEBUG
+        if QALaunch.page?.hasPrefix("play-source:") == true || QALaunch.page == "resume-last" {
+            let report: [String: Any] = ["seconds": position, "duration": duration, "ready": item.status == .readyToPlay,
+                "rate": player.rate, "error": error ?? "", "danmakuCount": danmaku.count,
+                "danmakuState": catalogDanmaku.automaticState, "cached": catalogDanmaku.fromCache,
+                "introEnd": skipSettings.introEnd, "outroLength": skipSettings.outroLength,
+                "requestedResumePosition": requestedResumePosition ?? 0, "restoredPosition": restoredPosition ?? 0]
+            try? JSONSerialization.data(withJSONObject: report).write(to: URL.cachesDirectory.appending(path: "qa-playback.json"), options: .atomic)
+        }
+        #endif
         if (loading || buffering) && tick % 5 == 0 {
             Diagnostics.shared.record(.debug, "player", "waiting host=\(next.host ?? "-") received=\(next.received) speed=\(Int(next.bytesPerSecond ?? -1)) required=\(Int(next.required ?? -1)) failure=\(next.failure ?? "-")")
         }
@@ -289,6 +379,13 @@ import TVCore
         return text
     }
     func stop() {
+        saveHistory()
+        catalogDanmaku.clear()
+        historyContext = nil; pendingResume = nil; restoringPosition = false
+        requestedResumePosition = nil; restoredPosition = nil
+        skipScope = nil; skipSettings = EpisodeSkipSettings(); skipPass = EpisodeSkipPass()
+        position = 0; duration = 0; editingSkip = false; resumeAfterEditing = false; seekingSegment = false
+        onPlaybackEnded = nil
         if player.currentItem != nil {
             let seconds = player.currentTime().seconds
             Diagnostics.shared.record(.info, "player", "stop at=\(seconds.isFinite ? Int(seconds) : -1)s")
@@ -309,6 +406,34 @@ import TVCore
         if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
         failureObserver = nil
         player.pause(); player.replaceCurrentItem(with: nil)
+    }
+    func saveHistory(completed: Bool = false) {
+        guard let context = historyContext, let item = player.currentItem, item.status == .readyToPlay,
+              pendingResume == nil, !restoringPosition, !seekingSegment else { return }
+        let length = item.duration.seconds
+        let time = completed && length.isFinite ? length : player.currentTime().seconds
+        history.record(context, position: time, duration: length.isFinite ? length : 0)
+    }
+
+    private func restorePositionIfNeeded(_ item: AVPlayerItem) {
+        guard let requested = pendingResume, !restoringPosition, item.status == .readyToPlay,
+              let target = PlaybackHistoryEntry.resumeTarget(requested, duration: item.duration.seconds) else { return }
+        restoringPosition = true
+        let activeGeneration = generation
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
+            Task { @MainActor [weak self] in
+                guard let self, self.generation == activeGeneration else { return }
+                self.restoringPosition = false; self.pendingResume = nil; self.loading = false
+                guard finished else {
+                    self.error = L10n.text("The player could not restore the saved position. Try again.")
+                    return
+                }
+                self.restoredPosition = self.player.currentTime().seconds
+                Diagnostics.shared.record(.info, "player", "history resume requested=\(requested) restored=\(self.restoredPosition ?? -1)")
+                if !self.editingSkip { self.player.play() }
+                self.saveHistory()
+            }
+        }
     }
 }
 

@@ -316,6 +316,51 @@ struct Chip: View {
     }
 }
 
+/// A page with nothing in it yet: a symbol, what the page is for, and one way forward. The button is
+/// also the remote's focus target; a tvOS page with nothing to focus strands it.
+struct EmptyPage<Footer: View>: View {
+    let symbol: String
+    let title: String
+    let message: String
+    let action: String
+    let actionSymbol: String
+    let perform: () -> Void
+    @ViewBuilder var footer: Footer
+    #if os(tvOS)
+    private let icon: CGFloat = 132, titleSize: CGFloat = 46, text: CGFloat = 28, spacing: CGFloat = 30, width: CGFloat = 960
+    #else
+    private let icon: CGFloat = 84, titleSize: CGFloat = 24, text: CGFloat = 15, spacing: CGFloat = 18, width: CGFloat = 420
+    #endif
+    var body: some View {
+        VStack(spacing: spacing) {
+            Image(systemName: symbol)
+                .font(.system(size: icon * 0.42, weight: .bold))
+                .foregroundStyle(Brand.accent)
+                .frame(width: icon, height: icon)
+                .background(Brand.accent.opacity(0.14), in: Circle())
+                .accessibilityHidden(true)
+            VStack(spacing: spacing * 0.4) {
+                Text(title).font(.system(size: titleSize, weight: .bold))
+                Text(message)
+                    .font(.system(size: text)).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: width)
+            Button(action: perform) { Label(action, systemImage: actionSymbol).padding(.horizontal, 8) }
+                .controlButton(prominent: true).controlSize(.large)
+            footer.font(.system(size: text * 0.8)).monospacedDigit().foregroundStyle(.tertiary)
+        }
+        .padding(Layout.gutter)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+extension EmptyPage where Footer == EmptyView {
+    init(symbol: String, title: String, message: String, action: String, actionSymbol: String, perform: @escaping () -> Void) {
+        self.init(symbol: symbol, title: title, message: message, action: action, actionSymbol: actionSymbol, perform: perform) { EmptyView() }
+    }
+}
+
 /// Two-line card title that always takes two lines of height (so cards in a grid row match)
 /// but centres a one-line title instead of leaving a gap under it.
 struct CardTitle: View {
@@ -370,14 +415,23 @@ private actor PosterLoader {
     static let shared = PosterLoader()
     private let cache = NSCache<NSString, PosterBitmap>()
     private var pending: [PosterResource: Task<PosterBitmap, Error>] = [:]
+    private var revision = MediaCache.shared.revision
     init() { cache.countLimit = 96; cache.totalCostLimit = 48 * 1024 * 1024 }
 
     func load(_ resource: PosterResource) async throws -> PosterBitmap {
-        let key = (resource.url.absoluteString + resource.headers.sorted { $0.key < $1.key }.map { "\n\($0.key):\($0.value)" }.joined()) as NSString
+        let current = MediaCache.shared.revision
+        if revision != current { cache.removeAllObjects(); revision = current }
+        let key = resource.cacheKey as NSString
         if let image = cache.object(forKey: key) { return image }
         if let task = pending[resource] { return try await task.value }
         let task = Task {
-            let (data, _) = try await HTTPClient().get(resource.url, headers: resource.headers)
+            let disk = MediaCache.shared
+            let ticket = disk.ticket()
+            let scope = PosterResource.artworkScope(resource.url)
+            let cached = disk.data(for: resource.cacheKey, kind: .artwork, scope: scope)
+            let data: Data
+            if let cached { data = cached }
+            else { data = try await HTTPClient().get(resource.url, headers: resource.headers).0 }
             guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
                   let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                     kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -387,13 +441,16 @@ private actor PosterLoader {
                   ] as CFDictionary) else {
                 throw NSError(domain: "PosterLoader", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid poster image"])
             }
+            if cached == nil {
+                disk.store(data, for: resource.cacheKey, kind: .artwork, scope: scope, ttl: 30 * 86400, ticket: ticket)
+            }
             return PosterBitmap(image)
         }
         pending[resource] = task
         do {
             let bitmap = try await task.value
             pending[resource] = nil
-            cache.setObject(bitmap, forKey: key, cost: bitmap.image.bytesPerRow * bitmap.image.height)
+            if current == MediaCache.shared.revision { cache.setObject(bitmap, forKey: key, cost: bitmap.image.bytesPerRow * bitmap.image.height) }
             return bitmap
         } catch { pending[resource] = nil; throw error }
     }

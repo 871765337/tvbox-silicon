@@ -16,6 +16,7 @@ enum QALaunch {
         case "sites": .sites
         case "favorites": .favorites
         case "downloads": .downloads
+        case "history": .history
         case "settings": .settings
         case "more": .more
         default: nil
@@ -29,6 +30,14 @@ enum QALaunch {
         guard section != nil || page != nil || UserDefaults.standard.string(forKey: "qaPlay") != nil
                 || UserDefaults.standard.string(forKey: "qaDownload") != nil
                 || UserDefaults.standard.string(forKey: "qaPlayLive") != nil else { return }
+        if UserDefaults.standard.bool(forKey: "qaResetHistory") { store.playbackHistory.clear() }
+        if UserDefaults.standard.bool(forKey: "qaResetPlayerSettings") {
+            EpisodeSkipSettings().saveGlobal(defaults: store.playbackDefaults)
+            for key in store.playbackDefaults.dictionaryRepresentation().keys where key.hasPrefix("episodeSkip.v1.") || key == "episodeSkip.auto.v2" {
+                store.playbackDefaults.removeObject(forKey: key)
+            }
+        }
+        if UserDefaults.standard.bool(forKey: "qaResetCache") { MediaCache.shared.clear() }
         if let subscription = UserDefaults.standard.string(forKey: "qaSubscription") { await store.importSubscription(address: subscription) }
         else if store.subscription == nil { await store.importSubscription() }
         if QASweep.enabled, let config = store.subscription { Task.detached(priority: .utility) { await QASweep.run(config) } }
@@ -50,7 +59,10 @@ enum QALaunch {
                 do {
                     let video = try await client.detail(parts[1])
                     let index = min(parts.count > 2 ? Int(parts[2]) ?? 0 : 0, max(0, video.episodes.count - 1))
-                    if video.episodes.indices.contains(index) { store.playing = try await client.playback(video.episodes[index]) }
+                    if video.episodes.indices.contains(index) {
+                        let episode = video.episodes[index]
+                        store.playing = store.catalogChannel(try await client.playback(episode), video: video, episode: episode, client: client)
+                    }
                 } catch { store.error = error.localizedDescription }
             }
         }
@@ -66,6 +78,39 @@ enum QALaunch {
                     }
                 } catch { store.error = error.localizedDescription }
             }
+        }
+        if let page, page.hasPrefix("play-source:"), let config = store.subscription {
+            let key = String(page.dropFirst("play-source:".count))
+            do {
+                guard let site = config.sites.first(where: { $0.key == key }) else { throw QASweep.Failure(message: "Source not found") }
+                let client = CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL).with(parses: config.parseServices)
+                var videos: [Video]
+                if let query = UserDefaults.standard.string(forKey: "qaVideoQuery") {
+                    videos = try await QASweep.limit(60) { try await client.list(category: nil, query: query, page: 1).videos }
+                } else {
+                    let home = try await QASweep.limit(60) { try await client.home() }
+                    videos = home.videos
+                    if videos.isEmpty, let category = home.categories.first {
+                        videos = try await QASweep.limit(60) { try await client.list(category: category.id, query: "", page: 1).videos }
+                    }
+                }
+                let videoID = UserDefaults.standard.string(forKey: "qaVideoID")
+                guard let first = videoID.flatMap({ id in videos.first { $0.id == id } }) ?? videos.first else { throw QASweep.Failure(message: "No videos") }
+                let video = try await QASweep.limit(60) { try await client.detail(first.id) }
+                let selectedEpisode = UserDefaults.standard.string(forKey: "qaEpisodeName")
+                guard let episode = selectedEpisode.flatMap({ name in video.episodes.first { $0.name == name } })
+                    ?? (selectedEpisode == nil ? video.episodes.first : nil) else { throw QASweep.Failure(message: "No episodes") }
+                let channel = try await QASweep.limit(60) { try await client.playback(episode) }
+                let start = UserDefaults.standard.object(forKey: "qaStartAt") == nil ? nil : UserDefaults.standard.double(forKey: "qaStartAt")
+                store.playing = store.catalogChannel(channel, video: video, episode: episode, client: client, resumePosition: start)
+            } catch {
+                store.error = error.localizedDescription
+                let file = URL.cachesDirectory.appending(path: "qa-playback.json")
+                try? JSONSerialization.data(withJSONObject: ["source": key, "stage": "resolve", "error": error.localizedDescription]).write(to: file, options: .atomic)
+            }
+        }
+        if page == "resume-last", let entry = store.playbackHistory.entries.first {
+            await store.resumeHistory(entry)
         }
         if page == "player", let url = URL(string: "http://127.0.0.1:8765/clip.mp4") {
             store.playing = Channel(name: "测试频道 01", url: url)
@@ -97,6 +142,7 @@ enum QALaunch {
                 }
             case "runtime": RuntimeView()
             case "logs": DiagnosticsView()
+            case "cache": CacheSettingsView()
             case "licenses": LicensesView()
             case "bilibili-account": BilibiliAccountView()
             case "bilibili-live": BilibiliLiveView()
@@ -111,7 +157,7 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "detail", "channels", "runtime", "logs", "licenses", "cloud-login", "bilibili-account", "bilibili-live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "detail", "channels", "runtime", "logs", "cache", "licenses", "cloud-login", "bilibili-account", "bilibili-live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
     }
 }
 

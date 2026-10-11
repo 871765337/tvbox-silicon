@@ -142,38 +142,14 @@ enum DownloadFormat {
 private struct EmptyDownloads: View {
     let available: Int64?
     let browse: () -> Void
-    #if os(tvOS)
-    private let icon: CGFloat = 132, title: CGFloat = 46, text: CGFloat = 28, spacing: CGFloat = 30, width: CGFloat = 960
-    #else
-    private let icon: CGFloat = 84, title: CGFloat = 24, text: CGFloat = 15, spacing: CGFloat = 18, width: CGFloat = 420
-    #endif
     var body: some View {
-        VStack(spacing: spacing) {
-            Image(systemName: "arrow.down")
-                .font(.system(size: icon * 0.42, weight: .bold))
-                .foregroundStyle(Brand.accent)
-                .frame(width: icon, height: icon)
-                .background(Brand.accent.opacity(0.14), in: Circle())
-                .accessibilityHidden(true)
-            VStack(spacing: spacing * 0.4) {
-                Text(L10n.text("No Downloads")).font(.system(size: title, weight: .bold))
-                Text(L10n.text("Choose Download on a video's page to save episodes for watching offline."))
-                    .font(.system(size: text)).foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: width)
-            // Also the remote's focus target: a page with nothing to focus strands it.
-            Button(action: browse) {
-                Label(L10n.text("Browse Sources"), systemImage: AppSection.sites.icon).padding(.horizontal, 8)
-            }
-            .controlButton(prominent: true).controlSize(.large)
+        EmptyPage(symbol: "arrow.down", title: L10n.text("No Downloads"),
+                  message: L10n.text("Choose Download on a video's page to save episodes for watching offline."),
+                  action: L10n.text("Browse Sources"), actionSymbol: AppSection.sites.icon, perform: browse) {
             if let available {
                 Label(L10n.text("%@ available on this device", DownloadFormat.size(available)), systemImage: "internaldrive")
-                    .font(.system(size: text * 0.8)).monospacedDigit().foregroundStyle(.tertiary)
             }
         }
-        .padding(Layout.gutter)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

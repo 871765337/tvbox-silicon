@@ -1,0 +1,233 @@
+import SwiftUI
+import TVCore
+
+/// Watched titles, newest first: resume where you left off, or select titles to remove.
+struct PlaybackHistoryView: View {
+    @Environment(Store.self) private var store
+    @State private var query = ""
+    @State private var managing = false
+    @State private var selected = Set<String>()
+    @State private var confirmsDelete = false
+    @State private var deletionIDs = Set<String>()
+    private var history: PlaybackHistory { store.playbackHistory }
+    private var entries: [PlaybackHistoryEntry] {
+        history.entries.filter { query.isEmpty || $0.context.videoName.localizedCaseInsensitiveContains(query) || $0.context.sourceName.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        Group {
+            if history.entries.isEmpty {
+                EmptyPage(symbol: AppSection.history.icon, title: L10n.text("No Playback History Yet"),
+                          message: L10n.text("Videos you watch appear here, ready to pick up where you left off."),
+                          action: L10n.text("Browse Sources"), actionSymbol: AppSection.sites.icon, perform: { store.section = .sites })
+            } else {
+                content.catalogSearchable(text: $query, prompt: L10n.text("Search history"))
+            }
+        }
+        .screenBackdrop()
+        #if os(tvOS)
+        // The tab bar already names the page.
+        .toolbar(.hidden, for: .navigationBar)
+        #else
+        .screenTitle(L10n.text("Playback History"))
+        #endif
+        .onChange(of: history.entries.isEmpty) { _, empty in if empty { managing = false; selected.removeAll() } }
+        .confirmationDialog(L10n.text("Remove selected history and its cached content?"), isPresented: $confirmsDelete, titleVisibility: .visible) {
+            Button(L10n.text("Remove from history"), role: .destructive) {
+                history.remove(deletionIDs); selected.subtract(deletionIDs); deletionIDs.removeAll()
+            }
+            .accessibilityIdentifier("history.confirmDelete")
+        } message: {
+            Text(L10n.text("Removing a title also clears its cached content and skip times."))
+        }
+    }
+
+    private var content: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+                if let error = history.persistenceError {
+                    StatusNotice(text: L10n.text("Unable to save playback history: %@", error))
+                }
+                header
+                LazyVStack(alignment: .leading, spacing: HistoryMetrics.rowSpacing) {
+                    ForEach(entries) { entry in
+                        Button { tap(entry) } label: {
+                            HistoryRow(entry: entry, selection: managing ? selected.contains(entry.id) : nil,
+                                       resuming: store.resumingHistoryID == entry.id)
+                        }
+                        .historyRow()
+                        .disabled(!managing && store.resumingHistoryID != nil)
+                        .accessibilityIdentifier((managing ? "history.select." : "history.resume.") + entry.context.videoID)
+                        .contextMenu {
+                            Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) {
+                                deletionIDs = [entry.id]; confirmsDelete = true
+                            }
+                        }
+                    }
+                }
+                .glassRowInsets()
+                #if os(tvOS)
+                .padding(.horizontal, -40)
+                #endif
+                .tvFocusSection()
+            }
+            .pageContainer()
+        }
+    }
+
+    /// Count and actions on one line, or actions under the count when a phone is too narrow;
+    /// managing swaps them for selection actions.
+    private var header: some View {
+        let title = SectionHeader(title: L10n.text("%lld titles", history.entries.count))
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 12) {
+                title
+                Spacer(minLength: 12)
+                actions
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                title
+                HStack(spacing: 10) { actions }
+            }
+        }
+        .tvFocusSection()
+    }
+
+    @ViewBuilder private var actions: some View {
+            if managing {
+                Button(L10n.text("Select all")) { selected = Set(entries.map(\.id)) }
+                    .controlButton().accessibilityIdentifier("history.selectAll")
+                Button { deletionIDs = selected; confirmsDelete = true } label: {
+                    Label(L10n.text("Delete selected (%lld)", selected.count), systemImage: "trash").lineLimit(1).fixedSize()
+                }
+                .controlButton().disabled(selected.isEmpty).accessibilityIdentifier("history.deleteSelected")
+                Button(L10n.text("Done")) { managing = false; selected.removeAll() }
+                    .controlButton(prominent: true).accessibilityIdentifier("history.manage")
+            } else {
+                Button { managing = true } label: {
+                    Label(L10n.text("Manage history"), systemImage: "checklist").lineLimit(1).fixedSize()
+                }
+                .controlButton().accessibilityIdentifier("history.manage")
+                Button { deletionIDs = Set(history.entries.map(\.id)); confirmsDelete = true } label: {
+                    Label(L10n.text("Clear history"), systemImage: "trash").lineLimit(1).fixedSize()
+                }
+                .controlButton()
+            }
+    }
+
+    private func tap(_ entry: PlaybackHistoryEntry) {
+        if managing {
+            if selected.contains(entry.id) { selected.remove(entry.id) } else { selected.insert(entry.id) }
+        } else {
+            Task { await store.resumeHistory(entry) }
+        }
+    }
+}
+
+enum HistoryMetrics {
+    #if os(tvOS)
+    static let thumb: CGFloat = 96, rowSpacing: CGFloat = 4, card: CGFloat = 240
+    #elseif os(macOS)
+    static let thumb: CGFloat = 52, rowSpacing: CGFloat = 10, card: CGFloat = 150
+    #else
+    static let thumb: CGFloat = 52, rowSpacing: CGFloat = 10, card: CGFloat = 120
+    #endif
+}
+
+private extension View {
+    /// Glass row on tvOS; a quiet panel elsewhere, like the download queue.
+    @ViewBuilder func historyRow() -> some View {
+        #if os(tvOS)
+        glassRow()
+        #else
+        buttonStyle(.plain)
+        #endif
+    }
+}
+
+/// Poster, title, episode and source, how far you got, and when.
+private struct HistoryRow: View {
+    let entry: PlaybackHistoryEntry
+    /// Whether the row is selected while managing; nil outside managing.
+    let selection: Bool?
+    let resuming: Bool
+    var body: some View {
+        HStack(spacing: 16) {
+            if let selection {
+                Image(systemName: selection ? "checkmark.circle.fill" : "circle")
+                    .font(.title2).foregroundStyle(selection ? AnyShapeStyle(Brand.accent) : AnyShapeStyle(.secondary))
+                    .contentTransition(.symbolEffect(.replace))
+                    .accessibilityHidden(true)
+            }
+            Color.clear.aspectRatio(2.0 / 3.0, contentMode: .fit).frame(width: HistoryMetrics.thumb)
+                .overlay { PosterImage(url: entry.context.poster, headers: entry.context.posterHeaders ?? [:]) }
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(entry.context.videoName).font(.headline).foregroundStyle(.primary).lineLimit(1)
+                Text("\(entry.context.episodeName) · \(SourceLabel(entry.context.sourceName).text)")
+                    .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                if entry.duration > 0 { ProgressView(value: entry.progress).tint(Brand.accent) }
+                HStack(spacing: 6) {
+                    Text(HistoryFormat.status(entry)).monospacedDigit()
+                    Text("·")
+                    Text(entry.updatedAt, style: .relative)
+                }
+                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if resuming { ProgressView() }
+            else if selection == nil { Image(systemName: "play.fill").foregroundStyle(Brand.accent).accessibilityHidden(true) }
+        }
+        #if !os(tvOS)
+        .padding(12)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        #endif
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selection == true ? [.isSelected] : [])
+    }
+}
+
+enum HistoryFormat {
+    static func status(_ entry: PlaybackHistoryEntry) -> String {
+        entry.completed ? L10n.text("Finished · Watch again") : L10n.text("Continue from %@", EpisodeSkipSettings.formatTime(entry.position))
+    }
+}
+
+/// Watch Now's Continue Watching card: the poster with progress along its foot, like the poster grid.
+struct HistoryCard: View {
+    @Environment(Store.self) private var store
+    @Environment(\.stripDrag) private var drag
+    let entry: PlaybackHistoryEntry
+    var body: some View {
+        Button { if drag?.active != true { Task { await store.resumeHistory(entry) } } } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Color.clear.aspectRatio(2.0 / 3.0, contentMode: .fit)
+                    .overlay { PosterImage(url: entry.context.poster, headers: entry.context.posterHeaders ?? [:]) }
+                    .overlay(alignment: .bottom) {
+                        if entry.duration > 0 {
+                            GeometryReader { proxy in
+                                Capsule().fill(.white.opacity(0.25))
+                                    .overlay(alignment: .leading) { Capsule().fill(Brand.accent).frame(width: proxy.size.width * entry.progress) }
+                            }
+                            .frame(height: 5).padding(10)
+                        }
+                    }
+                    .overlay {
+                        if store.resumingHistoryID == entry.id { ProgressView().controlSize(.large) }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                Text(entry.context.videoName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
+                // The bar on the poster already says how far; the line names the episode.
+                Text(entry.context.episodeName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .frame(width: HistoryMetrics.card)
+        }
+        .cardButton()
+        .disabled(store.resumingHistoryID != nil)
+        .contextMenu {
+            Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) { store.playbackHistory.remove(entry.id) }
+        }
+        .accessibilityIdentifier("history.resume.\(entry.context.videoID)")
+    }
+}
