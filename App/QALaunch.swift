@@ -1,4 +1,5 @@
 #if DEBUG
+import AVFoundation
 import SwiftUI
 import TVCore
 
@@ -84,6 +85,7 @@ enum QALaunch {
             case "licenses": LicensesView()
             case "bilibili-account": BilibiliAccountView()
             case "bilibili-live": BilibiliLiveView()
+            case "danmaku-list": QADanmakuList()
             #if !os(macOS)
             case "cloud-login": CloudQRLoginView(drive: parts.dropFirst().first == "uc" ? .uc : .quark) {}
             #endif
@@ -94,7 +96,7 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "detail", "channels", "runtime", "logs", "licenses", "cloud-login", "bilibili-account", "bilibili-live"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "detail", "channels", "runtime", "logs", "licenses", "cloud-login", "bilibili-account", "bilibili-live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
     }
 }
 
@@ -249,4 +251,24 @@ enum QASweep {
 }
 
 private extension Int { var nonZero: Int? { self == 0 ? nil : self } }
+
+/// `-qaPage danmaku-list`: the player's 弹幕 tab with sample comments, to check the focused row.
+private struct QADanmakuList: View {
+    var body: some View {
+        // A cover so focus starts on the first row instead of the tab bar.
+        #if os(macOS)
+        list
+        #else
+        Color.clear.fullScreenCover(isPresented: .constant(true)) { list }
+        #endif
+    }
+    @ViewBuilder private var list: some View {
+        let texts = ["失恋模式", "有用的小玩意增加了", "见缝插针属于是", "我曾经有一部手机", "见缝插针", "这个好", "直击要害", "前方高能"]
+        DanmakuListView(player: AVPlayer(), comments: texts.enumerated().map { Danmaku(time: Double(30 + $0.offset), position: .scroll, color: $0.offset == 2 ? 0xFFD700 : 0xFFFFFF, text: $0.element) })
+            .frame(height: 480)
+            .background(Color(white: 0.18))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(LinearGradient(colors: [.teal, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing))
+    }
+}
 #endif

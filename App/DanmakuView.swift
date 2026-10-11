@@ -163,25 +163,33 @@ struct DanmakuListView: View {
                 .padding(.horizontal, 16).padding(.top, 14)
             #endif
             ScrollViewReader { proxy in
+                #if os(tvOS)
+                // Not a List: tvOS puts a square focus background behind list cells.
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(shown, id: \.offset) { item in
+                            Button { jump(to: item.element) } label: { row(item.element) }
+                                .buttonStyle(DanmakuRowStyle())
+                                .id(item.offset)
+                        }
+                    }
+                    .padding(.horizontal, 40).padding(.vertical, 24)
+                }
+                .onAppear { scrollToNow(proxy) }
+                #else
                 List(shown, id: \.offset) { item in
                     Button { jump(to: item.element) } label: { row(item.element) }
-                        #if os(tvOS)
-                        .buttonStyle(DanmakuRowStyle())
-                        .listRowInsets(EdgeInsets())
-                        #endif
                         .id(item.offset)
                 }
-                #if os(tvOS)
-                // Rows draw their own padded focus plate (DanmakuRowStyle); keep room for its lift.
-                .contentMargins(.horizontal, 40, for: .scrollContent)
-                .contentMargins(.vertical, 24, for: .scrollContent)
+                .onAppear { scrollToNow(proxy) }
                 #endif
-                .onAppear {
-                    let now = player.currentTime().seconds
-                    if now.isFinite, let target = comments.firstIndex(where: { $0.time >= now - 1 }) { proxy.scrollTo(target, anchor: .top) }
-                }
             }
         }
+    }
+
+    private func scrollToNow(_ proxy: ScrollViewProxy) {
+        let now = player.currentTime().seconds
+        if now.isFinite, let target = comments.firstIndex(where: { $0.time >= now - 1 }) { proxy.scrollTo(target, anchor: .top) }
     }
 
     private func row(_ comment: Danmaku) -> some View {
@@ -205,8 +213,7 @@ struct DanmakuListView: View {
 }
 
 #if os(tvOS)
-/// The system list-row focus effect scales the full-width row with no inner padding, so the leading time
-/// sat on the plate's edge and looked cut off. This plate pads the text and lifts only slightly.
+/// The focused row floats on a Liquid Glass capsule, padded so the leading time never meets its edge.
 private struct DanmakuRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View { Plate(configuration: configuration) }
     private struct Plate: View {
@@ -214,11 +221,10 @@ private struct DanmakuRowStyle: ButtonStyle {
         @Environment(\.isFocused) private var focused
         var body: some View {
             configuration.label
-                .padding(.horizontal, 24).padding(.vertical, 12)
-                .environment(\.colorScheme, focused ? .light : .dark)
-                .background(.white.opacity(focused ? 1 : 0), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .scaleEffect(configuration.isPressed ? 0.98 : (focused ? 1.02 : 1))
-                .shadow(color: .black.opacity(focused ? 0.25 : 0), radius: 12, y: 6)
+                .padding(.horizontal, 28).padding(.vertical, 12)
+                .glassEffect(focused ? .regular.tint(.white.opacity(0.22)).interactive() : .identity, in: Capsule())
+                // Rows are full width: grow from the leading edge so the time stays in line with the others.
+                .scaleEffect(configuration.isPressed ? 0.99 : focused ? 1.02 : 1, anchor: .leading)
                 .animation(.easeOut(duration: 0.15), value: focused)
         }
     }
