@@ -35,7 +35,7 @@ cmake -S "$WORK/keystone" -B "$WORK/keystone-$TARGET" "${COMMON[@]}" -DBUILD_SHA
 cmake --build "$WORK/keystone-$TARGET" -j "${JOBS:-4}"
 JDK="${JAVA_HOME:-$(/usr/libexec/java_home -v 19)}"
 OUT="$WORK/native-$TARGET"; mkdir -p "$OUT" "$WORK/jna-headers" "$WORK/jna-classes" "$OUT/classes"
-"$JDK/bin/javac" -source 8 -target 8 -h "$WORK/jna-headers" -d "$WORK/jna-classes" $(rg --files "$WORK/jna/src" | rg '\.java$')
+"$JDK/bin/javac" -source 8 -target 8 -h "$WORK/jna-headers" -d "$WORK/jna-classes" $(find "$WORK/jna/src" -name '*.java')
 FLAGS=(-target "$TRIPLE" -isysroot "$(xcrun --sdk "$SDK" --show-sdk-path)" -O2 -I "$JDK/include" -I "$JDK/include/darwin")
 JNA=(-DNO_JAWT -D_REENTRANT '-DJNA_JNI_VERSION="6.1.2"' '-DCHECKSUM="147a998f0cbc89681a1ae6c0dd121629"' -I "$WORK/jna-headers" -I "$FFI/include")
 clang "${FLAGS[@]}" "${JNA[@]}" -DJNI_OnLoad=TVJNA_OnLoad -DJNI_OnUnload=TVJNA_OnUnload -c "$WORK/jna/native/dispatch.c" -o "$OUT/dispatch.o"
