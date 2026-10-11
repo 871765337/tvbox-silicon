@@ -73,67 +73,84 @@ struct PlaybackView: View {
     #if !os(tvOS)
     private var chrome: some View {
         VStack {
-            HStack(spacing: 12) {
-                Text(channel.name).font(.headline).lineLimit(1)
-                    .padding(.horizontal, 18).padding(.vertical, 11)
-                    .glassSurface(.regular, in: Capsule())
-                Spacer(minLength: 0)
-                if let previous = store.previousEpisode(before: channel) {
-                    Button { store.selectEpisode(previous, from: channel) } label: {
-                        Image(systemName: "backward.end.fill").font(.headline).frame(width: 22, height: 22)
-                    }
-                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
-                    .disabled(store.resolvingEpisode != nil)
-                    .accessibilityLabel(L10n.text("Previous Episode")).help(previous.name)
+            // On a phone the title and buttons rarely fit one line: the buttons then get a row of their own.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { chromeTitle; Spacer(minLength: 0); chromeButtons }
+                VStack(alignment: .leading, spacing: 10) {
+                    chromeTitle
+                    HStack { Spacer(minLength: 0); chromeButtons }
                 }
-                if let next = store.nextEpisode(after: channel) {
-                    Button { store.selectEpisode(next, from: channel) } label: {
-                        Image(systemName: "forward.end.fill").font(.headline).frame(width: 22, height: 22)
-                    }
-                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
-                    .disabled(store.resolvingEpisode != nil)
-                    .accessibilityLabel(L10n.text("Next Episode")).help(next.name)
-                }
-                CatalogPlaybackActions(channel: channel, session: session)
-                if session.qualities.count > 1 {
-                    Menu {
-                        QualityPicker(session: session)
-                    } label: {
-                        Image(systemName: "sparkles.tv").font(.headline).frame(width: 22, height: 22)
-                    }
-                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
-                    .accessibilityLabel(L10n.text("Quality"))
-                }
-                if !session.danmaku.isEmpty {
-                    Button { showsDanmaku.toggle() } label: {
-                        Image(systemName: showsDanmaku ? "text.bubble.fill" : "text.bubble").font(.headline).frame(width: 22, height: 22)
-                    }
-                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
-                    .accessibilityLabel(L10n.text(showsDanmaku ? "Hide Danmaku" : "Show Danmaku"))
-                    Button { showsDanmakuList = true } label: {
-                        Image(systemName: "list.bullet.rectangle").font(.headline).frame(width: 22, height: 22)
-                    }
-                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
-                    .accessibilityLabel(L10n.text("Danmaku List"))
-                    .sheet(isPresented: $showsDanmakuList) {
-                        NavigationStack {
-                            DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
-                                .navigationTitle(L10n.text("Danmaku List"))
-                                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { showsDanmakuList = false } } }
-                        }
-                        #if os(macOS)
-                        .frame(minWidth: 460, minHeight: 520)
-                        #endif
-                    }
-                }
-                Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).frame(width: 22, height: 22) }
-                    .controlButton().buttonBorderShape(.circle).controlSize(.large)
-                    .accessibilityLabel(L10n.text("Close"))
-                    .accessibilityIdentifier("player.close")
-                    .keyboardShortcut(.cancelAction)
             }
             .padding(16)
+            #if os(iOS)
+            // Below VideoPlayer's own top row (Picture in Picture, volume), which would sit under the title.
+            .padding(.top, 44)
+            #endif
             Spacer()
+        }
+        .sheet(isPresented: $showsDanmakuList) {
+            NavigationStack {
+                DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
+                    .navigationTitle(L10n.text("Danmaku List"))
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { showsDanmakuList = false } } }
+            }
+            #if os(macOS)
+            .frame(minWidth: 460, minHeight: 520)
+            #endif
+        }
+    }
+
+    private var chromeTitle: some View {
+        Text(channel.name).font(.headline).lineLimit(1)
+            .padding(.horizontal, 18).padding(.vertical, 11)
+            .glassSurface(.regular, in: Capsule())
+    }
+
+    private var chromeButtons: some View {
+        HStack(spacing: 10) {
+            if let previous = store.previousEpisode(before: channel) {
+                Button { store.selectEpisode(previous, from: channel) } label: {
+                    Image(systemName: "backward.end.fill").font(.headline).frame(width: 22, height: 22)
+                }
+                .chromeButton()
+                .disabled(store.resolvingEpisode != nil)
+                .accessibilityLabel(L10n.text("Previous Episode")).help(previous.name)
+            }
+            if let next = store.nextEpisode(after: channel) {
+                Button { store.selectEpisode(next, from: channel) } label: {
+                    Image(systemName: "forward.end.fill").font(.headline).frame(width: 22, height: 22)
+                }
+                .chromeButton()
+                .disabled(store.resolvingEpisode != nil)
+                .accessibilityLabel(L10n.text("Next Episode")).help(next.name)
+            }
+            CatalogPlaybackActions(channel: channel, session: session)
+            if session.qualities.count > 1 {
+                Menu {
+                    QualityPicker(session: session)
+                } label: {
+                    Image(systemName: "sparkles.tv").font(.headline).frame(width: 22, height: 22)
+                }
+                .chromeButton()
+                .accessibilityLabel(L10n.text("Quality"))
+            }
+            if !session.danmaku.isEmpty {
+                Button { showsDanmaku.toggle() } label: {
+                    Image(systemName: showsDanmaku ? "text.bubble.fill" : "text.bubble").font(.headline).frame(width: 22, height: 22)
+                }
+                .chromeButton()
+                .accessibilityLabel(L10n.text(showsDanmaku ? "Hide Danmaku" : "Show Danmaku"))
+                Button { showsDanmakuList = true } label: {
+                    Image(systemName: "list.bullet.rectangle").font(.headline).frame(width: 22, height: 22)
+                }
+                .chromeButton()
+                .accessibilityLabel(L10n.text("Danmaku List"))
+            }
+            Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).frame(width: 22, height: 22) }
+                .chromeButton()
+                .accessibilityLabel(L10n.text("Close"))
+                .accessibilityIdentifier("player.close")
+                .keyboardShortcut(.cancelAction)
         }
     }
 

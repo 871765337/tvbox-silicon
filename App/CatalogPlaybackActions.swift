@@ -44,7 +44,7 @@ struct CatalogPlaybackActions: View {
             } label: {
                 Image(systemName: "ellipsis.circle").font(.headline).frame(width: 22, height: 22)
             }
-            .controlButton().buttonBorderShape(.circle).controlSize(.large)
+            .chromeButton()
             .accessibilityLabel(L10n.text("Playback Options"))
             .accessibilityIdentifier("player.catalogOptions")
             .sheet(isPresented: $showsSkip) { EpisodeSkipSettingsView(session: session) }

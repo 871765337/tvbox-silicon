@@ -913,6 +913,15 @@ private struct TVCardStyle: ButtonStyle {
 #endif
 
 extension View {
+    /// A round icon button in the player's top bar.
+    @ViewBuilder func chromeButton() -> some View {
+        #if os(iOS)
+        buttonStyle(ChromeButtonStyle())
+        #else
+        controlButton().buttonBorderShape(.circle).controlSize(.large)
+        #endif
+    }
+
     /// Solid, high-contrast controls. Glass styles take their fill from the tint, which made
     /// prominent labels vanish against a white fill.
     @ViewBuilder func controlButton(prominent: Bool = false) -> some View {
@@ -1007,6 +1016,22 @@ extension View {
 }
 
 #if !os(tvOS)
+#if os(iOS)
+/// 44-point glass circles: `ContentControlStyle` ignores the border shape, so its "circles" were
+/// capsules too wide for a phone's player bar.
+private struct ChromeButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline).foregroundStyle(.white)
+            .frame(width: 44, height: 44)
+            .glassSurface(.regular.interactive(), in: Circle())
+            .contentShape(Circle())
+            .opacity(enabled ? (configuration.isPressed ? 0.72 : 1) : 0.38)
+    }
+}
+#endif
+
 private struct ContentControlStyle: ButtonStyle {
     var prominent: Bool
     @Environment(\.isEnabled) private var enabled

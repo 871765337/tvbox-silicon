@@ -482,24 +482,33 @@ struct VideoDetailView: View {
     @ViewBuilder private var playControl: some View {
         if let detail {
             if let first = detail.episodes.first(where: { $0.flag == activeFlag }) ?? detail.episodes.first {
-                HStack(spacing: 10) {
-                    Button { Task { await play(first) } } label: {
-                        HStack(spacing: 8) {
-                            if loadingEpisode == first.id { ProgressView().controlSize(.small) } else { Image(systemName: "play.fill") }
-                            Text(L10n.text("Play"))
-                        }
-                        .font(.headline).padding(.horizontal, 8)
-                    }
-                    .controlButton(prominent: true).tint(Brand.accent).controlSize(.large)
-                    Button { choosingDownloads = true } label: {
-                        Label(L10n.text("Download"), systemImage: "arrow.down.circle").font(.headline)
-                    }
-                    .controlButton().controlSize(.large)
+                // Beside the poster on a phone there is no room for both labels: Download drops to its icon.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: false) }
+                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: true) }
                 }
             }
         } else if error == nil {
             SkeletonBlock(cornerRadius: 10).frame(width: 150, height: 40)
         }
+    }
+    private func playButton(_ episode: Episode) -> some View {
+        Button { Task { await play(episode) } } label: {
+            HStack(spacing: 8) {
+                if loadingEpisode == episode.id { ProgressView().controlSize(.small) } else { Image(systemName: "play.fill") }
+                Text(L10n.text("Play"))
+            }
+            .font(.headline).lineLimit(1).fixedSize().padding(.horizontal, 8)
+        }
+        .controlButton(prominent: true).tint(Brand.accent).controlSize(.large)
+    }
+    private func downloadButton(iconOnly: Bool) -> some View {
+        Button { choosingDownloads = true } label: {
+            Label(L10n.text("Download"), systemImage: "arrow.down.circle")
+                .labelStyle(DownloadLabelStyle(iconOnly: iconOnly))
+                .font(.headline).lineLimit(1).fixedSize()
+        }
+        .controlButton().controlSize(.large).accessibilityLabel(L10n.text("Download"))
     }
     /// Stands in for a watch-page player: a 16:9 stage with the artwork, title and the primary action.
     private var hero: some View {
@@ -545,10 +554,14 @@ struct VideoDetailView: View {
                     Color.clear.aspectRatio(2.0 / 3.0, contentMode: .fit).frame(width: posterWidth)
                         .overlay { PosterImage(url: video.poster, headers: video.posterHeaders) }
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(video.name).font(.title3.weight(.bold)).fixedSize(horizontal: false, vertical: true)
-                        if !video.remarks.isEmpty { Text(video.remarks).font(.subheadline).foregroundStyle(.secondary) }
-                        playControl
+                    // As tall as the 2:3 poster, so the buttons line up with its bottom edge.
+                    MinHeightLayout(minHeight: posterWidth * 1.5) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(video.name).font(.title3.weight(.bold)).fixedSize(horizontal: false, vertical: true)
+                            if !video.remarks.isEmpty { Text(video.remarks).font(.subheadline).foregroundStyle(.secondary) }
+                            Spacer(minLength: 0)
+                            playControl
+                        }
                     }
                     Spacer(minLength: 0)
                 }
@@ -787,5 +800,26 @@ private struct EpisodeRow: View {
             .onHover { hovering = $0 }
             .animation(.smooth(duration: 0.15), value: hovering)
         #endif
+    }
+}
+
+private struct DownloadLabelStyle: LabelStyle {
+    let iconOnly: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        if iconOnly { configuration.icon } else { HStack(spacing: 6) { configuration.icon; configuration.title } }
+    }
+}
+
+/// Gives its one subview at least `minHeight`, even in a scroll view, where `frame(minHeight:)`
+/// leaves the content at its ideal height and spacers inside it never grow.
+private struct MinHeightLayout: SwiftUI.Layout {
+    var minHeight: CGFloat
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let content = subviews.first else { return .zero }
+        let size = content.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
+        return CGSize(width: size.width, height: max(size.height, minHeight))
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
