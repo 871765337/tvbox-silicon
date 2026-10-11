@@ -1,6 +1,53 @@
 {
   "releases": [
     {
+      "version": "1.2.1",
+      "date": "2026-10-12",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.2.1/Yingxia-1.2.1-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios"
+      },
+      "features": [
+        {
+          "symbol": "laptopcomputer.and.iphone",
+          "platforms": [
+            "macos",
+            "ios"
+          ],
+          "title": {
+            "en": "Runs on macOS 15 and iOS 18",
+            "zh-Hans": "支持 macOS 15 和 iOS 18",
+            "zh-Hant": "支援 macOS 15 和 iOS 18",
+            "ja": "macOS 15 と iOS 18 に対応"
+          },
+          "detail": {
+            "en": "Yingxia now runs on Macs with macOS Sequoia 15 and on iPhone and iPad with iOS 18 or later. On these systems, glass surfaces use a frosted look instead of Liquid Glass.",
+            "zh-Hans": "映匣现在可在 macOS Sequoia 15 的 Mac 以及 iOS 18 或更高版本的 iPhone 和 iPad 上运行。在这些系统上，玻璃效果会以磨砂样式代替 Liquid Glass。",
+            "zh-Hant": "映匣現在可在 macOS Sequoia 15 的 Mac 以及 iOS 18 或更新版本的 iPhone 和 iPad 上執行。在這些系統上，玻璃效果會以霧面樣式取代 Liquid Glass。",
+            "ja": "macOS Sequoia 15 の Mac、iOS 18 以降の iPhone と iPad でも使えるようになりました。これらのシステムでは、Liquid Glass の代わりにすりガラス風の表示になります。"
+          }
+        },
+        {
+          "symbol": "iphone",
+          "platforms": [
+            "ios"
+          ],
+          "title": {
+            "en": "Player and video pages fit the iPhone",
+            "zh-Hans": "播放器和详情页适配 iPhone",
+            "zh-Hant": "播放器和詳情頁適配 iPhone",
+            "ja": "プレーヤーと詳細画面が iPhone にフィット"
+          },
+          "detail": {
+            "en": "The player's buttons no longer run off the screen or cover the system controls, and Play and Download sit neatly beside the poster.",
+            "zh-Hans": "播放器的按钮不再超出屏幕或挡住系统控件；「播放」和「下载」按钮也整齐地排在海报旁边。",
+            "zh-Hant": "播放器的按鈕不再超出螢幕或擋住系統控制項；「播放」和「下載」按鈕也整齊地排在海報旁邊。",
+            "ja": "プレーヤーのボタンが画面からはみ出したり、システムのコントロールに重なったりしなくなりました。「再生」と「ダウンロード」もポスターの横にきれいに並びます。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.2",
       "date": "2026-10-12",
       "links": {
