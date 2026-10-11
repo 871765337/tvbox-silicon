@@ -73,10 +73,7 @@ Apple TV 4K has no USB data connection, so cider installs to it over the network
 
 1. Connect your Mac and Apple TV to the same local network.
 2. On Apple TV, open **Settings → Remotes and Devices → Remote App and Devices**, and keep that screen open.
-3. Pair it, typing the PIN the TV shows:
-   ```sh
-   cider device trust
-   ```
+3. Pair the Mac with the TV once. cider can only pair over USB, so use Xcode (free in the App Store): open **Window → Devices and Simulators**, select the Apple TV under Discovered, click **Pair** and type the PIN the TV shows. (Sideloadly's **Re-Pair** button works too.)
 4. Find its UDID with `cider device list` (it's listed as `<your TV's name> [WiFi]` with an ID like `00008110-…`), then sign and install:
    ```sh
    cider sign Yingxia-1.1-tvos.ipa --apple-id --install --refresh -u <UDID>
@@ -88,11 +85,11 @@ If cider can't install to your Apple TV (for example, a provisioning profile or 
 
 ## Let an AI agent install it
 
-If you use Claude Code, Codex or another coding agent on your computer, choose **AI agent** under "How to install" on the [website](https://yingxia.getmegaportal.com/#install-ios): it copies a prompt like this one for your device. Or paste it yourself:
+If you use an AI agent that can run commands on your computer, such as [Claude Code](https://claude.com/product/claude-code), [WorkBuddy](https://www.workbuddy.ai), [Doubao](https://www.doubao.com/download) (desktop app, work mode), [Grok Build](https://x.ai/news/grok-build-cli), [Gemini CLI](https://github.com/google-gemini/gemini-cli) or [Codex](https://developers.openai.com/codex), choose **AI agent** under "How to install" on the [website](https://yingxia.getmegaportal.com/#install-ios): it copies a prompt like this one for your device. Or paste it yourself:
 
 > Install Yingxia on my Apple TV from this Mac. First read https://raw.githubusercontent.com/jo32/tvbox-silicon/main/.agents/skills/install-yingxia/SKILL.md and follow it. Use cider to sign the latest Apple TV IPA with my Apple account and install it over Wi-Fi. Let me type my own password, and ask me before anything that could revoke a certificate.
 
-The agent reads the [install skill](../.agents/skills/install-yingxia/SKILL.md), which covers downloads, cider, pairing and the known problems. Type your Apple account password into cider yourself; never paste it into the chat.
+The agent reads the [install skill](../.agents/skills/install-yingxia/SKILL.md), which covers downloads, cider on macOS, Windows and Linux, pairing, and what to do about common errors. A web chat can't do this, because it can't run commands on your computer; use the agent's desktop or terminal app. Type your Apple account password into cider yourself; never paste it into the chat.
 
 ## Keep the app working
 
@@ -134,7 +131,12 @@ Turn on **automatic app refreshing** in Sideloadly; it renews the signature only
 
 | Problem | Try this |
 | --- | --- |
-| The device isn't in `cider device list` | iPhone/iPad: unlock it, reconnect the USB cable and confirm **Trust**. Apple TV: same network, keep **Remote App and Devices** open, run `cider device trust`. |
+| The device isn't in `cider device list` | iPhone/iPad: use a data cable, unlock it, reconnect and confirm **Trust**. Windows: iTunes or Apple Devices must be installed. Apple TV: same network as the Mac, then pair it once in Xcode (see above). |
+| `cider device trust` fails with `PasswordProtected` or `PairingDialogResponsePending` | Unlock the device, tap **Trust**, enter the passcode, and run it again. |
+| `UserDeniedPairing` or `InvalidHostID` | On the device, go to Settings → General → Transfer or Reset → Reset → **Reset Location & Privacy**, reconnect and run `cider device trust` again. |
+| `Bad 2FA code` | Run `cider account login` again with the newest code. |
+| "maximum number of installed apps using a free developer profile" | A free account can have 3 sideloaded apps on a device. Delete one and try again. |
+| "Untrusted Developer" or "Developer Mode Required" when opening the app | Trust your account under **Settings → General → VPN & Device Management**, and turn on **Settings → Privacy & Security → Developer Mode**. |
 | `Too many certificates and failed to revoke any` | Your account is at Apple's certificate limit. Revoke an unused development certificate at developer.apple.com → Certificates, then try again. |
 | The Apple TV install seems stuck | It's copying about 11,000 files over Wi-Fi. Give it 5–10 minutes. |
 | Sideloadly says `GSA returned a non-plist response (HTTP 503 …)` | Its log shows **"Will use Fake Local Anisette"**: Sideloadly couldn't get Apple's sign-in data from your Mac, so Apple rejected the sign-in. It isn't your network. Open Sideloadly settings (gear icon), switch anisette to **On-device Anisette** or **Local Anisette**, and click **Start** again. |

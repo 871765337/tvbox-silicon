@@ -30,6 +30,17 @@ export const IMPACTOR = "https://github.com/claration/Impactor/releases";
 export const ILOADER = "https://iloader.app";
 export const SIDELOADLY = "https://sideloadly.io/";
 
+/** AI agents that can run the install (they run commands on the computer), by their official pages.
+ * `cjk` is the name in Chinese and Japanese. */
+export const AGENTS: { name: string; cjk?: string; href: string }[] = [
+  { name: "Claude Code", href: "https://claude.com/product/claude-code" },
+  { name: "WorkBuddy", href: "https://www.workbuddy.ai" },
+  { name: "Doubao", cjk: "豆包", href: "https://www.doubao.com/download" },
+  { name: "Grok Build", href: "https://x.ai/news/grok-build-cli" },
+  { name: "Gemini CLI", href: "https://github.com/google-gemini/gemini-cli" },
+  { name: "Codex", href: "https://developers.openai.com/codex" },
+];
+
 /** The app's public source repository (GPL-3.0). */
 export const REPO = "https://github.com/jo32/tvbox-silicon";
 

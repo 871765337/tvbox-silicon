@@ -2,7 +2,7 @@ import { SFSymbol } from "./SFSymbol";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useI18n } from "../i18n/I18nProvider";
 import { INSTALL, type InstallCopy, type Mode, type Platform, type Sideload } from "../i18n/install-strings";
-import { CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, SIDELOADLY } from "./controls";
+import { AGENTS, CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, SIDELOADLY } from "./controls";
 import { AppleTVIcon, IPhoneIPadIcon, MacIcon } from "./icons-devices";
 import { Reveal } from "./Reveal";
 
@@ -179,8 +179,17 @@ export function Install() {
               <span className="run-icon"><SFSymbol name="sparkles" /></span>
               <h3>{copy.agent.t}</h3>
               <p>{copy.agent.b}</p>
+              <div className="agents">
+                <span className="agents-label">{copy.agent.works}</span>
+                {AGENTS.map((agent) => (
+                  <a key={agent.name} className="agent-chip" href={agent.href} target="_blank" rel="noreferrer">
+                    {(lang === "ja" || lang === "zh-Hant") && agent.cjk ? agent.cjk : agent.name}
+                  </a>
+                ))}
+              </div>
               <p className="code prompt">{agentPrompt(copy, platform)}</p>
               <CopyButton text={agentPrompt(copy, platform)} copy={copy} flash={autoCopied} note={copy.copiedPrompt} />
+              <p className="run-note">{copy.agent.web}</p>
             </div>
           </div>
         )}
@@ -219,7 +228,8 @@ function commands(copy: InstallCopy, platform: Sideload) {
   return [
     [copy.cli.install, "brew tap Muonagi/cider-cli https://github.com/Muonagi/cider-cli", "brew install cider"],
     [copy.cli.login, "cider account login"],
-    [copy.cli.pair, "cider device trust"],
+    // cider pairs only over USB; an Apple TV is paired once in Xcode, then cider just finds it.
+    platform === "tv" ? [copy.cli.pairTv, "cider device list"] : [copy.cli.pair, "cider device trust"],
     [copy.cli.sign, `cider sign ${ipa} --apple-id --install --refresh`],
   ];
 }
