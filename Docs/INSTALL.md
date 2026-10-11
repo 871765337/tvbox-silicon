@@ -1,48 +1,88 @@
 # Install Yingxia on iPhone, iPad and Apple TV
 
-The Mac version is a regular [signed download](https://yingxia.getmegaportal.com). The iPhone, iPad and Apple TV versions aren't on the App Store yet, so you install them yourself with [Sideloadly](https://sideloadly.io/). Sideloadly signs the app with your own Apple account and installs it on your device. No jailbreak is required.
+The Mac version is a regular [signed download](https://yingxia.getmegaportal.com). The iPhone, iPad and Apple TV versions aren't on the App Store yet, so you sign and install them yourself with your own Apple account. No jailbreak is required.
+
+We recommend **[cider](https://github.com/Battzz/cider-cli)**, a free command-line tool for macOS, Windows and Linux. If you'd rather use an app, [Impactor](https://github.com/claration/Impactor/releases), [iloader](https://iloader.app) (iPhone and iPad only) and [Sideloadly](https://sideloadly.io/) work too; see [Other tools](#other-tools). You can also [let an AI agent do it](#let-an-ai-agent-install-it).
 
 ## What you need
 
 - **iPhone or iPad** with iOS / iPadOS 26 or later, or **Apple TV** with tvOS 26 or later.
 - An **Apple account**. A free account works.
-- A **Mac or Windows computer** with [Sideloadly](https://sideloadly.io/) installed. For Apple TV, use a Mac (see [Install on Apple TV](#install-on-apple-tv)).
+- A **Mac, Windows or Linux computer**. For Apple TV, it must be on the same local network as the TV.
 - The **Yingxia IPA** for your device:
 
   | Device | IPA | Bundle identifier |
   | --- | --- | --- |
-  | iPhone / iPad | built from `TVBox-iOS` | `com.tvbox.yingxia.ios` |
-  | Apple TV | built from `TVBox-tvOS` | `com.tvbox.yingxia.tv` |
+  | iPhone / iPad | [Yingxia-1.1-ios.ipa](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-ios.ipa) | `com.tvbox.yingxia.ios` |
+  | Apple TV | [Yingxia-1.1-tvos.ipa](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-tvos.ipa) | `com.tvbox.yingxia.tv` |
 
-  The two IPAs are not interchangeable. Sideloadly installs an existing IPA; it doesn't compile this repository's source code.
+  The two IPAs are not interchangeable. To build your own, see the [developer guide](DEVELOPMENT.md).
 
-  **Download:** [iPhone & iPad IPA](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-ios.ipa) · [Apple TV IPA](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-tvos.ipa). To build your own, see the [developer guide](DEVELOPMENT.md).
+## Install cider
+
+```sh
+# macOS (Homebrew)
+brew tap Muonagi/cider-cli https://github.com/Muonagi/cider-cli
+brew install cider
+
+# or macOS / Linux, installs to /usr/local/bin
+curl -fsSL https://raw.githubusercontent.com/Muonagi/cider-cli/main/install.sh | sh
+```
+
+On Windows, download `cider-x86_64-pc-windows-msvc.zip` from the [releases](https://github.com/Muonagi/cider-cli/releases) and install Apple's device drivers (iTunes or Apple Devices). On Linux, `usbmuxd` must be running. Building cider from source currently fails because one of its dependencies was removed from GitHub, so use a release build.
+
+Then sign in once:
+
+```sh
+cider account login   # asks for your Apple account, password and 2FA code
+cider account team    # only if your account belongs to several teams
+```
+
+> [!NOTE]
+> The first time it signs an app, cider creates a development certificate for your account. If Apple says you already have too many, cider revokes an existing development certificate to make room. That's routine for a free account; if you have a paid developer account with certificates you use elsewhere, check `cider account certificates` first.
 
 ## Install on iPhone or iPad
 
-1. Open Sideloadly on your Mac or Windows computer.
-2. Connect your device with a USB cable.
-3. Unlock the device and tap **Trust** if prompted.
-4. Select your device in Sideloadly.
-5. Drag the **iOS IPA** into Sideloadly.
-6. Enter your Apple account email, then click **Start**.
-7. Complete the sign-in and verification prompts.
-8. When installation finishes, open **Settings → General → VPN & Device Management** on the device. If prompted, trust the developer entry for your Apple account.
-9. If required, turn on **Settings → Privacy & Security → Developer Mode**, then follow the restart and confirmation prompts.
-10. Open **Yingxia**. 🎉
+1. Connect the device with a USB cable, unlock it, and tap **Trust** if prompted.
+2. Pair it:
+   ```sh
+   cider device list
+   cider device trust
+   ```
+3. In the folder with the IPA, sign and install it:
+   ```sh
+   cider sign Yingxia-1.1-ios.ipa --apple-id --install --refresh
+   ```
+4. On the device, open **Settings → General → VPN & Device Management** and trust the developer entry for your Apple account.
+5. If required, turn on **Settings → Privacy & Security → Developer Mode**, then follow the restart and confirmation prompts.
+6. Open **Yingxia**. 🎉
 
 ## Install on Apple TV
 
-Apple TV 4K has no USB data connection, so Sideloadly installs to it over the network. Use **Sideloadly on a Mac**: Sideloadly's official instructions say it can't install to these models from Windows.
+Apple TV 4K has no USB data connection, so cider installs to it over the network.
 
-1. Connect your Mac and Apple TV to the same local network.
-2. On Apple TV, open **Settings → Remotes and Devices → Remote App and Devices**.
-3. Keep that screen open.
-4. Open Sideloadly on your Mac and select the Apple TV. Complete any pairing prompts.
-5. Drag the **tvOS IPA** into Sideloadly.
-6. Enter your Apple account email, then click **Start**.
-7. Complete the sign-in and verification prompts.
-8. Wait for installation to finish, then open **Yingxia** on Apple TV. 🎉
+1. Connect your computer and Apple TV to the same local network.
+2. On Apple TV, open **Settings → Remotes and Devices → Remote App and Devices**, and keep that screen open.
+3. Pair it, typing the PIN the TV shows:
+   ```sh
+   cider device trust
+   ```
+4. Find its UDID with `cider device list` (it's listed as `<your TV's name> [WiFi]` with an ID like `00008110-…`), then sign and install:
+   ```sh
+   cider sign Yingxia-1.1-tvos.ipa --apple-id --install --refresh -u <UDID>
+   ```
+   The first install takes a few minutes: Yingxia carries a Java runtime of about 11,000 small files, and they're copied over Wi-Fi one by one. It ends with `✓ Installed to <name>`.
+5. Open **Yingxia** on Apple TV. 🎉
+
+If cider can't install to your Apple TV (for example, a provisioning profile or platform error), use [Sideloadly on a Mac](#sideloadly) instead.
+
+## Let an AI agent install it
+
+If you use Claude Code, Codex or another coding agent on your computer, paste a prompt like this:
+
+> Install Yingxia on my Apple TV. First read https://raw.githubusercontent.com/jo32/tvbox-silicon/main/.agents/skills/install-yingxia/SKILL.md and follow it. Use cider to sign the latest Apple TV IPA with my Apple account and install it over Wi-Fi. Let me type my own password, and ask me before anything that could revoke a certificate.
+
+The agent reads the [install skill](../.agents/skills/install-yingxia/SKILL.md), which covers downloads, cider, pairing and the known problems. Type your Apple account password into cider yourself; never paste it into the chat.
 
 ## Keep the app working
 
@@ -53,23 +93,48 @@ Apps you sideload stop opening when their signature expires:
 | Free | **7 days** |
 | Paid Apple Developer Program | Up to **1 year** |
 
-Turn on **automatic app refreshing** in Sideloadly when you install. Its background helper renews the signature, but only while your computer is running and the device is reachable.
+Apps signed with `--refresh` can be renewed before they expire, with the device connected or on the same network:
 
-If the app expires, install the IPA again with the **same Apple account and bundle identifier**. Don't delete the existing app first if you want to keep your subscriptions, favorites and history.
+```sh
+cider refresh list
+cider refresh run
+```
+
+If the app expires, sign and install the IPA again with the **same Apple account and bundle identifier**. Don't delete the existing app first if you want to keep your subscriptions, favorites and history.
+
+## Other tools
+
+| Tool | Runs on | Installs to | Notes |
+| --- | --- | --- | --- |
+| [Impactor](https://github.com/claration/Impactor/releases) | macOS, Windows, Linux | iPhone, iPad, Apple TV | Desktop app (formerly PlumeImpactor); also `brew install --cask impactor`. cider is built on its code. |
+| [iloader](https://iloader.app) | macOS, Windows, Linux | iPhone, iPad | Desktop app; use **Import IPA**. |
+| [Sideloadly](https://sideloadly.io/) | macOS, Windows | iPhone, iPad; Apple TV from a Mac only | Steps below. |
+
+Download these only from the links above: the projects publish no other official sites.
+
+### Sideloadly
+
+**iPhone or iPad:** connect by USB and tap **Trust**, select the device in Sideloadly, drag in the iOS IPA, enter your Apple account email and click **Start**. Then trust your account under **Settings → General → VPN & Device Management** and turn on Developer Mode if asked.
+
+**Apple TV (Mac only):** put both on the same network, open **Settings → Remotes and Devices → Remote App and Devices** on the TV, click Sideloadly's **Re-Pair** button and type the PIN, then select the Apple TV, drag in the tvOS IPA, enter your Apple account email and click **Start**.
+
+Turn on **automatic app refreshing** in Sideloadly; it renews the signature only while your computer is running and the device is reachable.
 
 ## Troubleshooting
 
 | Problem | Try this |
 | --- | --- |
-| iPhone or iPad isn't detected | Unlock it, reconnect the USB cable, and confirm **Trust**. |
+| The device isn't in `cider device list` | iPhone/iPad: unlock it, reconnect the USB cable and confirm **Trust**. Apple TV: same network, keep **Remote App and Devices** open, run `cider device trust`. |
+| `Too many certificates and failed to revoke any` | Your account is at Apple's certificate limit. Revoke an unused development certificate at developer.apple.com → Certificates, then try again. |
+| The Apple TV install seems stuck | It's copying about 11,000 files over Wi-Fi. Give it 5–10 minutes. |
 | Sideloadly says `GSA returned a non-plist response (HTTP 503 …)` | Its log shows **"Will use Fake Local Anisette"**: Sideloadly couldn't get Apple's sign-in data from your Mac, so Apple rejected the sign-in. It isn't your network. Open Sideloadly settings (gear icon), switch anisette to **On-device Anisette** or **Local Anisette**, and click **Start** again. |
-| Apple TV isn't detected | Make sure both devices are on the same network, and leave **Remote App and Devices** open. |
 | Wrong platform or architecture error | Check that you chose the IPA for your device (iOS or tvOS) and that it's a device build, not a simulator build. |
-| The app stopped opening after a week | Its signature expired. Refresh or reinstall it to renew the signature. |
+| The app stopped opening after a week | Its signature expired. Run `cider refresh run`, or sign and install it again. |
 | It installed, but videos won't play | Installing the app doesn't guarantee that every subscription source or plugin works. Try another source. |
 
 ## Links
 
-- [Download Sideloadly](https://sideloadly.io/)
-- [Sideloadly FAQ and Apple TV connection instructions](https://sideloadly.io/faq)
+- [cider](https://github.com/Battzz/cider-cli) and its [releases](https://github.com/Muonagi/cider-cli/releases)
+- [Impactor](https://github.com/claration/Impactor) · [iloader](https://iloader.app) · [Sideloadly](https://sideloadly.io/)
+- [Install skill for AI agents](../.agents/skills/install-yingxia/SKILL.md)
 - [Yingxia website](https://yingxia.getmegaportal.com)

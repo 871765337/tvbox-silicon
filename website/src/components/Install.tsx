@@ -1,8 +1,8 @@
 import { SFSymbol } from "./SFSymbol";
 import { useEffect, useState, type ComponentType } from "react";
 import { useI18n } from "../i18n/I18nProvider";
-import { INSTALL, type Platform } from "../i18n/install-strings";
-import { DOWNLOADS, INSTALL_GUIDE, SIDELOADLY } from "./controls";
+import { INSTALL, type InstallCopy, type Platform, type Sideload } from "../i18n/install-strings";
+import { CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, SIDELOADLY } from "./controls";
 import { AppleTVIcon, IPhoneIPadIcon, MacIcon } from "./icons-devices";
 import { Reveal } from "./Reveal";
 
@@ -91,8 +91,8 @@ export function Install() {
               {copy.get}
             </a>
             {sideload && (
-              <a className="link-blue" href={SIDELOADLY} target="_blank" rel="noreferrer">
-                {copy.sideloadly} <SFSymbol name="chevron.right" />
+              <a className="link-blue" href={CIDER} target="_blank" rel="noreferrer">
+                {copy.cider} <SFSymbol name="chevron.right" />
               </a>
             )}
           </div>
@@ -110,6 +110,8 @@ export function Install() {
             ))}
           </ol>
         </div>
+
+        {sideload && <RunCards copy={copy} platform={platform} />}
 
         {sideload && (
           <div className="keep">
@@ -134,5 +136,88 @@ export function Install() {
         )}
       </div>
     </section>
+  );
+}
+
+/** The cider commands for a platform, with each comment above its command. */
+function commands(copy: InstallCopy, platform: Sideload) {
+  const ipa = DOWNLOADS[platform].split("/").pop();
+  return [
+    [copy.cli.install, "brew tap Muonagi/cider-cli https://github.com/Muonagi/cider-cli", "brew install cider"],
+    [copy.cli.login, "cider account login"],
+    [copy.cli.pair, "cider device trust"],
+    [copy.cli.sign, `cider sign ${ipa} --apple-id --install --refresh`],
+  ];
+}
+
+/** "Run it yourself" (the cider commands) beside "Let your AI agent do it" (a prompt that points at the install skill). */
+function RunCards({ copy, platform }: { copy: InstallCopy; platform: Sideload }) {
+  const blocks = commands(copy, platform);
+  const script = blocks.map(([comment, ...lines]) => [`# ${comment}`, ...lines].join("\n")).join("\n");
+  const prompt = copy.agent.prompt[platform].replace("{skill}", INSTALL_SKILL).replace("{ipa}", DOWNLOADS[platform]);
+  return (
+    <>
+      <div className="run">
+        <div className="run-card">
+          <span className="run-icon"><SFSymbol name="terminal" /></span>
+          <h3>{copy.cli.t}</h3>
+          <p>{copy.cli.b}</p>
+          <pre className="code">
+            {blocks.map(([comment, ...lines]) => (
+              <span key={comment}>
+                <span className="cm"># {comment}</span>
+                {"\n" + lines.join("\n") + "\n"}
+              </span>
+            ))}
+          </pre>
+          <CopyButton text={script} copy={copy} />
+        </div>
+        <div className="run-card">
+          <span className="run-icon"><SFSymbol name="sparkles" /></span>
+          <h3>{copy.agent.t}</h3>
+          <p>{copy.agent.b}</p>
+          <p className="code prompt">{prompt}</p>
+          <CopyButton text={prompt} copy={copy} />
+        </div>
+      </div>
+      <p className="alt">
+        {copy.alt.t}{" "}
+        <a href={IMPACTOR} target="_blank" rel="noreferrer">Impactor</a> ·{" "}
+        <a href={ILOADER} target="_blank" rel="noreferrer">iloader</a> ·{" "}
+        <a href={SIDELOADLY} target="_blank" rel="noreferrer">Sideloadly</a>
+        <span className="alt-note">{copy.alt.note}</span>
+      </p>
+    </>
+  );
+}
+
+function CopyButton({ text, copy }: { text: string; copy: InstallCopy }) {
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!done) return;
+    const timer = setTimeout(() => setDone(false), 2000);
+    return () => clearTimeout(timer);
+  }, [done]);
+  const onClick = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Older browsers and non-secure contexts: copy through a hidden selection.
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.append(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+    }
+    setDone(true);
+  };
+  return (
+    <button type="button" className={done ? "copy-btn done" : "copy-btn"} onClick={onClick}>
+      <SFSymbol name={done ? "checkmark" : "doc.on.doc"} />
+      <span aria-live="polite">{done ? copy.copied : copy.copy}</span>
+    </button>
   );
 }

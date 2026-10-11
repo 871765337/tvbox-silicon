@@ -112,6 +112,10 @@ Run it (by hand or from a scheduled job) before the signature runs out, with the
 | App stopped opening after a week | Signature expired: `cider refresh run`, or sign and install again with the same account. |
 | Installed, but a video won't play | Installing doesn't guarantee every subscription source works; try another source. |
 
+## Other sideloading apps
+
+If the person prefers a desktop app, or cider fails: [Impactor](https://github.com/claration/Impactor/releases) (macOS/Windows/Linux, iPhone, iPad and Apple TV; `brew install --cask impactor`; cider is built on its code), [iloader](https://iloader.app) (iPhone and iPad only; "Import IPA") or Sideloadly (below). Only link these official sources: iloader.site and plamimpactor.site are third-party sites the projects don't list.
+
 ## Fallback: Sideloadly
 
 Steps are in [Docs/INSTALL.md](../../../Docs/INSTALL.md) (Apple TV needs Sideloadly on a Mac). One known failure: `Guru Meditation … GSA returned a non-plist response (HTTP 503)` with **"Will use Fake Local Anisette"** in its log means Sideloadly couldn't get real sign-in data from macOS (seen with 0.70.1 under Rosetta on macOS 27), not a network problem. Switch anisette to **On-device** or **Local** in Sideloadly settings (gear icon) and start again.

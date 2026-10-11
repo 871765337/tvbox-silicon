@@ -24,13 +24,20 @@ export const DOWNLOADS = {
   tv: "https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-tvos.ipa",
 } as const;
 
+/** Sideloading tools, official sources only (iloader.site and plamimpactor.site are third-party mirrors). */
+export const CIDER = "https://github.com/Battzz/cider-cli";
+export const IMPACTOR = "https://github.com/claration/Impactor/releases";
+export const ILOADER = "https://iloader.app";
 export const SIDELOADLY = "https://sideloadly.io/";
 
 /** The app's public source repository (GPL-3.0). */
 export const REPO = "https://github.com/jo32/tvbox-silicon";
 
-/** The full Sideloadly guide (with troubleshooting) in the public repository. */
+/** The full install guide (with troubleshooting) in the public repository. */
 export const INSTALL_GUIDE = `${REPO}/blob/main/Docs/INSTALL.md`;
+
+/** The agent skill the "copy prompt" points AI agents at (raw, so agents read plain Markdown). */
+export const INSTALL_SKILL = `${REPO.replace("https://github.com/", "https://raw.githubusercontent.com/")}/main/.agents/skills/install-yingxia/SKILL.md`;
 
 /** Goes to the install section, which offers the Mac download and the iPhone, iPad and Apple TV IPAs. */
 export function DownloadButton({ small = false }: { small?: boolean }) {

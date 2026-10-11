@@ -214,6 +214,26 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
 .keep-body { max-width: 38em; margin: 32px auto 0; font-size: 17px; color: var(--muted); text-wrap: pretty; }
 .keep .link-blue { display: inline-block; margin-top: 18px; }
 
+/* Install: run cider yourself, or hand an AI agent the prompt. Both cards stretch to the same height. */
+.run { margin-top: 72px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.run-card { display: flex; flex-direction: column; min-width: 0; padding: 36px 32px 28px; border-radius: 28px; background: var(--card); }
+.run-icon { display: flex; align-items: center; height: 30px; font-size: 24px; color: var(--ink); }
+.run-card h3 { margin-top: 14px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+.run-card > p:not(.code) { margin-top: 8px; font-size: 15px; line-height: 1.5; color: var(--muted); text-wrap: pretty; }
+.code { flex: 1; margin: 20px 0 0; padding: 18px 20px; border-radius: 16px; background: #fff; color: var(--ink); font: 12.5px/1.75 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; overflow-x: auto; }
+.code .cm { color: #8e8e93; }
+.code.prompt { font-family: inherit; font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.copy-btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 7px; margin-top: 18px; padding: 9px 18px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 15px; font-weight: 500; transition: background-color 0.2s ease; }
+.copy-btn:hover { background: #333336; }
+.copy-btn.done { background: #1d7d3f; }
+.copy-btn .sf { font-size: 15px; }
+.copy-btn:focus-visible { outline: 2px solid #0071e3; outline-offset: 2px; }
+.alt { margin-top: 28px; text-align: center; font-size: 15px; color: var(--muted); }
+.alt a { color: #0066cc; }
+.alt a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.alt-note { display: block; margin-top: 4px; font-size: 13px; }
+:lang(ja) .run-card h3, :lang(ko) .run-card h3, :lang(zh-Hant) .run-card h3 { letter-spacing: 0; }
+
 /* Motion */
 .headline.animate .w { opacity: 0; filter: blur(10px); transform: translateY(0.12em); animation: word-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: calc(var(--i) * 70ms + 80ms); }
 @keyframes word-in { to { opacity: 1; filter: blur(0); transform: none; } }
@@ -233,6 +253,8 @@ a.badge:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0,
   .steps, .steps.n3 { grid-template-columns: 1fr 1fr; }
   .how { margin-top: 88px; }
   .keep { padding: 44px 20px 40px; }
+  .run { grid-template-columns: 1fr; }
+  .run-card { padding: 32px 20px 24px; }
   .card { padding: 40px 20px 20px; border-radius: 28px; }
   .section { padding-top: 104px; }
 }
