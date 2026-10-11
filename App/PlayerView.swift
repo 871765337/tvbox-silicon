@@ -76,7 +76,7 @@ struct PlaybackView: View {
             HStack(spacing: 12) {
                 Text(channel.name).font(.headline).lineLimit(1)
                     .padding(.horizontal, 18).padding(.vertical, 11)
-                    .glassEffect(.regular, in: Capsule())
+                    .glassSurface(.regular, in: Capsule())
                 Spacer(minLength: 0)
                 if let previous = store.previousEpisode(before: channel) {
                     Button { store.selectEpisode(previous, from: channel) } label: {
@@ -162,7 +162,7 @@ struct PlaybackView: View {
             VStack(spacing: 18) {
                 Image(systemName: "exclamationmark.triangle.fill").font(.largeTitle).foregroundStyle(Brand.amber)
                 Text(error).multilineTextAlignment(.center).frame(maxWidth: 420)
-                GlassEffectContainer(spacing: 10) {
+                GlassGroup(spacing: 10) {
                     HStack(spacing: 10) {
                         Button(L10n.text("Retry")) { startCatalogPlayback(session, channel: channel, store: store) }.controlButton(prominent: true).tint(Brand.accent)
                         Button(L10n.text("Close")) { dismiss() }.controlButton()
@@ -577,7 +577,7 @@ private struct DesktopPlaybackView: View {
                 .shadow(color: .black.opacity(0.6), radius: 4)
                 .padding(.leading, 86)
             Spacer(minLength: 12)
-            GlassEffectContainer(spacing: 8) {
+            GlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
                     if session.isLive {
                         // Live hides AVKit's controls (see DesktopNativePlayer), so play and mute live here.
@@ -604,7 +604,7 @@ private struct DesktopPlaybackView: View {
         Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .medium)) }
             .buttonStyle(.plain)
             .frame(width: 34, height: 34)
-            .glassEffect(.regular.interactive(), in: Circle())
+            .glassSurface(.regular.interactive(), in: Circle())
             .help(label)
             .accessibilityLabel(label)
     }
@@ -631,7 +631,7 @@ private struct DesktopPlaybackView: View {
         } label: { Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .medium)) }
             .menuStyle(.borderlessButton).menuIndicator(.hidden)
             .frame(width: 34, height: 34)
-            .glassEffect(.regular.interactive(), in: Circle())
+            .glassSurface(.regular.interactive(), in: Circle())
             .help(L10n.text("Playback Options"))
             .accessibilityLabel(L10n.text("Playback Options"))
     }

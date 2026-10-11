@@ -16,6 +16,70 @@ extension View {
     }
 }
 
+/// A Liquid Glass recipe. On macOS 26, iOS 26 and tvOS it is real glass; on macOS 15 and iOS 18,
+/// which have no glass, `glassSurface` draws a material with the same tint instead.
+struct GlassStyle {
+    var tint: Color?
+    var isInteractive = false
+    var isVisible = true
+    static let regular = GlassStyle()
+    static let identity = GlassStyle(isVisible: false)
+    func tint(_ color: Color) -> GlassStyle { var style = self; style.tint = color; return style }
+    func interactive() -> GlassStyle { var style = self; style.isInteractive = true; return style }
+    @available(macOS 26, iOS 26, tvOS 26, *)
+    var glass: Glass {
+        guard isVisible else { return .identity }
+        var glass = Glass.regular
+        if let tint { glass = glass.tint(tint) }
+        return isInteractive ? glass.interactive() : glass
+    }
+}
+
+/// `GlassEffectContainer` where it exists, so nearby glass shapes blend; a plain group before OS 26.
+struct GlassGroup<Content: View>: View {
+    var spacing: CGFloat?
+    @ViewBuilder var content: Content
+    var body: some View {
+        if #available(macOS 26, iOS 26, tvOS 26, *) {
+            GlassEffectContainer(spacing: spacing) { content }
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder func glassSurface(_ style: GlassStyle = .regular, in shape: some Shape) -> some View {
+        if #available(macOS 26, iOS 26, tvOS 26, *) {
+            glassEffect(style.glass, in: shape)
+        } else if style.isVisible {
+            background {
+                shape.fill(.ultraThinMaterial).overlay { if let tint = style.tint { shape.fill(tint) } }
+            }
+        } else {
+            self
+        }
+    }
+
+    #if !os(tvOS)
+    /// A bar pinned to the top that content scrolls under: a soft scroll edge on OS 26, a bar material before.
+    @ViewBuilder func topBar<Bar: View>(@ViewBuilder _ bar: () -> Bar) -> some View {
+        let bar = bar()
+        if #available(macOS 26, iOS 26, *) {
+            scrollEdgeEffectStyle(.soft, for: .top).safeAreaBar(edge: .top, spacing: 0) { bar }
+        } else {
+            safeAreaInset(edge: .top, spacing: 0) { bar.background(.bar) }
+        }
+    }
+    #endif
+
+    #if os(iOS)
+    @ViewBuilder func minimizesTabBarOnScroll() -> some View {
+        if #available(iOS 26, *) { tabBarMinimizeBehavior(.onScrollDown) } else { self }
+    }
+    #endif
+}
+
 // Content-first surfaces: neutral backgrounds, quiet controls, and strong selection contrast.
 
 /// Warm palette: an apricot accent on espresso and cream canvases.
@@ -151,7 +215,7 @@ extension View {
     }
 
     func contentPanel(cornerRadius: CGFloat = 12) -> some View {
-        glassEffect(.regular, in: RoundedRectangle(cornerRadius: max(cornerRadius, 14), style: .continuous))
+        glassSurface(.regular, in: RoundedRectangle(cornerRadius: max(cornerRadius, 14), style: .continuous))
     }
 
     @ViewBuilder func cardButton() -> some View {
@@ -211,7 +275,7 @@ struct Pill: View {
         }
         .font(.caption.weight(.semibold)).foregroundStyle(tint)
         .padding(.horizontal, 10).padding(.vertical, 5)
-        .glassEffect(.regular.tint(tint.opacity(0.15)), in: Capsule())
+        .glassSurface(.regular.tint(tint.opacity(0.15)), in: Capsule())
     }
 }
 
@@ -228,7 +292,7 @@ struct StatusNotice: View {
         .font(.subheadline)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .glassEffect(.regular.tint(tint.opacity(0.12)), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .glassSurface(.regular.tint(tint.opacity(0.12)), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -241,7 +305,7 @@ private struct FilterChipStyle: ButtonStyle {
             .foregroundStyle(selected ? Brand.onAccent : .primary)
             .padding(.horizontal, 12).padding(.vertical, 8)
             .frame(minHeight: 44)
-            .glassEffect(selected ? .regular.tint(Brand.accent).interactive() : .regular.interactive(), in: Capsule())
+            .glassSurface(selected ? .regular.tint(Brand.accent).interactive() : .regular.interactive(), in: Capsule())
             .contentShape(Capsule())
             .opacity(configuration.isPressed ? 0.8 : 1)
     }
@@ -265,14 +329,14 @@ private struct TVChipStyle: ButtonStyle {
                 .foregroundStyle(focused ? Color.black : selected ? Brand.onAccent : Color.white)
                 .padding(.horizontal, 22).padding(.vertical, 13)
                 .frame(minHeight: 58)
-                .glassEffect(glass, in: Capsule())
+                .glassSurface(glass, in: Capsule())
                 .opacity(enabled ? 1 : 0.4)
                 .scaleEffect(configuration.isPressed ? 0.97 : focused ? 1.06 : 1)
                 .shadow(color: .black.opacity(focused ? 0.35 : 0), radius: 16, y: 10)
                 .animation(.easeOut(duration: 0.18), value: focused)
                 .animation(.smooth(duration: 0.2), value: selected)
         }
-        private var glass: Glass {
+        private var glass: GlassStyle {
             if focused { return .regular.tint(.white.opacity(0.9)).interactive() }
             if selected { return .regular.tint(Brand.accent).interactive() }
             return .regular.interactive()
@@ -507,7 +571,7 @@ struct PosterCard: View {
                     if !remarks.isEmpty {
                         Text(remarks).font(.caption2.weight(.semibold)).lineLimit(1)
                             .foregroundStyle(.white).padding(.horizontal, 6).padding(.vertical, 3)
-                            .glassEffect(.regular.tint(.black.opacity(0.45)), in: Capsule()).padding(8)
+                            .glassSurface(.regular.tint(.black.opacity(0.45)), in: Capsule()).padding(8)
                     }
                 }
             // One line, cut with an ellipsis: a title that wrapped made its card taller than the rest of the row.
@@ -717,7 +781,7 @@ struct LoadingCard: View {
         }
         .padding(.horizontal, 18).padding(.vertical, 14)
         .frame(maxWidth: 620, alignment: .leading)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .glassSurface(.regular, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .accessibilityElement(children: .combine)
         .animation(.smooth(duration: 0.25), value: state.title)
         .animation(.smooth(duration: 0.25), value: explains)
@@ -860,7 +924,7 @@ extension View {
     }
     @ViewBuilder func controlBackdrop() -> some View {
         #if os(tvOS)
-        background(Color.clear.glassEffect(.regular, in: .rect))
+        background(Color.clear.glassSurface(.regular, in: .rect))
         #else
         background(.bar)
         #endif
@@ -904,7 +968,7 @@ struct GlassRowStyle: ButtonStyle {
         var body: some View {
             configuration.label
                 .padding(.horizontal, 28).padding(.vertical, 12)
-                .glassEffect(focused ? .regular.tint(.white.opacity(0.22)).interactive() : .identity, in: Capsule())
+                .glassSurface(focused ? .regular.tint(.white.opacity(0.22)).interactive() : .identity, in: Capsule())
                 .opacity(enabled ? 1 : 0.5)
                 .scaleEffect(configuration.isPressed ? 0.99 : focused ? 1.02 : 1, anchor: .leading)
                 .animation(.easeOut(duration: 0.15), value: focused)

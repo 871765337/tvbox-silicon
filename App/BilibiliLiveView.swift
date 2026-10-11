@@ -23,7 +23,7 @@ struct BilibiliLiveView: View {
             LazyVStack(alignment: .leading, spacing: 22) {
                 if !areas.isEmpty {
                     ChipRow {
-                        GlassEffectContainer(spacing: 8) {
+                        GlassGroup(spacing: 8) {
                             HStack(spacing: 8) {
                                 ForEach(areas, id: \.self) { value in
                                     Chip(title: value, selected: (area ?? areas.first) == value) { area = value }
@@ -92,13 +92,13 @@ struct LiveRoomCard: View {
                             Label(room.online.formatted(.number.notation(.compactName)), systemImage: "person.2.fill")
                                 .font(.caption2.weight(.semibold)).foregroundStyle(.white).labelStyle(.titleAndIcon)
                                 .padding(.horizontal, 7).padding(.vertical, 3)
-                                .glassEffect(.regular.tint(.black.opacity(0.45)), in: Capsule()).padding(8)
+                                .glassSurface(.regular.tint(.black.opacity(0.45)), in: Capsule()).padding(8)
                         }
                     }
                     .overlay(alignment: .bottomLeading) {
                         if favorite {
                             Image(systemName: "heart.fill").font(.caption).foregroundStyle(Brand.rose)
-                                .padding(6).glassEffect(.regular.tint(.black.opacity(0.45)), in: Circle()).padding(8)
+                                .padding(6).glassSurface(.regular.tint(.black.opacity(0.45)), in: Circle()).padding(8)
                         }
                     }
                 Text(room.title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)

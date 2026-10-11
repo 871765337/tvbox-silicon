@@ -69,8 +69,7 @@ struct GlobalSearchView: View {
         #else
         searchResults
             .scrollPosition(id: $model.scrollID)
-            .scrollEdgeEffectStyle(.soft, for: .top)
-            .safeAreaBar(edge: .top, spacing: 0) { if let config = store.subscription { searchHeader(config) } }
+            .topBar { if let config = store.subscription { searchHeader(config) } }
             .screenBackdrop()
             .screenTitle(L10n.text("Global Search"))
             #if os(iOS)
@@ -343,7 +342,7 @@ struct GlobalSearchView: View {
                         if index < history.count - 1 { Divider().padding(.leading, 56) }
                     }
                 }
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .glassSurface(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
             #endif
         }
@@ -882,7 +881,7 @@ struct ScrollStrip<Content: View>: View {
                 .font(.system(size: overlayArrows ? 14 : 11, weight: .bold))
                 .frame(width: overlayArrows ? 34 : 26, height: overlayArrows ? 34 : 26)
                 .background(Color.primary.opacity(0.07), in: Circle())
-                .glassEffect(overlayArrows ? .regular.interactive() : .identity, in: Circle())
+                .glassSurface(overlayArrows ? .regular.interactive() : .identity, in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

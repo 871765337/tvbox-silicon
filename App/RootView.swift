@@ -94,7 +94,7 @@ struct RootView: View {
             }
             .tabViewStyle(.sidebarAdaptable)
             #if os(iOS)
-            .tabBarMinimizeBehavior(.onScrollDown)
+            .minimizesTabBarOnScroll()
             .onChange(of: store.section) { _, section in
                 if sizeClass == .compact && Self.inMore.contains(section) {
                     moreSection = section; morePath = NavigationPath([section])
