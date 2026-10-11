@@ -16,7 +16,7 @@ The Mac version is a regular [signed download](https://yingxia.getmegaportal.com
 
   The two IPAs are not interchangeable. Sideloadly installs an existing IPA; it doesn't compile this repository's source code.
 
-  **Download:** [iPhone & iPad IPA](https://download.getmegaportal.com/yingxia/1.0.1/Yingxia-1.0.1-ios.ipa) · [Apple TV IPA](https://download.getmegaportal.com/yingxia/1.0.1/Yingxia-1.0.1-tvos.ipa). To build your own, see the [developer guide](DEVELOPMENT.md).
+  **Download:** [iPhone & iPad IPA](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-ios.ipa) · [Apple TV IPA](https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-tvos.ipa). To build your own, see the [developer guide](DEVELOPMENT.md).
 
 ## Install on iPhone or iPad
 
@@ -62,6 +62,7 @@ If the app expires, install the IPA again with the **same Apple account and bund
 | Problem | Try this |
 | --- | --- |
 | iPhone or iPad isn't detected | Unlock it, reconnect the USB cable, and confirm **Trust**. |
+| Sideloadly says `GSA returned a non-plist response (HTTP 503 …)` | Its log shows **"Will use Fake Local Anisette"**: Sideloadly couldn't get Apple's sign-in data from your Mac, so Apple rejected the sign-in. It isn't your network. Open Sideloadly settings (gear icon), switch anisette to **On-device Anisette** or **Local Anisette**, and click **Start** again. |
 | Apple TV isn't detected | Make sure both devices are on the same network, and leave **Remote App and Devices** open. |
 | Wrong platform or architecture error | Check that you chose the IPA for your device (iOS or tvOS) and that it's a device build, not a simulator build. |
 | The app stopped opening after a week | Its signature expired. Refresh or reinstall it to renew the signature. |
