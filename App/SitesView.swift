@@ -11,7 +11,7 @@ struct SitesView: View {
                     LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
                         ForEach(store.orderedSites(config)
                             .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { site in
-                            RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site) }.cardButton()
+                            RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site) }.tileButton()
                                 .contextMenu { PinSourceButton(site: site, origin: config.origin) }
                         }
                     }.pageContainer()
@@ -23,38 +23,102 @@ struct SitesView: View {
     }
 }
 
+/// A source as an app-icon tile plus its name: the name's emoji becomes the icon, its taglines
+/// ("不卡", "秒播") and engine a quiet second line, so a page of sources reads like a launcher
+/// rather than a wall of identical badges. Use with `tileButton()`: on tvOS the card lights up itself.
 struct SiteCard: View {
     @Environment(Store.self) private var store
+    @Environment(\.isFocused) private var isFocused
     let site: Site
+    #if os(tvOS)
+    private var focused: Bool { isFocused }
+    private let icon: CGFloat = 88, padding: CGFloat = 20, radius: CGFloat = 28
+    #else
+    private let icon: CGFloat = 48, padding: CGFloat = 12, radius: CGFloat = 16
+    // Keyboard focus on the Mac must not turn the text black on a dark panel.
+    private let focused = false
+    #endif
     var body: some View {
         let label = SourceLabel(site.name)
         let pinned = store.subscription.map { store.pinnedSources.contains(site, origin: $0.origin) } ?? false
-        HStack(spacing: 14) {
-            // Most sources work, so only the exceptions carry a badge.
-            Group {
-                if site.isBuiltIn { BilibiliMark(size: 46) }
-                else { IconTile(symbol: site.native ? "film.stack" : "puzzlepiece.extension.fill", tint: site.native ? Brand.terracotta : Brand.amber, size: 46) }
-            }
-            // A badge on the icon, not another line, so pinned cards keep the grid's height.
-            .overlay(alignment: .bottomTrailing) {
-                if pinned {
-                    Image(systemName: "pin.fill").font(.system(size: 11, weight: .bold)).foregroundStyle(Brand.onAccent)
-                        .frame(width: 22, height: 22).background(Brand.accent, in: Circle())
-                        .overlay { Circle().strokeBorder(.black.opacity(0.35), lineWidth: 1) }
-                        .offset(x: 6, y: 6)
-                        .accessibilityLabel(L10n.text("Pinned"))
+        let runs = site.isBuiltIn || site.canBrowse(jarURL: store.subscription?.spiderURL)
+        let detail = runs ? (label.parts.dropFirst() + [engine].compactMap { $0 }).joined(separator: " · ") : site.compatibility
+        HStack(spacing: padding) {
+            SourceIcon(site: site, label: label, size: icon)
+                .opacity(runs ? 1 : 0.45)
+                // A badge on the icon, not another line, so pinned cards keep the grid's height.
+                .overlay(alignment: .bottomTrailing) {
+                    if pinned {
+                        Image(systemName: "pin.fill").font(.system(size: icon * 0.18, weight: .bold)).foregroundStyle(Brand.onAccent)
+                            .frame(width: icon * 0.36, height: icon * 0.36).background(Brand.accent, in: Circle())
+                            .overlay { Circle().strokeBorder(.black.opacity(0.35), lineWidth: 1) }
+                            .offset(x: icon * 0.1, y: icon * 0.1)
+                            .accessibilityLabel(L10n.text("Pinned"))
+                    }
+                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label.parts[0]).font(.headline).lineLimit(1)
+                    .foregroundStyle(focused ? Color.black : runs ? Color.primary : Color.secondary)
+                if !detail.isEmpty {
+                    Text(detail).font(.subheadline).lineLimit(1)
+                        .foregroundStyle(focused ? Color.black.opacity(0.6) : runs ? Color.secondary : Brand.amber)
                 }
             }
-            VStack(alignment: .leading, spacing: 6) {
-                CardTitle(text: label.text)
-                if site.isBuiltIn { Pill(text: site.compatibility, tint: BilibiliMark.blue) }
-                else if !site.native { Pill(text: site.compatibility, tint: Brand.amber) }
-            }
             Spacer(minLength: 0)
+            #if !os(tvOS)
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            #endif
         }
-        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-        .contentPanel()
+        .padding(padding).frame(maxWidth: .infinity, alignment: .leading)
+        .background { surface }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Which engine runs a source is an implementation detail; only built-in sources say so.
+    private var engine: String? { site.isBuiltIn ? L10n.text("Built-in") : nil }
+
+    @ViewBuilder private var surface: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        #if os(tvOS)
+        // Like the system's focused buttons: a quiet tile at rest, a bright plate under focus.
+        shape.fill(focused ? Color.white : Color.white.opacity(0.07))
+            .overlay { shape.strokeBorder(.white.opacity(focused ? 0 : 0.06), lineWidth: 1) }
+        #else
+        Color.clear.contentPanel(cornerRadius: radius)
+        #endif
+    }
+}
+
+/// A source's icon: Bilibili's own mark, otherwise the emoji its name starts with (or the name's
+/// first character) on a tile whose colour is derived from the name, so neighbours differ.
+struct SourceIcon: View {
+    let site: Site
+    let label: SourceLabel
+    var size: CGFloat
+    private static let tints: [Color] = [
+        Brand.terracotta, Brand.amber, Brand.rose,
+        Color(red: 0.30, green: 0.66, blue: 0.60), Color(red: 0.42, green: 0.56, blue: 0.92),
+        Color(red: 0.62, green: 0.48, blue: 0.88), Color(red: 0.52, green: 0.72, blue: 0.38),
+    ]
+    var body: some View {
+        if site.isBilibili { BilibiliMark(size: size) } else {
+            // A stable hash: `hashValue` changes every launch.
+            let tint = Self.tints[site.name.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF } % Self.tints.count]
+            let shape = RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
+            Group {
+                if site.key == Hongguo.siteKey {
+                    Image(systemName: "play.rectangle.fill").font(.system(size: size * 0.42, weight: .semibold)).foregroundStyle(.white)
+                } else if let symbol = label.symbol {
+                    Text(symbol).font(.system(size: size * 0.5))
+                } else {
+                    Text(String(label.parts[0].prefix(1))).font(.system(size: size * 0.44, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                }
+            }
+            .frame(width: size, height: size)
+            .background(LinearGradient(colors: [tint.opacity(0.85), tint.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing), in: shape)
+            .overlay { shape.strokeBorder(.white.opacity(0.12), lineWidth: 1) }
+            .accessibilityHidden(true)
+        }
     }
 }
 
@@ -85,6 +149,16 @@ struct SiteView: View {
     @State private var bilibiliLogin = BilibiliAccount.load().cookie
     private var initialLoading: Bool { browser.videos.isEmpty && browser.error == nil && (browser.busy || !browser.loaded) }
     private var client: CatalogClient { CatalogClient(site: site, origin: origin, jarURL: jarURL) }
+    @State private var requestTask: Task<Void, Never>?
+
+    private func startRequest(_ operation: @escaping @MainActor () async -> Void) {
+        requestTask?.cancel()
+        requestTask = Task {
+            guard !Task.isCancelled else { return }
+            await operation()
+        }
+    }
+
     var body: some View {
         Group {
             if !canLoad {
@@ -107,7 +181,7 @@ struct SiteView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
-                        if site.isBuiltIn && !BilibiliAccount.load().signedIn { BilibiliSignInBanner() }
+                        if site.isBilibili && !BilibiliAccount.load().signedIn { BilibiliSignInBanner() }
                         if !browser.categories.isEmpty { categoryBar } else if initialLoading { ChipSkeletonRow() }
                         if isIndex && !browser.videos.isEmpty {
                             Text(L10n.text("Choose a title to find it across your sources.")).font(.subheadline).foregroundStyle(.secondary)
@@ -121,7 +195,7 @@ struct SiteView: View {
                                 title: L10n.text("Unable to load this source"),
                                 message: L10n.text("Try again, or choose another source to keep watching."),
                                 details: error,
-                                retry: { Task { await browser.load(browser.request, client: client) } },
+                                retry: { startRequest { await browser.load(browser.request, client: client) } },
                                 goBack: { dismiss() },
                                 busy: browser.busy
                             )
@@ -144,21 +218,25 @@ struct SiteView: View {
                 .safeAreaInset(edge: .bottom) { if browser.pageCount > 1 { pager } }
                 .catalogSearchable(text: Binding(get: { query }, set: { value in
                     query = value
-                    if value.isEmpty && !browser.query.isEmpty { Task { await home() } }
+                    if value.isEmpty && !browser.query.isEmpty { startRequest { await home() } }
                 }), prompt: L10n.text("Search videos"))
-                .onSubmit(of: .search) { Task { await search() } }
+                .onSubmit(of: .search) { startRequest { await search() } }
             }
         }
+        .onDisappear { requestTask?.cancel(); browser.cancel() }
         .toolbar { PinSourceButton(site: site, origin: origin) }
         .screenBackdrop()
         .onAppear {
-            guard site.isBuiltIn, browser.loaded else { return }
+            guard site.isBilibili, browser.loaded else { return }
             let login = BilibiliAccount.load().cookie
-            if login != bilibiliLogin { bilibiliLogin = login; query = ""; Task { await home(); await browser.loadCategories(client: client) } }
+            if login != bilibiliLogin { bilibiliLogin = login; query = ""; startRequest { await home(); await browser.loadCategories(client: client) } }
         }
         .screenTitle(site.name).task {
+            store.searchModel.suspend()
             if canLoad && !browser.loaded {
-                if initialQuery.isEmpty {
+                if browser.request != .home {
+                    await browser.load(browser.request, client: client)
+                } else if initialQuery.isEmpty {
                     await home()
                     #if DEBUG
                     // `-qaCategory <type id>` opens that category, for screenshots.
@@ -175,11 +253,11 @@ struct SiteView: View {
         ChipRow {
             GlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
-                    Chip(title: L10n.text("Recommendations"), selected: browser.query.isEmpty && browser.category.isEmpty) { query = ""; Task { await home() } }
+                    Chip(title: L10n.text("Recommendations"), selected: browser.query.isEmpty && browser.category.isEmpty) { query = ""; startRequest { await home() } }
                     ForEach(browser.categories) { item in
                         Chip(title: item.name, selected: browser.query.isEmpty && browser.category == item.id) {
                             query = ""
-                            Task { await browser.load(.list(category: item.id, query: "", page: 1), client: client) }
+                            startRequest { await browser.load(.list(category: item.id, query: "", page: 1), client: client) }
                         }
                     }
                 }
@@ -189,11 +267,11 @@ struct SiteView: View {
     private var pager: some View {
         GlassGroup(spacing: 10) {
             HStack(spacing: 10) {
-                Button { Task { await load(page: browser.page - 1) } } label: { Image(systemName: "chevron.left").frame(width: 22) }
+                Button { startRequest { await load(page: browser.page - 1) } } label: { Image(systemName: "chevron.left").frame(width: 22) }
                     .controlButton().disabled(browser.page <= 1 || browser.busy).accessibilityLabel(L10n.text("Previous"))
                 Text(L10n.text("Page %lld of %lld", browser.page, browser.pageCount)).font(.subheadline.weight(.medium).monospacedDigit())
                     .padding(.horizontal, 16).padding(.vertical, 10)
-                Button { Task { await load(page: browser.page + 1) } } label: { Image(systemName: "chevron.right").frame(width: 22) }
+                Button { startRequest { await load(page: browser.page + 1) } } label: { Image(systemName: "chevron.right").frame(width: 22) }
                     .controlButton().disabled(browser.page >= browser.pageCount || browser.busy).accessibilityLabel(L10n.text("Next"))
             }
         }.controlSize(.large)
@@ -220,6 +298,7 @@ struct VideoDetailView: View {
     @Environment(Store.self) private var store
     let video: Video
     let client: CatalogClient
+    @State private var requestTask: Task<Void, Never>?
     @State private var detail: Video?
     @State private var error: String?
     @State private var busy = false
@@ -256,6 +335,16 @@ struct VideoDetailView: View {
         760
         #endif
     }
+    private func startRequest(_ operation: @escaping @MainActor () async -> Void) {
+        let previous = requestTask
+        previous?.cancel()
+        requestTask = Task {
+            await previous?.value
+            guard !Task.isCancelled else { return }
+            await operation()
+        }
+    }
+
     var body: some View {
         Group {
             if splitLayout {
@@ -294,18 +383,20 @@ struct VideoDetailView: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
         .screenBackdrop()
         .screenTitle(video.name).task {
+            store.searchModel.suspend()
             if detail == nil { await loadDetail() }
             #if DEBUG
             // `-qaDownloadPicker 1` opens the episode picker, for screenshots.
             if UserDefaults.standard.bool(forKey: "qaDownloadPicker") { choosingDownloads = true }
             #endif
         }
+        .onDisappear { requestTask?.cancel() }
         .onChange(of: choosingQuality) { _, open in if !open && !busy { loadingEpisode = nil } }
         // Sign in where playback failed, then resume the episode that needed the account.
         #if os(macOS)
         .sheet(item: $signingIn) { drive in
             CloudLoginView(provider: drive.provider) { cookie in
-                Task {
+                startRequest {
                     do { try await drive.provider.saveLogin(cookie) } catch { return }
                     if let episode = playbackIssue?.episode { await play(episode) }
                 }
@@ -314,7 +405,7 @@ struct VideoDetailView: View {
         #else
         .fullScreenCover(item: $signingIn) { drive in
             CloudQRLoginView(drive: drive.qrDrive) {
-                if let episode = playbackIssue?.episode { Task { await play(episode) } }
+                if let episode = playbackIssue?.episode { startRequest { await play(episode) } }
             }
         }
         #endif
@@ -329,7 +420,7 @@ struct VideoDetailView: View {
         .confirmationDialog(L10n.text("Choose quality"), isPresented: $choosingQuality, titleVisibility: .visible) {
             if let plan = pendingPlan, let episode = pendingEpisode {
                 ForEach(plan.choices) { choice in
-                    Button(choice.name) { Task { await resolve(plan, choice: choice, episode: episode) } }
+                    Button(choice.name) { startRequest { await resolve(plan, choice: choice, episode: episode) } }
                 }
             }
         }
@@ -374,7 +465,7 @@ struct VideoDetailView: View {
                             Button(drive.signInTitle) { signingIn = drive }.settingsButton(prominent: true)
                         }
                         Button(L10n.text(issue.blockedBeforeRequest ? "Try Anyway" : "Retry")) {
-                            Task { await play(issue.episode, skipAccountCheck: true) }
+                            startRequest { await play(issue.episode, skipAccountCheck: true) }
                         }
                         .settingsButton(prominent: issue.drive == nil)
                         #if os(tvOS)
@@ -408,7 +499,7 @@ struct VideoDetailView: View {
                             ? L10n.text("Try again, or go back and choose another video.")
                             : L10n.text("Try another episode or playback source."),
                         details: error,
-                        retry: detail == nil ? { Task { await loadDetail() } } : nil,
+                        retry: detail == nil ? { startRequest { await loadDetail() } } : nil,
                         goBack: { dismiss() },
                         busy: busy,
                         backTitle: L10n.text("Go back")
@@ -423,7 +514,11 @@ struct VideoDetailView: View {
         guard !busy else { return }
         busy = true; error = nil
         defer { busy = false }
-        do { detail = try await client.detail(video.id, cached: client.site.type == 3 || client.site.type == 4) } catch { self.error = error.localizedDescription }
+        do {
+            let value = try await client.detail(video.id, cached: client.site.type == 3 || client.site.type == 4)
+            try Task.checkCancellation()
+            detail = value
+        } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
     }
     private var headerLayout: AnyLayout {
         #if os(iOS)
@@ -493,7 +588,7 @@ struct VideoDetailView: View {
         }
     }
     private func playButton(_ episode: Episode) -> some View {
-        Button { Task { await play(episode) } } label: {
+        Button { startRequest { await play(episode) } } label: {
             HStack(spacing: 8) {
                 if loadingEpisode == episode.id { ProgressView().controlSize(.small) } else { Image(systemName: "play.fill") }
                 Text(L10n.text("Play"))
@@ -618,9 +713,9 @@ struct VideoDetailView: View {
                 let saved = download(episode)
                 Group {
                     if longNames {
-                        EpisodeRow(name: episode.name, loading: loadingEpisode == episode.id, download: saved) { Task { await play(episode) } }
+                        EpisodeRow(name: episode.name, loading: loadingEpisode == episode.id, download: saved) { startRequest { await play(episode) } }
                     } else {
-                        Chip(title: episode.name, selected: loadingEpisode == episode.id, fill: true) { Task { await play(episode) } }
+                        Chip(title: episode.name, selected: loadingEpisode == episode.id, fill: true) { startRequest { await play(episode) } }
                             .overlay(alignment: .topTrailing) { if saved?.status == .completed { DownloadedBadge() } }
                     }
                 }
@@ -674,10 +769,12 @@ struct VideoDetailView: View {
         defer { busy = false; if !choosingQuality { loadingEpisode = nil } }
         do {
             let plan = try await client.preparePlayback(episode)
+            try Task.checkCancellation()
             if plan.choices.count > 1 {
                 pendingPlan = plan; pendingEpisode = episode; choosingQuality = true
             } else {
                 let resolved = try await client.with(parses: store.subscription?.parseServices ?? []).resolvePlayback(plan, choice: plan.choices[0])
+                try Task.checkCancellation()
                 store.playing = store.catalogChannel(resolved, video: detail ?? video, episode: episode, client: client)
             }
         } catch { fail(episode, error) }
@@ -687,15 +784,18 @@ struct VideoDetailView: View {
         defer { busy = false; pendingPlan = nil; pendingEpisode = nil; loadingEpisode = nil }
         do {
             let resolved = try await client.with(parses: store.subscription?.parseServices ?? []).resolvePlayback(plan, choice: choice)
+            try Task.checkCancellation()
             store.playing = store.catalogChannel(resolved, video: detail ?? video, episode: episode, client: client)
         } catch { fail(episode, error) }
     }
     private func fail(_ episode: Episode, _ error: Error) {
-        guard !(error is CancellationError) else { return }
+        guard !Task.isCancelled, !(error is CancellationError) else { return }
         withAnimation(.smooth(duration: 0.25)) {
             // Plugins report a missing or expired drive login in their own words ("夸克授权失败，请扫码登录");
             // say what happened and offer the sign-in instead of echoing them.
-            if let drive = CloudDrive(flag: episode.flag), CloudDrive.isLoginFailure(error.localizedDescription) {
+            if let login = error as? CloudDriveLoginRequired, let drive = CloudDrive(rawValue: login.rawValue) {
+                playbackIssue = PlaybackIssue(episode: episode, message: drive.expiredHint, drive: drive, blockedBeforeRequest: false)
+            } else if let drive = CloudDrive(flag: episode.flag), CloudDrive.isLoginFailure(error.localizedDescription) {
                 playbackIssue = PlaybackIssue(episode: episode, message: drive.expiredHint, drive: drive, blockedBeforeRequest: false)
             } else {
                 playbackIssue = PlaybackIssue(episode: episode, message: error.localizedDescription,

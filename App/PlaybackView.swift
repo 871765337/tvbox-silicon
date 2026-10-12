@@ -213,6 +213,11 @@ import TVCore
                 }
             }
             var address = channel.url
+            do { address = try await EmbeddedJarHost.shared.recoverProxy(address) }
+            catch {
+                guard self.generation == activeGeneration, !Task.isCancelled else { return }
+                self.error = error.localizedDescription; self.loading = false; return
+            }
             // A downloaded episode plays from disk: its file, or its HLS through a loopback server.
             if address.scheme == DownloadLibrary.scheme {
                 do { address = try await DownloadLibrary.shared.playbackAddress(for: address) }
@@ -251,8 +256,10 @@ import TVCore
         #endif
         // Some providers require request headers. AVURLAsset's HTTP-header option is
         // best-effort and is not a guarantee for every redirected HLS segment.
-        let asset = BilibiliStreams.asset(for: url) ?? AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
+        let asset = HongguoStreams.asset(for: url) ?? BilibiliStreams.asset(for: url)
+            ?? AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
         let item = AVPlayerItem(asset: asset)
+        if url.scheme == HongguoStreams.scheme { item.preferredForwardBufferDuration = HongguoStreams.forwardBufferDuration }
         observation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             let status = item.status
             let message = item.error?.localizedDescription
@@ -326,6 +333,7 @@ import TVCore
         guard let item = player.currentItem else { return true }
         restorePositionIfNeeded(item)
         updateSkipping(item)
+        if let url = playing?.url { HongguoStreams.updatePosition(for: url, seconds: pendingResume ?? player.currentTime().seconds) }
         if tick % 5 == 0 { saveHistory() }
         let events = item.accessLog()?.events ?? []
         let now = Date()
@@ -367,6 +375,7 @@ import TVCore
         if QALaunch.page?.hasPrefix("play-source:") == true || QALaunch.page == "resume-last" {
             let report: [String: Any] = ["seconds": position, "duration": duration, "ready": item.status == .readyToPlay,
                 "rate": player.rate, "error": error ?? "", "danmakuCount": danmaku.count,
+                "errorDetail": item.error.map(Self.describe) ?? "", "videoWidth": item.presentationSize.width, "videoHeight": item.presentationSize.height,
                 "danmakuState": catalogDanmaku.automaticState, "cached": catalogDanmaku.fromCache,
                 "introEnd": skipSettings.introEnd, "outroLength": skipSettings.outroLength,
                 "requestedResumePosition": requestedResumePosition ?? 0, "restoredPosition": restoredPosition ?? 0]
@@ -390,6 +399,8 @@ import TVCore
     }
     func stop() {
         saveHistory()
+        if let url = playing?.url { HongguoStreams.stop(url) }
+        playing = nil
         catalogDanmaku.clear()
         historyContext = nil; pendingResume = nil; restoringPosition = false
         requestedResumePosition = nil; restoredPosition = nil

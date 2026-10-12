@@ -598,3 +598,19 @@
 // Player episodes
 "Previous Episode" = "上一集";
 "Next Episode" = "下一集";
+
+"Hongguo" = "紅果短劇";
+"Episode %@" = "第 %@ 集";
+"Live-action Drama" = "真人劇";
+"Animated Drama" = "漫劇";
+"AI Drama" = "AI 劇";
+"Trending Dramas" = "綜合熱播榜";
+"Trending Live-action" = "真人熱播榜";
+"Trending Animation" = "漫劇熱播榜";
+"Trending AI Drama" = "AI 熱播榜";
+"Hongguo could not be reached. Try again later." = "暫時無法連接紅果，請稍後重試。";
+"Hongguo returned incomplete data. Please refresh and try again." = "紅果傳回的資料不完整，請重新整理後再試。";
+"Hongguo did not provide a playable source for this episode. Try again later." = "紅果暫未提供本集的可用片源，請稍後重試。";
+"This Hongguo video could not be prepared for playback. Please try again." = "無法準備此紅果影片，請重試。";
+
+"Waiting for an earlier plugin request to finish." = "正在等待先前的外掛請求結束。";

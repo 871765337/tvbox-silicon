@@ -85,7 +85,10 @@ enum CloudProvider: String, Identifiable, CaseIterable {
         !(self == .quark ? accounts.quarkCookie : accounts.ucCookie).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     func set(_ cookie: String, in accounts: inout CloudDriveAccounts) {
-        if self == .quark { accounts.quarkCookie = cookie } else { accounts.ucCookie = cookie }
+        if self == .quark {
+            if accounts.quarkCookie != cookie { accounts.quarkServiceTicket = nil }
+            accounts.quarkCookie = cookie
+        } else { accounts.ucCookie = cookie }
     }
     func clear(_ accounts: inout CloudDriveAccounts) {
         set("", in: &accounts)

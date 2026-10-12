@@ -13,7 +13,7 @@ import org.json.JSONObject;
  */
 public final class SharedPluginRuntime {
     private static final int SOURCE_LIMIT = 24;
-    private record Source(PluginSession session, CloudDriveBridge bridge, Path cache) {}
+    private record Source(PluginSession session, CloudDriveBridge bridge, Path cache, OpeningGate requests) {}
     private final NativeProbe.StandardRuntime runtime;
     private final LinkedHashMap<String, Source> sources = new LinkedHashMap<>(16, 0.75f, true);
     /** Requests in flight per source; a busy source is never evicted. Guarded by this. */
@@ -77,11 +77,14 @@ public final class SharedPluginRuntime {
         }
         try {
             // A spider keeps per-source state (e.g. the detail loaded before playback).
-            synchronized (source) {
+            // Waiting searches must be cancellable too, even when this spider is already open.
+            // Detail/playback goes ahead of searches queued against the same source.
+            source.requests().enter(OpeningGate.search(input), OpeningGate.cancelled(input));
+            try {
                 source.bridge().activate();
                 try { return source.session().request(input.getJSONObject("params")); }
                 finally { CloudDriveBridge.deactivate(); }
-            }
+            } finally { source.requests().leave(); }
         } finally {
             synchronized (this) { busy.computeIfPresent(id, (key, count) -> count > 1 ? count - 1 : null); }
         }
@@ -107,7 +110,7 @@ public final class SharedPluginRuntime {
             long start = System.nanoTime();
             var session = NativeProbe.createStandardSession(runtime, input, bridge, accounts);
             System.err.printf("PLUGIN_SOURCE_READY %s %.3fs %s%n", input.optString("key"), (System.nanoTime() - start) / 1e9, HeapBudget.describe());
-            return new Source(session, bridge, cache);
+            return new Source(session, bridge, cache, new OpeningGate());
         } catch (Throwable failure) {
             bridge.close();
             throw failure;
@@ -128,6 +131,14 @@ public final class SharedPluginRuntime {
 
     /** Closes every idle spider (the heap ran short or the OS asked for memory); returns how many. */
     public synchronized int trim() { return release(true); }
+
+    public synchronized String recoverProxy(String address) throws Exception {
+        for (Source source : sources.values()) {
+            String recovered = source.bridge().recoverProxy(address);
+            if (recovered != null) return recovered;
+        }
+        return null;
+    }
 
     /**
      * Closes idle spiders, least recently used first: all of them, or only until the heap has its

@@ -63,6 +63,60 @@ open build/DerivedData-mac/Build/Products/Debug/TVBox-macOS.app
 
 Playback depends on the source, media format, device decoder, and network availability. Unsupported features include full CatVod/Android API compatibility, arbitrary desktop JVM applications, web video detection, magnet links, multiple-quality playback responses, XML collection APIs, EPG, cloud sync, downloads, and a complete offline library. Complex playlist extensions and header requirements still need source-by-source verification.
 
+## Built-in Hongguo source
+
+Hongguo is appended alongside Bilibili to the displayed subscription, without changing
+the imported document. It uses the bundled QuickJS runtime on macOS, iOS and tvOS.
+The web catalog provides live-action, animated and AI dramas, four rankings, search,
+and complete episode IDs. Search currently exposes one batch because the website
+ignores its page parameter; category and ranking pagination follow the source.
+
+Playback first requests the exact episode through the app's signed model endpoint
+and its returned fallback endpoint. The adapter selects H.264/HEVC and resolves
+encrypted media URLs locally. Playback registers a virtual MP4 with AVFoundation's
+resource loader. Small HTTP Range requests read the MP4 sample tables (even when
+the moov is at the end), then fetch and decrypt only requested samples using native
+AES-CTR. Seeking reads the destination ranges without downloading the preceding
+media. Responses that ignore Range or return a different range are rejected.
+App media keeps the app endpoint's User-Agent. It omits Referer initially and retries
+HTTP 403 once with the app Referer, retaining the successful policy for subsequent
+ranges. Some CDN nodes reject the web browser headers even when another node works.
+
+The player and resource loader use a roughly 60-second forward window. Decrypted
+ranges have a 16 MB memory limit and expire as the playhead advances or seeks;
+stopping playback cancels pending requests and clears those ranges. Playback creates
+no complete movie on disk. Explicit offline downloads retain the complete-file
+preparation path through `preparePlayback(_:forDownload:)`, with disposable files
+eligible for cleanup after an hour at 512 MB, or after a day regardless of size.
+If app playback is unavailable, the adapter tries the selected episode's public web
+video. It does not substitute another episode or truncate the full episode list to
+the web preview count. Availability and quality still depend on the upstream response.
+
+`swift run TVBoxProbe --hongguo-check [series ID] [episode number]` checks catalog,
+search, rankings, details, first-frame timing, bytes fetched before playback,
+paused buffering, and forward/backward seeking. `--hongguo-play <series ID> [episode number]`
+isolates playback from catalog/search availability. `HongguoTests`
+cover the QuickJS signing/crypto bridge, exact episode selection, parsing and CENC
+sample/subsample decryption using a NIST AES-CTR vector, middle-of-sample range reads,
+tail metadata, cache reuse, cancellation, the forward window, and invalid HTTP Range
+responses, app media headers, and bounded Referer retries. On tvOS, diagnostic logs
+are stored under `Library/Caches/com.tvbox.yingxia/Logs` so they can be retrieved
+from the app container after a device failure. Successful platform builds
+do not establish playback on physical iPhone or Apple TV devices.
+
+On 2026-10-12, the live probe returned all 69 episode IDs for series
+`7686713195246930968`. Episodes 4 and 69 both played at 1080×1920 on macOS,
+advanced past two seconds, and sought successfully near the end. Page 2 of all
+seven catalog/ranking categories returned items. These are sampled live checks,
+not a guarantee that every episode or title is available.
+
+The subsequent streaming check on episode 69 resolved in 0.61 s and produced its
+first frame in 1.93 s, after receiving 2.84 MB of the 13.28 MB, 157.5-second file.
+With playback paused at 2.1 s, buffered media ended at 63.7 s and the received-byte
+count stayed unchanged across consecutive checks. Seeking near the end and back
+to 5 s both succeeded. These timings are one local network sample, not a latency
+guarantee.
+
 ## Languages
 
 English (`en`) is the source and fallback language. Traditional Chinese (`zh-Hant`), Simplified Chinese (`zh-Hans`), and Japanese (`ja`) are supported on all three platforms. The app follows the system's preferred languages or Apple's per-app language setting.

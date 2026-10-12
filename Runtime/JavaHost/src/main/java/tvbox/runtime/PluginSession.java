@@ -19,14 +19,18 @@ public final class PluginSession {
         this.spider = spider; this.initializationWarning = initializationWarning; this.bridge = bridge;
     }
 
+    public String recoverProxy(String address) throws Exception {
+        return bridge == null ? null : bridge.recoverProxy(address);
+    }
+
     public String request(JSONObject params) throws Exception {
+        HttpDiagnostics.beginRequest(params.has("play"));
         PreparationProgress.loading();
         try { return performRequest(params); }
-        finally { PreparationProgress.loading(); } // Flush the final throttled counters, also on failure.
+        finally { PreparationProgress.loading(); HttpDiagnostics.endRequest(); } // Flush the final throttled counters, also on failure.
     }
 
     private String performRequest(JSONObject params) throws Exception {
-        HttpDiagnostics.reset();
         if (params.has("play")) {
             String required = params.optString("detailID", "");
             if (!required.isEmpty() && !required.equals(detailID)) {
@@ -80,6 +84,8 @@ public final class PluginSession {
             HttpDiagnostics.throwIfFailed();
             throw malformed;
         }
+        // A spider may swallow even a host handoff and return empty/partial content.
+        HttpDiagnostics.throwIfLoginRequired();
         if (result != null && !result.isBlank()) {
             if (checkInitialization && initializationWarning != null && emptyAllowed) checkInitialization(new JSONObject(result));
             return result;

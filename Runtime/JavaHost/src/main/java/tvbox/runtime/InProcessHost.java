@@ -21,7 +21,7 @@ public final class InProcessHost {
     /** Requests in flight per runtime id; a busy runtime is never closed. Guarded by the class lock. */
     private static final java.util.HashMap<String, Integer> busy = new java.util.HashMap<>();
     /** {@code host} is a SharedPluginRuntime when shared, otherwise a single-source PluginSession. */
-    private record Runtime(URLClassLoader loader, Object host, boolean shared, java.nio.file.Path cache) {}
+    private record Runtime(URLClassLoader loader, Object host, boolean shared, java.nio.file.Path cache, OpeningGate requests) {}
     /**
      * Cancellation flags of requests in flight, by the app's request id. The app sends
      * {@code {"command":"cancel","request":id}} when nobody waits for a request any more; a cancel
@@ -77,6 +77,7 @@ public final class InProcessHost {
         String requestId = "";
         try {
             JSONObject input = new JSONObject(inputText);
+            if ("recoverProxy".equals(input.optString("command"))) return recoverProxy(input.getString("url"));
             if ("trim".equals(input.optString("command"))) return new JSONObject().put("result", trim("memory pressure", true)).toString();
             if ("cancel".equals(input.optString("command"))) return cancel(input.optString("request"));
             requestId = input.optString("request");
@@ -113,6 +114,19 @@ public final class InProcessHost {
         System.err.println("PLUGIN_CANCEL " + requestId);
         synchronized (InProcessHost.class) { InProcessHost.class.notifyAll(); }
         return "{\"result\":true}";
+    }
+
+    private static String recoverProxy(String address) throws Exception {
+        gate.readLock().lock();
+        try {
+            synchronized (InProcessHost.class) {
+                for (Runtime runtime : runtimes.values()) {
+                    String recovered = (String)runtime.host().getClass().getMethod("recoverProxy", String.class).invoke(runtime.host(), address);
+                    if (recovered != null) return new JSONObject().put("result", recovered).toString();
+                }
+            }
+            return new JSONObject().put("result", address).toString();
+        } finally { gate.readLock().unlock(); }
     }
 
     private static String cancelled() {
@@ -154,9 +168,14 @@ public final class InProcessHost {
                         result = runtime.host().getClass().getMethod("request", JSONObject.class).invoke(runtime.host(), input);
                     } else {
                         // A single-source session is one spider; it takes one request at a time.
-                        synchronized (runtime.host()) {
+                        runtime.requests().enter(OpeningGate.search(input), OpeningGate.cancelled(input));
+                        try {
+                            // A warm FTY session runs on a new worker thread. Start progress in
+                            // its own class loader on every request, not only during plugin init.
+                            runtime.loader().loadClass("tvbox.runtime.PreparationProgress")
+                                .getMethod("begin", java.nio.file.Path.class).invoke(null, runtime.cache());
                             result = runtime.host().getClass().getMethod("request", JSONObject.class).invoke(runtime.host(), input.getJSONObject("params"));
-                        }
+                        } finally { runtime.requests().leave(); }
                     }
                 } catch (Throwable error) {
                     if (HeapBudget.outOfMemory(error)) throw new OutOfMemoryError("Java heap space");
@@ -304,7 +323,7 @@ public final class InProcessHost {
             Object value = shared
                 ? loader.loadClass("tvbox.runtime.SharedPluginRuntime").getMethod("open", JSONObject.class).invoke(null, input)
                 : loader.loadClass("tvbox.runtime.NativeProbe").getMethod("initialize", JSONObject.class).invoke(null, input);
-            return new Runtime(loader, value, shared, java.nio.file.Path.of(input.getString("cache")));
+            return new Runtime(loader, value, shared, java.nio.file.Path.of(input.getString("cache")), new OpeningGate());
         } catch (Throwable failure) {
             try { loader.loadClass("android.os.Looper").getMethod("shutdown").invoke(null); } catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
             try { loader.loadClass("tvbox.runtime.CloudDriveBridge").getMethod("closeCurrent").invoke(null); } catch (Throwable cleanup) { failure.addSuppressed(cleanup); }

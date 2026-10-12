@@ -66,12 +66,12 @@ import TVCore
     private func resolveDownload(_ item: DownloadItem) async throws -> Channel {
         let config = subscription
         guard let site = config?.sites.first(where: { $0.key == item.source.siteKey })
-                ?? (item.source.siteKey == Site.bilibili.key ? Site.bilibili : nil) else {
+                ?? Site.builtInSites.first(where: { $0.key == item.source.siteKey }) else {
             throw TVError.unsupported(L10n.text("%@ is no longer in your subscription, so this download can't continue.", item.source.siteName))
         }
         let client = CatalogClient(site: site, origin: config?.origin ?? URL(string: "https://example.invalid/")!, jarURL: config?.spiderURL)
             .with(parses: config?.parseServices ?? [])
-        let plan = try await client.preparePlayback(item.source.episode)
+        let plan = try await client.preparePlayback(item.source.episode, forDownload: true)
         return try await client.resolvePlayback(plan, choice: plan.choices[0])
     }
     /// Large subscriptions run to megabytes, past the defaults size limit that aborts tvOS apps,

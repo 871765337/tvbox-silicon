@@ -57,6 +57,9 @@ struct RootView: View {
             platformTabs
             #endif
         }
+        .onChange(of: store.section) { _, section in
+            if section != .search { store.searchModel.suspend() }
+        }
         .modifier(PlayerPresentation(playing: $store.playing))
         .updatePresentation(updates, playing: store.playing != nil)
         .alert(L10n.text("Unable to Complete"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {

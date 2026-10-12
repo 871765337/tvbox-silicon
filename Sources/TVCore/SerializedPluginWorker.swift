@@ -16,6 +16,8 @@ final class SerializedPluginWorker: @unchecked Sendable {
         let id = UUID().uuidString
         let queued = ContinuousClock.now
         var waiters: [UUID: CheckedContinuation<String, Error>] = [:]
+        var startHandlers: [UUID: @Sendable () -> Void] = [:]
+        var started = false
         init(resources: String, json: String, search: Bool) {
             self.resources = resources; self.json = json; self.search = search
         }
@@ -40,7 +42,7 @@ final class SerializedPluginWorker: @unchecked Sendable {
         self.abandon = abandon; self.execute = execute
     }
 
-    func request(resources: String, json: String, search: Bool = false) async throws -> String {
+    func request(resources: String, json: String, search: Bool = false, onStart: (@Sendable () -> Void)? = nil) async throws -> String {
         let id = UUID()
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -49,9 +51,13 @@ final class SerializedPluginWorker: @unchecked Sendable {
                     lock.unlock(); continuation.resume(throwing: CancellationError()); return
                 }
                 // Join before checking queue capacity. A duplicate consumes no slot.
-                if let matching = (running + pending).first(where: { $0.resources == resources && $0.json == json }) {
+                if let matching = (running + pending).first(where: { !$0.waiters.isEmpty && $0.resources == resources && $0.json == json }) {
                     matching.waiters[id] = continuation
-                    lock.unlock(); return
+                    let started = matching.started
+                    if !started { matching.startHandlers[id] = onStart }
+                    lock.unlock()
+                    if started { onStart?() }
+                    return
                 }
                 // A search burst may briefly queue a full width.
                 let queued = pending.count(where: { $0.search == search })
@@ -62,7 +68,7 @@ final class SerializedPluginWorker: @unchecked Sendable {
                     continuation.resume(throwing: TVError.unsupported("The plugin runtime is busy. Wait for the current source.")); return
                 }
                 let work = Work(resources: resources, json: json, search: search)
-                work.waiters[id] = continuation; pending.append(work)
+                work.waiters[id] = continuation; work.startHandlers[id] = onStart; pending.append(work)
                 scheduleLocked()
                 lock.unlock()
             }
@@ -75,11 +81,12 @@ final class SerializedPluginWorker: @unchecked Sendable {
         var abandoned: Work?
         for work in running where waiter == nil {
             waiter = work.waiters.removeValue(forKey: id)
+            work.startHandlers[id] = nil
             if waiter != nil, work.waiters.isEmpty { abandoned = work }
         }
         if waiter == nil {
             for work in pending {
-                if let removed = work.waiters.removeValue(forKey: id) { waiter = removed; break }
+                if let removed = work.waiters.removeValue(forKey: id) { work.startHandlers[id] = nil; waiter = removed; break }
             }
             pending.removeAll { $0.waiters.isEmpty }
             scheduleLocked()
@@ -124,6 +131,12 @@ final class SerializedPluginWorker: @unchecked Sendable {
 
     private func perform(_ work: Work) {
         let began = ContinuousClock.now
+        lock.lock()
+        work.started = true
+        let startHandlers = Array(work.startHandlers.values); work.startHandlers.removeAll()
+        lock.unlock()
+        // Only native execution moves a caller out of the Swift queue, including joined callers.
+        for handler in startHandlers { handler() }
         let timer = DispatchWorkItem { [self, work] in expire(work) }
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timer)
         let result = execute(work.resources, abandon == nil ? work.json : Self.tagged(work.json, id: work.id))

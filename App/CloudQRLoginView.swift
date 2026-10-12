@@ -84,9 +84,12 @@ struct CloudQRLoginView: View {
                 switch try await login.poll() {
                 case .waiting: continue
                 case .expired: expired = true; return
-                case .signedIn(let cookie):
+                case .signedIn(let credentials):
                     var accounts = (try? CloudDriveAccounts.load()) ?? CloudDriveAccounts()
-                    if drive == .quark { accounts.quarkCookie = cookie } else { accounts.ucCookie = cookie }
+                    if drive == .quark {
+                        accounts.quarkCookie = credentials.cookie
+                        accounts.quarkServiceTicket = credentials.serviceTicket
+                    } else { accounts.ucCookie = credentials.cookie }
                     try accounts.save()
                     dismiss()
                     signedIn()

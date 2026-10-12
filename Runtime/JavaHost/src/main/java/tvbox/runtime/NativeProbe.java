@@ -39,7 +39,12 @@ public class NativeProbe extends AbstractJni {
         result.put("trace", trace(chain));
         NoClassDefFoundError missing = null;
         for (Throwable link : chain) if (link instanceof NoClassDefFoundError found) { missing = found; break; }
-        if (error instanceof HttpDiagnostics.SourceHTTPException remote) {
+        HttpDiagnostics.CloudLoginRequired login = null;
+        for (Throwable link : chain) if (link instanceof HttpDiagnostics.CloudLoginRequired found) { login = found; break; }
+        if (login != null) {
+            System.err.println("PLUGIN_LOGIN_REQUIRED " + login.drive);
+            result.put("errorCode", "cloud_login_required").put("drive", login.drive);
+        } else if (error instanceof HttpDiagnostics.SourceHTTPException remote) {
             result.put("errorCode", "source_http").put("host", remote.host).put("status", remote.status);
         } else if (error instanceof PluginSession.EmptyContentException) {
             result.put("errorCode", "source_empty");
@@ -113,6 +118,7 @@ public class NativeProbe extends AbstractJni {
     }
 
     public static PluginSession initialize(org.json.JSONObject input) throws Exception {
+        HttpDiagnostics.singleSourceRuntime(true);
         File cache = new File(input.getString("cache")); cache.mkdirs();
         File session = java.nio.file.Files.createTempDirectory(cache.toPath(), "session-").toFile();
         HostEnvironment.cache = cache.getAbsolutePath();
@@ -173,6 +179,7 @@ public class NativeProbe extends AbstractJni {
             com.github.catvod.crawler.Spider actual = (com.github.catvod.crawler.Spider)spider;
             actual.siteKey = input.optString("key");
             actual.init(context, input.optString("ext"));
+            bridge.restoreFtyQuarkAccount(accounts, actual.getClass());
             bridge.setDriveProxy(dalvik.system.DexClassLoader.current);
             bridge.setProxy(params -> com.github.catvod.spider.DexNative.proxyInvoke(loader.getValue(), params));
             return new PluginSession(actual, null, bridge);

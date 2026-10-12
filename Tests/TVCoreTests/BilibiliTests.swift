@@ -8,8 +8,8 @@ struct BilibiliTests {
         let subscription = try Subscription.parse(data, origin: URL(string: "https://example.com/sub.json")!)
         #expect(subscription.sites.map(\.key) == ["a"])
         let shown = subscription.withBuiltInSites()
-        #expect(shown.sites.map(\.key) == ["a", Bilibili.siteKey])
-        #expect(shown.withBuiltInSites().sites.count == 2)
+        #expect(shown.sites.map(\.key) == ["a", Bilibili.siteKey, Hongguo.siteKey])
+        #expect(shown.withBuiltInSites().sites.count == 3)
         #expect(shown.lives.map(\.isBuiltIn) == [true] && shown.withBuiltInSites().lives.count == 1)
         #expect(BilibiliLive.room(URL(string: "bilibili-live://room/22828499")!) == 22828499)
         let site = Site.bilibili

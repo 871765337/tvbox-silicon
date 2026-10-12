@@ -22,8 +22,13 @@ public final class CloudDriveBridge implements AutoCloseable {
         CloudDriveBridge local = active.get();
         return local != null ? local : current;
     }
-    private final HttpServer server;
-    private final ExecutorService workers = Executors.newFixedThreadPool(4, r -> { Thread t = new Thread(r, "cloud-proxy"); t.setDaemon(true); return t; });
+    private volatile HttpServer server;
+    private boolean closed;
+    private final Set<Integer> ports = ConcurrentHashMap.newKeySet();
+    private ExecutorService workers = newWorkers();
+    private static ExecutorService newWorkers() {
+        return Executors.newFixedThreadPool(4, r -> { Thread t = new Thread(r, "cloud-proxy"); t.setDaemon(true); return t; });
+    }
     private final String capability = UUID.randomUUID().toString();
     private final Map<String, byte[]> files = new HashMap<>();
     private final Path activity;
@@ -32,9 +37,15 @@ public final class CloudDriveBridge implements AutoCloseable {
 
     public CloudDriveBridge(Path cache) throws IOException {
         activity = cache.resolve("proxy-active");
-        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 16);
-        server.setExecutor(workers);
-        server.createContext("/", exchange -> {
+        server = listen(0);
+        current = this;
+        startStandardPort();
+    }
+
+    private HttpServer listen(int port) throws IOException {
+        HttpServer listener = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 16);
+        listener.setExecutor(workers);
+        listener.createContext("/", exchange -> {
             try {
                 String path = exchange.getRequestURI().getPath();
                 if (!path.startsWith("/" + capability + "/") || exchange.getRequestHeaders().containsKey("Origin")) {
@@ -43,6 +54,7 @@ public final class CloudDriveBridge implements AutoCloseable {
                 String method = exchange.getRequestMethod();
                 if (!method.equals("GET") && !method.equals("HEAD")) { exchange.sendResponseHeaders(405, -1); return; }
                 String resource = path.substring(capability.length() + 2);
+                if (resource.equals("health")) { exchange.sendResponseHeaders(204, -1); return; }
                 if (files.containsKey(resource)) {
                     configurationReads.incrementAndGet();
                     byte[] bytes = files.get(resource);
@@ -59,9 +71,40 @@ public final class CloudDriveBridge implements AutoCloseable {
                 try { exchange.sendResponseHeaders(502, -1); } catch (IOException ignored) { }
             } finally { exchange.close(); }
         });
-        server.start();
-        current = this;
-        startStandardPort();
+        listener.start();
+        ports.add(listener.getAddress().getPort());
+        return listener;
+    }
+
+    /** Apple can invalidate sockets while the app is suspended without destroying its JVM. */
+    public synchronized void ensureAvailable() throws IOException {
+        if (closed) throw new IOException("Plugin proxy was closed");
+        HttpURLConnection probe = null;
+        try {
+            probe = (HttpURLConnection)URI.create(base() + "health").toURL().openConnection(java.net.Proxy.NO_PROXY);
+            probe.setRequestMethod("HEAD"); probe.setConnectTimeout(750); probe.setReadTimeout(1500);
+            probe.setUseCaches(false); probe.setRequestProperty("Connection", "close");
+            if (probe.getResponseCode() == 204) return;
+        } catch (IOException unavailable) {
+            // Recover the listener; the spider and its account/session state are still valid.
+        } finally { if (probe != null) probe.disconnect(); }
+        int port = server.getAddress().getPort();
+        server.stop(0);
+        workers.shutdownNow(); workers = newWorkers();
+        try { server = listen(port); }
+        catch (BindException occupied) { server = listen(0); }
+        System.err.println("CLOUD_PROXY_RECOVERED");
+    }
+
+    public String recoverProxy(String address) throws IOException {
+        final URI uri;
+        try { uri = URI.create(address); } catch (IllegalArgumentException invalid) { return null; }
+        if (!"http".equals(uri.getScheme()) || !"127.0.0.1".equals(uri.getHost())
+                || !ports.contains(uri.getPort()) || uri.getRawPath() == null
+                || !uri.getRawPath().startsWith("/" + capability + "/")) return null;
+        ensureAvailable();
+        return base() + uri.getRawPath().substring(capability.length() + 2)
+            + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
     }
 
     /** Hands a media or drive request to the plugin's proxy and streams its answer back. */
@@ -87,20 +130,47 @@ public final class CloudDriveBridge implements AutoCloseable {
         }
         try (InputStream body = (InputStream) response[2]) {
             exchange.getResponseHeaders().set("Content-Type", String.valueOf(response[1]));
+            long length = -1;
             if (response.length > 3 && response[3] instanceof Map<?,?> responseHeaders) {
                 for (var entry : responseHeaders.entrySet()) {
                     String key = String.valueOf(entry.getKey());
-                    if (Set.of("connection", "transfer-encoding", "content-length").contains(key.toLowerCase(Locale.ROOT))) continue;
                     String value = String.valueOf(entry.getValue());
+                    if (key.equalsIgnoreCase("content-length")) {
+                        try { length = Math.max(-1, Long.parseLong(value)); } catch (NumberFormatException ignored) { }
+                        continue;
+                    }
+                    if (Set.of("connection", "transfer-encoding").contains(key.toLowerCase(Locale.ROOT))) continue;
                     if (key.equalsIgnoreCase("location")) value = rewriteAddress(value);
                     exchange.getResponseHeaders().set(key, value);
                 }
             }
             int status = ((Number)response[0]).intValue();
-            exchange.sendResponseHeaders(status, method.equals("HEAD") || status == 204 || status == 304 ? -1 : 0);
-            if (!method.equals("HEAD")) {
+            // Some Android proxies call a range starting at zero "200". AVPlayer
+            // needs the partial-response status and length, including its 0-1 probe.
+            String range = exchange.getResponseHeaders().getFirst("Content-Range");
+            if ((status == 200 || status == 206) && headers.containsKey("range") && range != null) {
+                var match = java.util.regex.Pattern.compile("bytes (\\d+)-(\\d+)/(?:\\d+|\\*)").matcher(range);
+                if (match.matches()) try {
+                    long first = Long.parseLong(match.group(1)), last = Long.parseLong(match.group(2));
+                    if (last >= first && last - first < Long.MAX_VALUE) {
+                        status = 206;
+                        // Android proxies may report the entire file size for a small range.
+                        length = last - first + 1;
+                    }
+                } catch (NumberFormatException ignored) { }
+            }
+            boolean noBody = method.equals("HEAD") || status == 204 || status == 304 || length == 0;
+            if (length >= 0 && noBody) exchange.getResponseHeaders().set("Content-Length", Long.toString(length));
+            exchange.sendResponseHeaders(status, noBody ? -1 : length > 0 ? length : 0);
+            System.err.println("CLOUD_PROXY_RESPONSE status=" + status + " length=" + length + " head=" + method.equals("HEAD"));
+            if (!noBody) {
                 byte[] buffer = new byte[64 * 1024]; int count;
-                while ((count = body.read(buffer)) != -1) { exchange.getResponseBody().write(buffer, 0, count); touch(); }
+                long remaining = length;
+                while (remaining != 0 && (count = body.read(buffer, 0, remaining < 0 ? buffer.length : (int)Math.min(buffer.length, remaining))) != -1) {
+                    exchange.getResponseBody().write(buffer, 0, count); touch();
+                    if (remaining > 0) remaining -= count;
+                }
+                System.err.println("CLOUD_PROXY_COMPLETE remaining=" + remaining);
             }
         }
     }
@@ -196,6 +266,38 @@ public final class CloudDriveBridge implements AutoCloseable {
         }
         return ext.toString();
     }
+    /** Restore the two values FTY normally saves after its Android QR dialog succeeds. */
+    public boolean restoreFtyQuarkAccount(JSONObject accounts, Class<?> spiderClass) throws Exception {
+        if (accounts == null) return false;
+        String cookie = accounts.optString("quarkCookie"), ticket = accounts.optString("quarkServiceTicket");
+        if (cookie.isBlank() || ticket.isBlank()) return false;
+        Class<?> pan = spiderClass;
+        while (pan != null && !pan.getName().equals("com.github.catvod.spider.Pan")) pan = pan.getSuperclass();
+        if (pan == null) return false;
+        try {
+            if (!pan.getField("yq").getType().getName().equals("com.github.catvod.spider.Cloud_quark")) return false;
+        } catch (NoSuchFieldException absent) { return false; }
+        // Inspected FTY releases rename this helper, while retaining this complete contract.
+        // Never alter verification methods or success flags: the plugin validates the cookie.
+        for (String name : List.of("xU", "Z")) {
+            try {
+                Class<?> type = Class.forName("com.github.catvod.spider.merge." + name, false, spiderClass.getClassLoader());
+                var singleton = type.getMethod("Zm");
+                var web = type.getField("F5"); var mobile = type.getField("W");
+                if (singleton.getReturnType() != type || !java.lang.reflect.Modifier.isStatic(singleton.getModifiers())
+                    || web.getType() != String.class || mobile.getType() != String.class
+                    || type.getField("ee").getType() != String.class
+                    || type.getMethod("Gd").getReturnType() != boolean.class
+                    || type.getMethod("k", String.class).getReturnType() != boolean.class) continue;
+                Object account = singleton.invoke(null);
+                web.set(account, cookie); mobile.set(account, ticket);
+                System.err.println("CLOUD_ACCOUNT_RESTORED quark");
+                return true;
+            } catch (ClassNotFoundException | NoSuchFieldException | NoSuchMethodException unsupported) { }
+        }
+        return false;
+    }
+
     /** The Cloud-based Wogg family accepts inline cookies under different keys than FTY. */
     public String cloudExtension(String original, JSONObject accounts, Class<?> spiderClass) throws Exception {
         if (accounts == null) return original;
@@ -216,6 +318,10 @@ public final class CloudDriveBridge implements AutoCloseable {
     }
 
     public String rewriteAddress(String address) {
+        for (int port : ports) {
+            String prior = "http://127.0.0.1:" + port + "/" + capability + "/";
+            if (address.startsWith(prior)) return base() + address.substring(prior.length());
+        }
         // Preserve Bili's dedicated progressive-MP4 resolver and plain HLS unwrapping.
         if (address.contains("do=bili") || address.contains("do=m3u8")) return address;
         if (address.matches("^http://(127\\.0\\.0\\.1|localhost)(:-?\\d+)?/proxy\\?.*")) {
@@ -224,6 +330,7 @@ public final class CloudDriveBridge implements AutoCloseable {
         return address;
     }
     public String playback(String text) throws Exception {
+        ensureAvailable();
         JSONObject result = new JSONObject(text);
         Object value = result.opt("url");
         if (value instanceof String address) result.put("url", rewriteAddress(address));
@@ -236,5 +343,5 @@ public final class CloudDriveBridge implements AutoCloseable {
     public void activate() { current = this; active.set(this); }
     public static void deactivate() { active.remove(); }
     public static void closeCurrent() { if (current != null) current.close(); }
-    @Override public void close() { server.stop(0); workers.shutdownNow(); if (current == this) current = null; }
+    @Override public synchronized void close() { closed = true; server.stop(0); workers.shutdownNow(); if (current == this) current = null; }
 }

@@ -3,6 +3,8 @@ import Foundation
 /// Kept outside disposable plugin caches; never included in subscription exports.
 public struct CloudDriveAccounts: Codable, Sendable {
     public var quarkCookie = ""
+    /// Quark's mobile service ticket is distinct from its web cookies; older saves omit it.
+    public var quarkServiceTicket: String?
     public var ucCookie = ""
     public var ucToken = ""
     public var token = ""
@@ -48,4 +50,21 @@ public struct CloudDriveAccounts: Codable, Sendable {
     #if os(tvOS)
     private static let defaultsKey = "cloudDriveAccounts"
     #endif
+}
+
+/// The plugin tried to open an Android-only QR login flow. The app presents its own login.
+public enum CloudDriveLoginRequired: String, LocalizedError, Sendable {
+    case quark, uc
+
+    init?(envelope: [String: JSONValue]) {
+        guard envelope["errorCode"]?.string == "cloud_login_required",
+              let drive = envelope["drive"]?.string else { return nil }
+        self.init(rawValue: drive)
+    }
+
+    public func message(language: String? = nil) -> String {
+        L10n.text("Your %@ sign-in is missing or has expired. Sign in again to play this episode.",
+                  L10n.text(self == .quark ? "Quark" : "UC", language: language), language: language)
+    }
+    public var errorDescription: String? { message() }
 }

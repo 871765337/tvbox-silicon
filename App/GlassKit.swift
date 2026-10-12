@@ -225,6 +225,15 @@ extension View {
         buttonStyle(LiftButtonStyle())
         #endif
     }
+
+    /// For cards that paint their own focus state (source cards).
+    @ViewBuilder func tileButton() -> some View {
+        #if os(tvOS)
+        buttonStyle(TVTileStyle())
+        #else
+        buttonStyle(LiftButtonStyle())
+        #endif
+    }
 }
 
 /// Pointer-aware press and hover feedback for content cards.
@@ -888,6 +897,21 @@ enum TVStyle {
     static let background = Color(red: 0.086, green: 0.063, blue: 0.047)
     static let surface = Color(red: 0.18, green: 0.14, blue: 0.11)
     static let raised = Color(red: 0.25, green: 0.195, blue: 0.15)
+}
+/// Tiles that draw their own surface and light it up on focus (`\.isFocused` reaches the label),
+/// so there is no second plate around them: just the lift.
+private struct TVTileStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { Tile(configuration: configuration) }
+    private struct Tile: View {
+        let configuration: ButtonStyleConfiguration
+        @Environment(\.isFocused) private var focused
+        var body: some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.98 : focused ? 1.05 : 1)
+                .shadow(color: .black.opacity(focused ? 0.5 : 0), radius: 24, y: 14)
+                .animation(.easeOut(duration: 0.18), value: focused)
+        }
+    }
 }
 private struct TVCardStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View { Card(configuration: configuration) }

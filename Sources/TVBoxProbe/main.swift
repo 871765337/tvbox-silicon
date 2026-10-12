@@ -109,6 +109,81 @@ import TVCore
             try await Task.sleep(for: .seconds(args.count > 2 ? Double(args[2]) ?? 60 : 60))
             return
         }
+        if args[1] == "--hongguo-check" || args[1] == "--hongguo-play" {
+            // --hongguo-play <series id> [episode number] isolates playback from catalog/search availability.
+            // --hongguo-check [series id] [episode number] also checks the catalog, search and rankings.
+            setvbuf(stdout, nil, _IONBF, 0)
+            let client = CatalogClient(site: .hongguo, origin: URL(string: "https://example.invalid/")!)
+            var defaultID: String?
+            if args[1] == "--hongguo-check" {
+                let home = try await client.home()
+                defaultID = home.videos.first?.id
+                print("home categories=\(home.categories.count) videos=\(home.videos.count)")
+                let search = try await client.list(category: nil, query: "总裁", page: 1)
+                print("search videos=\(search.videos.count) pages=\(search.pageCount)")
+                let rank = try await client.list(category: "hot-drama", query: "", page: 1)
+                print("ranking videos=\(rank.videos.count) pages=\(rank.pageCount)")
+            }
+            guard let id = args.count > 2 ? args[2] : defaultID else { throw TVError.emptyPlaylist }
+            let video = try await client.detail(id)
+            let index = args.count > 3 ? (Int(args[3]) ?? 4) - 1 : 3
+            guard video.episodes.indices.contains(index) else { throw TVError.emptyPlaylist }
+            print("detail episodes=\(video.episodes.count) selected=\(index + 1)")
+            let started = Date()
+            let channel = try await client.playback(video.episodes[index])
+            print("resolve seconds=\(Date().timeIntervalSince(started)) streaming=\(channel.url.scheme == HongguoStreams.scheme)")
+            let asset = HongguoStreams.asset(for: channel.url) ?? AVURLAsset(url: channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
+            let item = AVPlayerItem(asset: asset), player = AVPlayer()
+            item.preferredForwardBufferDuration = HongguoStreams.forwardBufferDuration
+            player.replaceCurrentItem(with: item); player.isMuted = true; player.play()
+            let positionUpdates = Task {
+                while !Task.isCancelled {
+                    HongguoStreams.updatePosition(for: channel.url, seconds: player.currentTime().seconds)
+                    try? await Task.sleep(for: .milliseconds(200))
+                }
+            }
+            defer { positionUpdates.cancel(); HongguoStreams.stop(channel.url) }
+            var firstFrame = false
+            for _ in 0..<100 {
+                try await Task.sleep(for: .milliseconds(200))
+                if item.status == .failed { throw item.error ?? TVError.emptyPlaylist }
+                if !firstFrame, player.currentTime().seconds > 0.05 {
+                    firstFrame = true
+                    let stats = await HongguoStreams.statistics(for: channel.url)
+                    print("first frame seconds=\(Date().timeIntervalSince(started)) bytes=\(stats?.received ?? 0)/\(stats?.total ?? 0)")
+                }
+                if player.currentTime().seconds > 2 { break }
+            }
+            let duration = try await asset.load(.duration).seconds
+            print("play status=\(item.status.rawValue) time=\(player.currentTime().seconds) size=\(item.presentationSize) duration=\(duration)")
+            if let stats = await HongguoStreams.statistics(for: channel.url) {
+                print("startup seconds=\(Date().timeIntervalSince(started)) bytes=\(stats.received)/\(stats.total) cache=\(stats.cached) requests=\(stats.requests)")
+            }
+            guard player.currentTime().seconds > 2 else { throw TVError.emptyPlaylist }
+            player.pause()
+            try await Task.sleep(for: .seconds(3))
+            let beforePause = await HongguoStreams.statistics(for: channel.url)
+            try await Task.sleep(for: .seconds(3))
+            let afterPause = await HongguoStreams.statistics(for: channel.url)
+            if let beforePause, let afterPause {
+                print("paused bytes=\(afterPause.received)/\(afterPause.total) additional=\(afterPause.received - beforePause.received) cache=\(afterPause.cached) bufferedThrough=\(afterPause.bufferedThrough)s")
+                guard afterPause.received == beforePause.received else { throw TVError.emptyPlaylist }
+                guard afterPause.bufferedThrough <= player.currentTime().seconds + HongguoStreams.forwardBufferDuration + 10 else { throw TVError.emptyPlaylist }
+                if duration > 90 { guard afterPause.received < afterPause.total else { throw TVError.emptyPlaylist } }
+            }
+            player.play()
+            await player.seek(to: CMTime(seconds: max(0, duration - 15), preferredTimescale: 600))
+            try await Task.sleep(for: .seconds(3))
+            print("seek time=\(player.currentTime().seconds) status=\(item.status.rawValue)")
+            guard item.status == .readyToPlay, player.currentTime().seconds >= duration - 16 else { throw TVError.emptyPlaylist }
+            await player.seek(to: CMTime(seconds: 5, preferredTimescale: 600))
+            try await Task.sleep(for: .seconds(2))
+            print("seek back time=\(player.currentTime().seconds) status=\(item.status.rawValue)")
+            guard item.status == .readyToPlay, (5...10).contains(player.currentTime().seconds) else { throw TVError.emptyPlaylist }
+            player.pause()
+            HongguoStreams.stop(channel.url)
+            return
+        }
         if args[1] == "--bili-play", args.count >= 3 {
             // --bili-play <BV id | season_N> [part index] [seconds]: the built-in Bilibili source end to end,
             // through its script port, playback resolution and AVPlayer.

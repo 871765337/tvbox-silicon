@@ -4,7 +4,11 @@ import Foundation
 /// service ticket, which the drive exchanges for the same cookie its web sign-in sets.
 public struct CloudDriveQRLogin: Sendable {
     public enum Drive: Sendable { case quark, uc }
-    public enum Status: Sendable, Equatable { case waiting, expired, signedIn(cookie: String) }
+    public struct Credentials: Sendable, Equatable {
+        public let cookie: String
+        public let serviceTicket: String?
+    }
+    public enum Status: Sendable, Equatable { case waiting, expired, signedIn(Credentials) }
 
     public let drive: Drive
     /// The text to encode in the QR code.
@@ -22,7 +26,9 @@ public struct CloudDriveQRLogin: Sendable {
         switch status {
         case 2_000_000:
             guard let ticket = members?["service_ticket"] as? String else { return .expired }
-            return .signedIn(cookie: try await Self.cookie(drive, ticket: ticket))
+            let session = URLSession(configuration: .ephemeral)
+            defer { session.finishTasksAndInvalidate() }
+            return .signedIn(try await Self.complete(drive, ticket: ticket, session: session))
         case 50_004_001: return .waiting
         default: return .expired
         }
@@ -45,20 +51,38 @@ public struct CloudDriveQRLogin: Sendable {
     }
 
     /// The account page sets the drive cookies for the ticket; keep only those the plugins send.
-    private static func cookie(_ drive: Drive, ticket: String) async throws -> String {
-        // An ephemeral session keeps its cookies in a private in-memory store, redirects included.
-        let session = URLSession(configuration: .ephemeral)
-        defer { session.finishTasksAndInvalidate() }
+    static func complete(_ drive: Drive, ticket: String, session: URLSession) async throws -> Credentials {
+        // Keep cookies and the mobile ticket from the same approved scan. FTY's player
+        // requires both; passing only the web cookie makes it ask to scan again.
         var components = URLComponents(string: drive.accountPage)!
         components.queryItems = [URLQueryItem(name: "st", value: ticket), URLQueryItem(name: "lw", value: "scan")]
-        _ = try await session.data(for: request(components.url!, drive))
+        let (_, response) = try await session.data(for: request(components.url!, drive))
+        try check(response)
+        var serviceTicket: String?
+        if drive == .quark {
+            var mobile = URLComponents(string: "https://pan.quark.cn/account/mobileinfo")!
+            mobile.queryItems = [URLQueryItem(name: "pr", value: "ucpro"), URLQueryItem(name: "fr", value: "h5"), URLQueryItem(name: "st", value: ticket)]
+            let (data, response) = try await session.data(for: request(mobile.url!, drive))
+            try check(response)
+            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            serviceTicket = (object?["data"] as? [String: Any])?["serviceTicket"] as? String
+            guard object?["success"] as? Bool == true, serviceTicket?.isEmpty == false else {
+                throw TVError.unsupported(L10n.text("Sign-in was approved, but the drive didn't return a login. Try again."))
+            }
+        }
         var fields: [String: String] = [:]
         for cookie in session.configuration.httpCookieStorage?.cookies ?? [] {
             let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
             if domain == drive.domain || domain.hasSuffix("." + drive.domain) { fields[cookie.name] = cookie.value }
         }
         guard fields["__pus"]?.isEmpty == false else { throw TVError.unsupported(L10n.text("Sign-in was approved, but the drive didn't return a login. Try again.")) }
-        return fields.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "; ")
+        return Credentials(cookie: fields.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "; "), serviceTicket: serviceTicket)
+    }
+
+    private static func check(_ response: URLResponse) throws {
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw TVError.unsupported(L10n.text("The source %@ returned HTTP %lld.", http.url?.host ?? "", http.statusCode))
+        }
     }
 
     private static func request(_ url: URL, _ drive: Drive) -> URLRequest {

@@ -598,3 +598,19 @@
 // Player episodes
 "Previous Episode" = "前のエピソード";
 "Next Episode" = "次のエピソード";
+
+"Hongguo" = "Hongguo";
+"Episode %@" = "エピソード %@";
+"Live-action Drama" = "実写ドラマ";
+"Animated Drama" = "アニメドラマ";
+"AI Drama" = "AI ドラマ";
+"Trending Dramas" = "総合人気ランキング";
+"Trending Live-action" = "実写人気ランキング";
+"Trending Animation" = "アニメ人気ランキング";
+"Trending AI Drama" = "AI 人気ランキング";
+"Hongguo could not be reached. Try again later." = "Hongguo に接続できません。しばらくしてから再試行してください。";
+"Hongguo returned incomplete data. Please refresh and try again." = "Hongguo のデータが不完全です。更新して再試行してください。";
+"Hongguo did not provide a playable source for this episode. Try again later." = "このエピソードの再生ソースがありません。しばらくしてから再試行してください。";
+"This Hongguo video could not be prepared for playback. Please try again." = "Hongguo の動画を再生する準備ができませんでした。再試行してください。";
+
+"Waiting for an earlier plugin request to finish." = "先行するプラグイン要求の完了を待っています。";

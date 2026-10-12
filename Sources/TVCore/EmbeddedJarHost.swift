@@ -50,6 +50,20 @@ public actor EmbeddedJarHost {
     /// Abandons a running request: if it is still waiting to open its plugin, it stops waiting.
     static func cancelCommand(_ id: String) -> String { "{\"command\":\"cancel\",\"request\":\"\(id)\"}" }
 
+    /// Reopens a plugin's loopback listener after suspension, including retries of a cached URL.
+    public func recoverProxy(_ url: URL) async throws -> URL {
+        guard url.scheme == "http", url.host == "127.0.0.1",
+              url.path.contains("/drive/") || url.path.hasSuffix("/media"),
+              Self.available, let resources = Bundle.main.resourcePath else { return url }
+        let input = ["command": "recoverProxy", "url": url.absoluteString]
+        let json = String(decoding: try JSONEncoder().encode(input), as: UTF8.self)
+        let response = try await worker.request(resources: resources, json: json)
+        let envelope = try JSONDecoder().decode([String: JSONValue].self, from: Data(response.utf8))
+        if let error = envelope["error"]?.string { throw TVError.unsupported(error) }
+        guard let address = envelope["result"]?.string else { return url }
+        return try WebAddress.resolve(address)
+    }
+
     public func request(site: Site, jarURL: URL, params: [String: String], http: HTTPClient, configurationOrigin: URL, progress: PluginPreparation? = nil) async throws -> [String: JSONValue] {
         guard Self.available, let resources = Bundle.main.resourcePath else { throw TVError.unsupported("The on-device plugin runtime is missing from this build.") }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
@@ -99,16 +113,22 @@ public actor EmbeddedJarHost {
         input["params"] = .object(params.mapValues(JSONValue.string))
         let json = String(decoding: try encoder.encode(input), as: UTF8.self)
         Diagnostics.shared.record(.info, "jar.request", "source=\(site.key) begin; first preparation can take several minutes")
-        var response = try await worker.request(resources: resources, json: json, search: params["wd"] != nil)
+        var response = try await worker.request(resources: resources, json: json, search: params["wd"] != nil) {
+            progress?.report(PluginPreparation.runtimeReady ? .loading : .preparing)
+        }
         PluginPreparation.runtimeReady = true
         var envelope = try JSONDecoder().decode([String: JSONValue].self, from: Data(response.utf8))
         // NewCz's upstream cookie challenge is intermittent. Retry once; the spider keeps its cookie.
         if site.api == "csp_NewCzGuard", envelope["errorCode"]?.string == "source_http", envelope["status"]?.int == 403 {
             Diagnostics.shared.record(.warning, "jar.retry", "source=\(site.key) HTTP 403 retry=1")
             try await Task.sleep(for: .milliseconds(300))
-            response = try await worker.request(resources: resources, json: json, search: params["wd"] != nil)
+            progress?.report(.queued)
+            response = try await worker.request(resources: resources, json: json, search: params["wd"] != nil) {
+                progress?.report(.loading)
+            }
             envelope = try JSONDecoder().decode([String: JSONValue].self, from: Data(response.utf8))
         }
+        if let login = CloudDriveLoginRequired(envelope: envelope) { throw login }
         if let message = PluginFailure.message(envelope) {
             Diagnostics.shared.record(.error, "jar.request", PluginFailure.diagnostic(source: site.key, envelope))
             if let name = envelope["error"]?.string.flatMap(PluginClassMissing.className(in:)) {

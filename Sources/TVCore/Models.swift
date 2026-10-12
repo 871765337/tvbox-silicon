@@ -18,6 +18,7 @@ public enum TVError: LocalizedError, Sendable {
 public enum PluginFailure {
     public static func message(_ envelope: [String: JSONValue], language: String? = nil) -> String? {
         guard let detail = envelope["error"]?.string else { return nil }
+        if let login = CloudDriveLoginRequired(envelope: envelope) { return login.message(language: language) }
         let missing = envelope["missingClass"]?.string
         switch envelope["errorCode"]?.string {
         case "source_http":
@@ -100,9 +101,17 @@ public enum WebAddress {
         // Encode Unicode without re-encoding existing %HH sequences. Foundation's
         // automatic repair can otherwise turn %26 into %2526 in mixed Unicode URLs.
         var allowed = CharacterSet.urlFragmentAllowed
-        allowed.insert(charactersIn: "#[]")
+        allowed.insert(charactersIn: "#")
         guard !value.isEmpty, let escaped = value.addingPercentEncoding(withAllowedCharacters: allowed) else { throw TVError.invalidURL }
-        let encoded = escaped.replacingOccurrences(of: "%25([0-9A-Fa-f]{2})", with: "%$1", options: .regularExpression)
+        var encoded = escaped.replacingOccurrences(of: "%25([0-9A-Fa-f]{2})", with: "%$1", options: .regularExpression)
+        // Brackets are legal in an IPv6 authority, but must be escaped in filenames.
+        // Leaving a filename's brackets raw makes Foundation repair the whole URL,
+        // encoding existing percent escapes a second time.
+        if let authority = encoded.range(of: "^(?:[A-Za-z][A-Za-z0-9+.-]*:)?//[^/?#]*", options: .regularExpression) {
+            let host = encoded[authority].replacingOccurrences(of: "%5B", with: "[", options: .caseInsensitive)
+                .replacingOccurrences(of: "%5D", with: "]", options: .caseInsensitive)
+            encoded.replaceSubrange(authority, with: host)
+        }
         guard var components = URLComponents(string: encoded) else { throw TVError.invalidURL }
         // Setting the decoded host asks Foundation to apply IDNA (Punycode).
         if let host = components.host { components.host = host }

@@ -137,3 +137,33 @@ private func eventually(_ predicate: () -> Bool) async throws {
     #expect(try await worker.request(resources: "app", json: "{\"quick\":1}").contains("\"quick\":1"))
     #expect(abandoned.executed.count == 1)
 }
+
+@Test func newPluginRequestsDoNotJoinAbandonedNativeCalls() async throws {
+    let gate = NativeCallGate(); defer { gate.release() }
+    let worker = SerializedPluginWorker(width: 2) { _, json in gate.execute(json) }
+    let old = Task { try await worker.request(resources: "app", json: "blocked", search: true) }
+    try await eventually { gate.executed.count == 1 }
+    old.cancel()
+    await #expect(throws: CancellationError.self) { try await old.value }
+    let retry = Task { try await worker.request(resources: "app", json: "blocked", search: true) }
+    try await eventually { gate.executed.count == 2 }
+    gate.release()
+    #expect(try await retry.value == "blocked")
+}
+
+@Test func pluginStartNotificationsFollowExecutionAndJoinedCallers() async throws {
+    let gate = NativeCallGate(); defer { gate.release() }
+    let starts = NativeCallGate()
+    let worker = SerializedPluginWorker(interactiveWidth: 1) { _, json in gate.execute(json) }
+    let first = Task { try await worker.request(resources: "app", json: "blocked", onStart: { _ = starts.execute("first") }) }
+    try await eventually { gate.executed.count == 1 }
+    let joined = Task { try await worker.request(resources: "app", json: "blocked", onStart: { _ = starts.execute("joined") }) }
+    try await eventually { starts.executed.count == 2 }
+    let queued = Task { try await worker.request(resources: "app", json: "next", onStart: { _ = starts.execute("next") }) }
+    try await eventually { worker.scheduling.pending == 1 }
+    #expect(starts.executed == ["first", "joined"])
+    gate.release()
+    _ = try await first.value; _ = try await joined.value
+    #expect(try await queued.value == "next")
+    #expect(starts.executed == ["first", "joined", "next"])
+}

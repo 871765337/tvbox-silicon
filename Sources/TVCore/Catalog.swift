@@ -241,7 +241,7 @@ public struct CatalogClient: Sendable {
         return try await resolvePlayback(plan, choice: plan.choices[0])
     }
 
-    public func preparePlayback(_ episode: Episode) async throws -> PlaybackPlan {
+    public func preparePlayback(_ episode: Episode, forDownload: Bool = false) async throws -> PlaybackPlan {
         var headers = site.raw["header"]?.object?.compactMapValues(\.string) ?? [:]
         if site.type == 4 || site.type == 3 {
             var params = ["play": episode.address, "flag": episode.flag]
@@ -253,8 +253,24 @@ public struct CatalogClient: Sendable {
                     let fields = try? JSONDecoder().decode([String: String].self, from: data) { headers.merge(fields) { _, new in new } }
             if let ua = result["UA"]?.string ?? result["ua"]?.string, !ua.isEmpty { headers["User-Agent"] = ua }
             let prefix = result["playUrl"]?.string ?? ""
-            let choices = PlaybackChoice.parse(result["url"], prefix: prefix, fallbackName: episode.name)
+            var choices = PlaybackChoice.parse(result["url"], prefix: prefix, fallbackName: episode.name)
             guard !choices.isEmpty else { throw TVError.unsupported(L10n.text("The API did not return a single playback URL.")) }
+            if site.key == Hongguo.siteKey, let key = result["hongguoKey"]?.string, !key.isEmpty {
+                do {
+                    let remote = try WebAddress.resolve(choices[0].address)
+                    let address: URL
+                    if forDownload {
+                        address = try await HongguoMedia.shared.prepare(url: remote, key: key, headers: headers, http: http)
+                    } else {
+                        address = try HongguoStreams.register(url: remote, key: key, headers: headers, http: http)
+                    }
+                    choices = [PlaybackChoice(id: 0, name: episode.name, address: address.absoluteString)]
+                    headers = [:]
+                } catch {
+                    if error is CancellationError || Task.isCancelled { throw CancellationError() }
+                    throw TVError.unsupported(L10n.text("This Hongguo video could not be prepared for playback. Please try again."))
+                }
+            }
             return PlaybackPlan(choices: choices, headers: headers, group: episode.flag,
                                 requiresWebDetection: (result["parse"]?.int ?? 0) != 0 || (result["jx"]?.int ?? 0) != 0 || !prefix.isEmpty)
         }
@@ -263,6 +279,9 @@ public struct CatalogClient: Sendable {
     }
 
     public func resolvePlayback(_ plan: PlaybackPlan, choice: PlaybackChoice) async throws -> Channel {
+        if site.key == Hongguo.siteKey, let url = URL(string: choice.address), url.scheme == HongguoStreams.scheme {
+            return Channel(name: choice.name, group: plan.group, url: url, headers: [:])
+        }
         guard !plan.requiresWebDetection || Self.isDirectMedia(choice.address) else {
             if let found = await WebPlayback.resolve(page: choice.address, headers: plan.headers, parses: parses, http: http) {
                 return Channel(name: choice.name, group: plan.group, url: found.url, headers: found.headers)

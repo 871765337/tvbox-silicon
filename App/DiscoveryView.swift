@@ -31,12 +31,17 @@ struct GlobalSearchView: View {
         let later = model.batches.flatMap { batch in sites[batch.source].map { site in batch.videos.map { SearchPoster(site: site, video: $0) } } ?? [] }
         return (first + later).filter { seen.insert($0.id).inserted }
     }
-    /// The source chips: All, then Bilibili (always, so it can be picked before it answers), then the rest.
+    /// Built-in sources can be selected while their first search is still in flight.
     private var sourceItems: [SearchSourceItem] {
-        let bilibili = model.results.first { $0.site.isBuiltIn }
-        let searchingBilibili = model.total > 0 && (bilibili != nil || model.busy)
+        let builtins = Site.builtInSites.filter { site in
+            model.total > 0 && (model.results.contains { $0.site.key == site.key } ||
+                (model.busy && store.subscription?.sites.contains { $0.key == site.key && $0.searchable } == true))
+        }.map { site in
+            SearchSourceItem(id: site.key, name: site.name,
+                             count: model.results.contains { $0.site.key == site.key } ? uniqueVideos(model.videos(for: site.key)).count : nil)
+        }
         return [.init(id: "", name: L10n.text("All Sources"), count: model.videoCount)]
-            + (searchingBilibili ? [.init(id: Bilibili.siteKey, name: Site.bilibili.name, count: bilibili.map { _ in uniqueVideos(model.videos(for: Bilibili.siteKey)).count })] : [])
+            + builtins
             + model.matches.filter { !$0.site.isBuiltIn }.map { .init(id: $0.id, name: $0.site.name, count: uniqueVideos(model.videos(for: $0.id)).count) }
     }
 
@@ -54,18 +59,7 @@ struct GlobalSearchView: View {
             .screenBackdrop()
             .sheet(isPresented: $showFailures) { failureDetails }
             .onAppear { if let config = store.subscription { model.resumeSuspended(config: config) } }
-            .onDisappear { model.suspend() }
-            .task(id: model.draft) {
-                let query = model.draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard query != model.keyword else { return }
-                if query.isEmpty { model.reset(); return }
-                // Wait for a pause in remote, dictation, or phone keyboard input.
-                do { try await Task.sleep(for: .milliseconds(650)) } catch { return }
-                guard !Task.isCancelled, let config = store.subscription else { return }
-                let draft = model.draft
-                model.search(query, config: config)
-                model.draft = draft
-            }
+            .onDisappear { endVisible = false; model.suspend() }
         #else
         searchResults
             .scrollPosition(id: $model.scrollID)
@@ -80,7 +74,7 @@ struct GlobalSearchView: View {
                 if model.keyword.isEmpty { inputFocused = true }
                 if let config = store.subscription { model.resumeSuspended(config: config) }
             }
-            .onDisappear { model.suspend() }
+            .onDisappear { endVisible = false; model.suspend() }
         #endif
     }
 
@@ -88,8 +82,20 @@ struct GlobalSearchView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 #if os(tvOS)
-                if let config = store.subscription, !model.keyword.isEmpty {
-                    searchHeader(config).padding(.horizontal, -Layout.gutter)
+                // Editing, dictation and search completions only update the draft. The remote
+                // needs an explicit, focusable submit action before starting expensive plugins.
+                if let config = store.subscription {
+                    let query = model.draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !query.isEmpty, query != model.keyword {
+                        Button { submit(config) } label: {
+                            Label(L10n.text("Search"), systemImage: "magnifyingglass")
+                        }
+                        .controlButton(prominent: true)
+                        .accessibilityIdentifier("search.submit")
+                    }
+                    if !model.keyword.isEmpty {
+                        searchHeader(config).padding(.horizontal, -Layout.gutter)
+                    }
                 }
                 #endif
                 if let config = store.subscription {
@@ -673,6 +679,7 @@ struct RecommendationsView: View {
             await browser.load(.list(category: category, query: "", page: categoryPage),
                                client: CatalogClient(site: loadedSite, origin: config.origin, jarURL: config.spiderURL))
         }
+        .onDisappear { browser.cancel() }
         .onChange(of: site?.key) { category = nil; categoryPage = 1 }
     }
 
@@ -940,6 +947,8 @@ private struct SourceChip: View {
 struct SourceLabel {
     var symbol: String?
     var title: String
+    /// The name's segments ("片单", "精选"); the first is the source's own name, the rest are taglines.
+    var parts: [String]
     var text: String { [symbol, title].compactMap { $0 }.joined(separator: " ") }
     init(_ name: String) {
         var text = Substring(name.trimmingCharacters(in: .whitespaces))
@@ -948,11 +957,12 @@ struct SourceLabel {
             text = text.dropFirst()
         }
         let parts = text.split(whereSeparator: { character in
-            "|｜丨¦".contains(character)
+            "|｜丨¦·・".contains(character)
                 || character.unicodeScalars.allSatisfy { (0x2500...0x257F).contains($0.value) } // box drawing
         })
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        title = parts.isEmpty ? name : parts.joined(separator: " · ")
+        self.parts = parts.isEmpty ? [name] : parts
+        title = self.parts.joined(separator: " · ")
     }
 }

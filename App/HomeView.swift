@@ -115,7 +115,7 @@ struct HomeView: View {
             LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
                 ForEach(store.orderedSites(config).filter { store.pinnedSources.contains($0, origin: config.origin) }) { site in
                     RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site) }
-                        .cardButton().contextMenu { PinSourceButton(site: site, origin: config.origin) }
+                        .tileButton().contextMenu { PinSourceButton(site: site, origin: config.origin) }
                         .accessibilityIdentifier("home.pinned." + site.key)
                 }
             }
