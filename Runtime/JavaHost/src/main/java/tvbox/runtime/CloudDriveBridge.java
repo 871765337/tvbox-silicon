@@ -108,14 +108,17 @@ public final class CloudDriveBridge implements AutoCloseable {
     }
 
     /**
-     * The CDN address and headers behind one of this bridge's drive files, as JSON
+     * The CDN address and headers behind one of this bridge's drive or media files, as JSON
      * {@code {"url","headers","length"}}, or null. It asks the plugin's proxy for two bytes and
      * records the upstream range request the plugin makes to answer them; when those bytes were
-     * already cached, a second probe in the middle of the file forces a fresh request.
+     * already cached, a second probe in the middle of the file forces a fresh request. A proxy
+     * that does not answer with a byte range (a playlist, a page) is left alone at once.
      */
     public String directMedia(String address) throws Exception {
         String local = recoverProxy(address);
-        if (local == null || !URI.create(local).getRawPath().contains("/drive/")) return null;
+        if (local == null) return null;
+        String path = URI.create(local).getRawPath();
+        if (!path.contains("/drive/") && !path.endsWith("/media")) return null;
         synchronized (CloudDriveBridge.class) {
             try {
                 long total = -1;
@@ -124,13 +127,17 @@ public final class CloudDriveBridge implements AutoCloseable {
                     long first = probe == 0 || total < 4 ? 0 : total / 2;
                     HttpURLConnection connection = (HttpURLConnection)URI.create(local).toURL().openConnection(java.net.Proxy.NO_PROXY);
                     try {
-                        connection.setConnectTimeout(5000); connection.setReadTimeout(30000); connection.setUseCaches(false);
+                        connection.setConnectTimeout(5000); connection.setReadTimeout(20000); connection.setUseCaches(false);
                         connection.setRequestProperty("Range", "bytes=" + first + "-" + (first + 1));
                         int status = connection.getResponseCode();
                         String range = connection.getHeaderField("Content-Range");
                         var match = range == null ? null : java.util.regex.Pattern.compile("bytes \\d+-\\d+/(\\d+)").matcher(range);
                         if (match != null && match.matches()) total = Long.parseLong(match.group(1));
-                        if (status == 206) try (InputStream body = connection.getInputStream()) { body.readNBytes(2); }
+                        if (status != 206 || total < 0) {
+                            System.err.println("CLOUD_DIRECT_MEDIA not a ranged file status=" + status);
+                            return null;
+                        }
+                        try (InputStream body = connection.getInputStream()) { body.readNBytes(2); }
                     } finally { connection.disconnect(); }
                     // The plugin may still be finishing the upstream request when our two bytes arrive.
                     for (int wait = 0; wait < 50 && HttpDiagnostics.capturedMedia() == null; wait++) Thread.sleep(100);

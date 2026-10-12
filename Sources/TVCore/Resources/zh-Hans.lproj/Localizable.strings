@@ -328,6 +328,7 @@
 "Version %@" = "版本 %@";
 "Paste Credentials Manually" = "手动粘贴凭据";
 "Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "在官方页面登录。映匣会将登录信息保存在这台 Mac 上，并提供给你运行的插件。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "用网盘的手机 App 扫码登录。映匣会将登录信息保存在这台设备上，并提供给你运行的插件。";
 "Sources: %lld · Live playlists: %lld" = "来源：%lld · 直播列表：%lld";
 "Last updated %@" = "上次更新 %@";
 "Run Test" = "运行测试";

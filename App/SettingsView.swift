@@ -215,10 +215,8 @@ struct SettingsView: View {
             }
             SettingsGroup(title: L10n.text("Accounts")) {
                 SettingsLinkRow(symbol: "play.tv.fill", tint: .pink, title: L10n.text("Bilibili"), subtitle: bilibiliSummary) { BilibiliAccountView() }
-                #if os(macOS)
                 SettingsLinkRow(symbol: "externaldrive.fill.badge.person.crop", tint: .brown,
                                 title: L10n.text("Cloud Drive Accounts"), subtitle: cloudSummary) { CloudDriveView() }
-                #endif
             }
             SettingsGroup(title: L10n.text("Playback")) {
                 SettingsRow(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"),
@@ -260,10 +258,7 @@ struct SettingsView: View {
             if updates.available.isEmpty { UpdateSettingsGroup() }
         }
         // Refreshed whenever Settings reappears, so a sign-in on the account page shows here.
-        .onAppear { bilibiliSummary = BilibiliAccount.load().summary }
-        #if os(macOS)
-        .task { cloudSummary = CloudProvider.summary() }
-        #endif
+        .onAppear { bilibiliSummary = BilibiliAccount.load().summary; cloudSummary = CloudProvider.summary() }
     }
     @ViewBuilder private var subscriptionActions: some View {
         Button { Task { await store.importSubscription() } } label: {

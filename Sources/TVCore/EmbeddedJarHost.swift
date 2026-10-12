@@ -50,11 +50,20 @@ public actor EmbeddedJarHost {
     /// Abandons a running request: if it is still waiting to open its plugin, it stops waiting.
     static func cancelCommand(_ id: String) -> String { "{\"command\":\"cancel\",\"request\":\"\(id)\"}" }
 
+    /// A plugin's loopback address for a cloud-drive file (`/drive/`) or its own media proxy (`/media`).
+    public static func isPluginProxy(_ url: URL) -> Bool {
+        url.scheme == "http" && url.host == "127.0.0.1" && (url.path.contains("/drive/") || url.path.hasSuffix("/media"))
+    }
+    /// Which plugin proxy route an address uses (`drive` or `media do=<value>`), for diagnostics without the file's identity.
+    public static func proxyRoute(_ url: URL) -> String {
+        if url.path.contains("/drive/") { return "drive" }
+        let action = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "do" })?.value
+        return "media do=\(action ?? "-")"
+    }
+
     /// Reopens a plugin's loopback listener after suspension, including retries of a cached URL.
     public func recoverProxy(_ url: URL) async throws -> URL {
-        guard url.scheme == "http", url.host == "127.0.0.1",
-              url.path.contains("/drive/") || url.path.hasSuffix("/media"),
-              Self.available, let resources = Bundle.main.resourcePath else { return url }
+        guard Self.isPluginProxy(url), Self.available, let resources = Bundle.main.resourcePath else { return url }
         let input = ["command": "recoverProxy", "url": url.absoluteString]
         let json = String(decoding: try JSONEncoder().encode(input), as: UTF8.self)
         let response = try await worker.request(resources: resources, json: json)
@@ -64,10 +73,10 @@ public actor EmbeddedJarHost {
         return try WebAddress.resolve(address)
     }
 
-    /// The CDN address and headers behind a plugin's cloud-drive proxy address, or nil when the
-    /// plugin did not reveal them. The app then streams the file itself (`CloudStreams`).
+    /// The CDN address and headers behind a plugin's cloud-drive or media proxy address, or nil
+    /// when the plugin did not reveal them. The app then streams the file itself (`CloudStreams`).
     public func directMedia(_ url: URL) async -> CloudStreams.Source? {
-        guard url.scheme == "http", url.host == "127.0.0.1", url.path.contains("/drive/"),
+        guard Self.isPluginProxy(url),
               Self.available, let resources = Bundle.main.resourcePath,
               let input = try? JSONEncoder().encode(["command": "directMedia", "url": url.absoluteString]),
               let response = try? await worker.request(resources: resources, json: String(decoding: input, as: UTF8.self)),

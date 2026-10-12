@@ -66,6 +66,45 @@ public final class HttpDiagnostics {
         capturedMedia = new MediaRequest(sent.url().toString(), headers, Long.parseLong(match.group(1)));
     }
 
+    /*
+     * Some drive proxies download ranges over HttpURLConnection on their own threads (Fish's
+     * multi-threaded downloader), not OkHttp. Its request headers can only be read before it
+     * connects, so these wrap the first call that connects it.
+     */
+    public static int responseCode(java.net.URLConnection connection) throws IOException {
+        var request = connectionRequest(connection);
+        int status = ((java.net.HttpURLConnection) connection).getResponseCode();
+        if (request != null) recordMedia(connection, request);
+        return status;
+    }
+    public static java.io.InputStream inputStream(java.net.URLConnection connection) throws IOException {
+        var request = connectionRequest(connection);
+        java.io.InputStream body = connection.getInputStream();
+        if (request != null) recordMedia(connection, request);
+        return body;
+    }
+    private static java.util.Map<String, java.util.List<String>> connectionRequest(java.net.URLConnection connection) {
+        if (!capturingMedia || capturedMedia != null || !(connection instanceof java.net.HttpURLConnection)) return null;
+        String host = connection.getURL().getHost();
+        if (host.equals("127.0.0.1") || host.equals("localhost") || host.equals("::1")) return null;
+        try {
+            var request = connection.getRequestProperties();
+            return request.keySet().stream().anyMatch(name -> "range".equalsIgnoreCase(name)) ? request : null;
+        } catch (IllegalStateException connected) { return null; }
+    }
+    private static void recordMedia(java.net.URLConnection connection, java.util.Map<String, java.util.List<String>> request) throws IOException {
+        if (capturedMedia != null || ((java.net.HttpURLConnection) connection).getResponseCode() != 206) return;
+        var range = connection.getHeaderField("Content-Range");
+        var match = range == null ? null : java.util.regex.Pattern.compile("bytes \\d+-\\d+/(\\d+)").matcher(range);
+        if (match == null || !match.matches()) return;
+        var headers = new java.util.LinkedHashMap<String,String>();
+        request.forEach((name, values) -> {
+            if (name != null && !hopHeaders.contains(name.toLowerCase(java.util.Locale.ROOT))) headers.put(name, String.join("; ", values));
+        });
+        // getURL() is the address after redirects, the one that answered.
+        capturedMedia = new MediaRequest(connection.getURL().toString(), headers, Long.parseLong(match.group(1)));
+    }
+
     public static String host() { return state.get().host; }
     public static void recordStatus(String host, int status) { State current = state.get(); current.host = host; current.status = status; }
 

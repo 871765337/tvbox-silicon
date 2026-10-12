@@ -59,6 +59,7 @@ public class CloudDriveBridgeTest {
         proxyAddressMethodsUseHost();
         suspendedListenerRecovers();
         directMediaRevealsTheCdnRequest();
+        connectionDownloadsRevealTheCdnRequest();
         System.out.println("Cloud bridge checks passed (credentials, capability, range streaming, quality arrays).");
     }
     /** The app streams drive files itself: the bridge reveals the CDN request behind a proxy address. */
@@ -100,7 +101,81 @@ public class CloudDriveBridgeTest {
             check(!headers.has("Range"), "A range was kept as a fixed header");
             check(upstreamRanges.size() == 1, "The probe should cost one upstream request");
             check(bridge.directMedia("http://127.0.0.1:9/other/drive/x") == null, "Foreign address accepted");
-            check(bridge.directMedia(CloudDriveBridge.getUrl() + "?do=quark") == null, "Non-drive address probed");
+            check(bridge.directMedia(CloudDriveBridge.getUrl() + "?do=quark") == null, "A media address without a ranged answer was accepted");
+        }
+    }
+
+    /** A CDN connection that answers every range with 206, recording the ranges it was asked for. */
+    static final class FakeCdnConnection extends HttpURLConnection {
+        final long total; final List<String> ranges;
+        FakeCdnConnection(URL url, long total, List<String> ranges) { super(url); this.total = total; this.ranges = ranges; }
+        @Override public void connect() { if (!connected) { ranges.add(getRequestProperty("Range")); connected = true; } }
+        @Override public void disconnect() { }
+        @Override public boolean usingProxy() { return false; }
+        @Override public int getResponseCode() { connect(); return 206; }
+        @Override public String getHeaderField(String name) { connect(); return "Content-Range".equalsIgnoreCase(name) ? "bytes 0-1048575/" + total : null; }
+        @Override public InputStream getInputStream() { connect(); return new ByteArrayInputStream(new byte[1_048_576]); }
+    }
+
+    /**
+     * Fish's drives proxy through /media and download ranges over HttpURLConnection on their own
+     * threads. The converted plugin's calls are rewritten, so the bridge still learns the CDN request.
+     */
+    static void connectionDownloadsRevealTheCdnRequest() throws Exception {
+        Path folder = Files.createTempDirectory("cloud-connection-test");
+        Path source = folder.resolve("original.jar"), rewritten = folder.resolve("rewritten.jar");
+        var writer = new org.objectweb.asm.ClassWriter(0);
+        writer.visit(52, 1, "com/github/catvod/spider/merge/A/Downloader", null, "java/lang/Object", null);
+        var status = writer.visitMethod(9, "fetch", "(Ljava/net/HttpURLConnection;)I", null, new String[]{"java/io/IOException"});
+        status.visitCode(); status.visitVarInsn(25, 0);
+        status.visitMethodInsn(182, "java/net/HttpURLConnection", "getResponseCode", "()I", false);
+        status.visitInsn(172); status.visitMaxs(1, 1); status.visitEnd();
+        var body = writer.visitMethod(9, "body", "(Ljava/net/URLConnection;)Ljava/io/InputStream;", null, new String[]{"java/io/IOException"});
+        body.visitCode(); body.visitVarInsn(25, 0);
+        body.visitMethodInsn(182, "java/net/URLConnection", "getInputStream", "()Ljava/io/InputStream;", false);
+        body.visitInsn(176); body.visitMaxs(1, 1); body.visitEnd();
+        writer.visitEnd();
+        try (var zip = new java.util.zip.ZipOutputStream(Files.newOutputStream(source))) {
+            zip.putNextEntry(new java.util.zip.ZipEntry("com/github/catvod/spider/merge/A/Downloader.class")); zip.write(writer.toByteArray()); zip.closeEntry();
+        }
+        tvbox.runtime.BytecodeCompatibility.rewrite(source, rewritten);
+        long total = 2_040_000_000L;
+        List<String> ranges = Collections.synchronizedList(new ArrayList<>());
+        @SuppressWarnings("deprecation")
+        URL cdn = new URL(null, "https://cdn.example.cn/v/abc?sign=s2", new URLStreamHandler() {
+            @Override protected URLConnection openConnection(URL url) { return new FakeCdnConnection(url, total, ranges); }
+        });
+        try (var bridge = new CloudDriveBridge(folder); var loader = new URLClassLoader(new URL[]{rewritten.toUri().toURL()}, CloudDriveBridgeTest.class.getClassLoader())) {
+            var plugin = loader.loadClass("com.github.catvod.spider.merge.A.Downloader");
+            bridge.setProxy(params -> {
+                String[] span = params.get("range").substring("bytes=".length()).split("-");
+                long first = Long.parseLong(span[0]), last = Long.parseLong(span[1]);
+                var pipe = new PipedInputStream(); var sink = new PipedOutputStream(pipe);
+                new Thread(() -> {
+                    try (sink) {
+                        var connection = (HttpURLConnection) cdn.openConnection();
+                        connection.setRequestProperty("Cookie", "BDUSS=test-only"); connection.setRequestProperty("User-Agent", "netdisk");
+                        connection.setRequestProperty("Range", "bytes=" + first + "-" + (first + 1_048_575));
+                        check((Integer) plugin.getMethod("fetch", HttpURLConnection.class).invoke(null, connection) == 206, "CDN status lost");
+                        try (var stream = (InputStream) plugin.getMethod("body", URLConnection.class).invoke(null, connection)) {
+                            sink.write(stream.readNBytes((int) (last - first + 1)));
+                        }
+                    } catch (Exception ignored) { }
+                }).start();
+                return new Object[]{206, "video/mp4", pipe, Map.of("Content-Range", "bytes " + first + "-" + last + "/" + total)};
+            });
+            var media = new JSONObject(bridge.directMedia(bridge.rewriteAddress("http://127.0.0.1:9978/proxy?do=fish&id=1")));
+            check(media.getString("url").equals(cdn.toString()), "CDN address not revealed");
+            check(media.getLong("length") == total, "File length lost");
+            var headers = media.getJSONObject("headers");
+            check("BDUSS=test-only".equals(headers.optString("Cookie")) && "netdisk".equals(headers.optString("User-Agent")), "CDN headers lost");
+            check(!headers.has("Range"), "A range was kept as a fixed header");
+            check(ranges.size() == 1, "The probe should cost one upstream request");
+            // A playlist (or anything not served as a byte range) is left to the proxy straight away.
+            bridge.setProxy(params -> new Object[]{200, "application/vnd.apple.mpegurl", new ByteArrayInputStream("#EXTM3U\n".getBytes()), Map.of()});
+            long started = System.nanoTime();
+            check(bridge.directMedia(CloudDriveBridge.getUrl() + "?do=m3u8&id=2") == null, "A playlist was taken for a file");
+            check(System.nanoTime() - started < 2_000_000_000L, "A playlist waited for a CDN request");
         }
     }
 

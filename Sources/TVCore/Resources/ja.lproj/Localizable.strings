@@ -328,6 +328,7 @@
 "Version %@" = "バージョン %@";
 "Paste Credentials Manually" = "認証情報を手動で貼り付け";
 "Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "公式ページでサインインしてください。映匣はログイン情報をこの Mac に保存し、実行するプラグインに渡します。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "ドライブのスマートフォンアプリでコードをスキャンしてサインインします。映匣はログイン情報をこのデバイスに保存し、実行するプラグインに渡します。";
 "Sources: %lld · Live playlists: %lld" = "ソース：%lld · ライブプレイリスト：%lld";
 "Last updated %@" = "最終更新 %@";
 "Run Test" = "テストを実行";

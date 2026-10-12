@@ -49,6 +49,63 @@ import TVCore
             print("after seek duration=\(Int(duration)) time=\(String(format: "%.1f", player.currentTime().seconds))")
         }
     }
+    /// For each drive (play flag) of one video, how playback gets its bytes: straight from the CDN
+    /// (CloudStreams) or through the plugin's proxy, with the address lookup time and a read speed.
+    static func driveCheck(subscription: String, source: String, query: String?) async throws {
+        let config = try await HTTPClient().subscription(WebAddress.resolve(subscription))
+        guard let site = config.sites.first(where: { $0.key == source || $0.name.contains(source) }) else { print("no source matches \(source)"); return }
+        let client = CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL)
+        print("loading \(site.name)")
+        let videos = if let query { try await client.list(category: nil, query: query, page: 1).videos } else { try await client.home().videos }
+        guard let first = videos.first else { print("no videos"); return }
+        print("\(videos.count) videos, opening \(first.name)")
+        let video = try await client.detail(first.id)
+        print("\(site.name) · \(video.name) · drives: \(EpisodePlaylist(video.episodes).flags.joined(separator: ", "))")
+        for flag in EpisodePlaylist(video.episodes).flags {
+            guard let episode = video.episodes.first(where: { $0.flag == flag }) else { continue }
+            do {
+                let channel = try await client.playback(episode)
+                let address = try await EmbeddedJarHost.shared.recoverProxy(channel.url)
+                guard EmbeddedJarHost.isPluginProxy(address) else {
+                    print("\(flag): no proxy, plays from \(address.host() ?? address.scheme ?? "-")")
+                    continue
+                }
+                let started = Date()
+                let media = await EmbeddedJarHost.shared.directMedia(address)
+                let lookup = String(format: "%.1f", Date().timeIntervalSince(started))
+                if let media {
+                    print("\(flag): DIRECT \(media.url.host() ?? "-") \(media.length / 1_048_576) MB, lookup \(lookup)s, \(try await readSpeed(media.url, headers: media.headers, parallel: true))")
+                } else {
+                    print("\(flag): PROXY \(EmbeddedJarHost.proxyRoute(address)), lookup \(lookup)s, \(try await readSpeed(address, headers: [:], parallel: false))")
+                }
+            } catch { print("\(flag): failed \(error.localizedDescription)") }
+        }
+    }
+    /// Reads the first 8 MB in 2 MB ranges, four at once like CloudStreams or one after another like AVPlayer on a proxy.
+    static func readSpeed(_ url: URL, headers: [String: String], parallel: Bool) async throws -> String {
+        let piece = 2 << 20
+        @Sendable func fetch(_ index: Int) async throws -> Int {
+            var request = URLRequest(url: url, timeoutInterval: 30)
+            for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
+            request.setValue("bytes=\(index * piece)-\((index + 1) * piece - 1)", forHTTPHeaderField: "Range")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard status == 206 else { throw TVError.unsupported("HTTP \(status) for a range") }
+            return data.count
+        }
+        let started = Date()
+        var bytes = 0
+        if parallel {
+            bytes = try await withThrowingTaskGroup(of: Int.self) { group in
+                for index in 0..<4 { group.addTask { try await fetch(index) } }
+                return try await group.reduce(0, +)
+            }
+        } else {
+            for index in 0..<4 { bytes += try await fetch(index) }
+        }
+        let seconds = Date().timeIntervalSince(started)
+        return String(format: "%d MB in %.1fs = %.2f MB/s", bytes >> 20, seconds, Double(bytes) / seconds / 1_048_576)
+    }
     static func main() async throws {
         let args = CommandLine.arguments
         guard args.count >= 2 else {
@@ -250,6 +307,17 @@ import TVCore
             }
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             print(String(decoding: try encoder.encode(results.sorted { $0.address < $1.address }), as: UTF8.self))
+            return
+        }
+        if args[1] == "--drive-check", args.count >= 4 {
+            // --drive-check <subscription> <source> [search]: each drive of a cloud-drive source's first
+            // video, DIRECT (CDN, CloudStreams) or PROXY (every byte through the plugin runtime).
+            setvbuf(stdout, nil, _IONBF, 0)
+            do { try await driveCheck(subscription: args[2], source: args[3], query: args.count > 4 ? args[4] : nil) }
+            catch { print("failed: \(error.localizedDescription)") }
+            for entry in await Diagnostics.shared.snapshot().entries where entry.category.hasPrefix("jar") || entry.category.hasPrefix("plugin") {
+                print("  \(entry.category): \(entry.message.prefix(240))")
+            }
             return
         }
         if args[1] == "--catalog-check", args.count >= 3 {

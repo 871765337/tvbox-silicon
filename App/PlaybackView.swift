@@ -225,6 +225,9 @@ import TVCore
                 let proxied = address
                 address = CloudStreams.register(media) { await EmbeddedJarHost.shared.directMedia(proxied) }
                 Diagnostics.shared.record(.info, "player", "cloud direct host=\(media.url.host() ?? "-") length=\(media.length)")
+            } else if EmbeddedJarHost.isPluginProxy(address) {
+                // Every byte of this stream passes through the plugin runtime.
+                Diagnostics.shared.record(.warning, "player", "plugin proxy stream \(EmbeddedJarHost.proxyRoute(address))")
             }
             // A downloaded episode plays from disk: its file, or its HLS through a loopback server.
             if address.scheme == DownloadLibrary.scheme {

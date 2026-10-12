@@ -1,7 +1,7 @@
-#if os(macOS)
 import SwiftUI
-import WebKit
 import TVCore
+#if os(macOS)
+import WebKit
 
 struct CloudDriveView: View {
     @State private var accounts = CloudDriveAccounts()
@@ -70,43 +70,6 @@ struct CloudDriveView: View {
                 notice = L10n.text("Accounts saved. Retry the video source.")
             } catch { self.error = error.localizedDescription }
         }
-    }
-}
-
-enum CloudProvider: String, Identifiable, CaseIterable {
-    case quark, uc
-    var id: String { rawValue }
-    var name: String { self == .quark ? L10n.text("Quark") : "UC" }
-    var symbol: String { self == .quark ? "icloud.fill" : "externaldrive.fill" }
-    var tint: Color { self == .quark ? .blue : .orange }
-    var domain: String { self == .quark ? "quark.cn" : "uc.cn" }
-    var url: URL { URL(string: self == .quark ? "https://pan.quark.cn/" : "https://drive.uc.cn/")! }
-    func isSignedIn(_ accounts: CloudDriveAccounts) -> Bool {
-        !(self == .quark ? accounts.quarkCookie : accounts.ucCookie).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-    func set(_ cookie: String, in accounts: inout CloudDriveAccounts) {
-        if self == .quark {
-            if accounts.quarkCookie != cookie { accounts.quarkServiceTicket = nil }
-            accounts.quarkCookie = cookie
-        } else { accounts.ucCookie = cookie }
-    }
-    func clear(_ accounts: inout CloudDriveAccounts) {
-        set("", in: &accounts)
-        if self == .uc { accounts.ucToken = "" }
-    }
-    /// Saves a login captured outside the accounts page and restarts plugin sessions.
-    func saveLogin(_ cookie: String) async throws {
-        var accounts = (try? CloudDriveAccounts.load()) ?? CloudDriveAccounts()
-        set(cookie, in: &accounts)
-        try accounts.save()
-        await LocalJarHost.shared.reloadCloudAccounts()
-        await EmbeddedJarHost.shared.reloadCloudAccounts()
-    }
-    /// "Signed In · Quark" style summary for the Settings row.
-    static func summary() -> String {
-        let accounts = (try? CloudDriveAccounts.load()) ?? CloudDriveAccounts()
-        let names = allCases.filter { $0.isSignedIn(accounts) }.map(\.name)
-        return names.isEmpty ? L10n.text("Not Signed In") : L10n.text("Signed In") + " · " + names.joined(separator: ", ")
     }
 }
 
@@ -200,6 +163,89 @@ private struct CloudLoginBrowser: NSViewRepresentable {
             }
             decisionHandler(.allow)
         }
+    }
+}
+#else
+/// Quark and UC sign-ins on iPhone, iPad and Apple TV, which have no browser to sign in with:
+/// a code to scan with the drive's phone app. Plugins read the saved sign-in on their next request.
+struct CloudDriveView: View {
+    @State private var accounts = CloudDriveAccounts()
+    @State private var login: CloudProvider?
+    @State private var error: String?
+    var body: some View {
+        SettingsPage(title: L10n.text("Cloud Drive Accounts")) {
+            SettingsGroup(footer: L10n.text("Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")) {
+                ForEach(CloudProvider.allCases) { provider in
+                    let signedIn = provider.isSignedIn(accounts)
+                    SettingsRow(symbol: provider.symbol, tint: provider.tint, title: provider.name,
+                                subtitle: L10n.text(signedIn ? "Signed In" : "Not Signed In")) {
+                        if signedIn {
+                            Button(L10n.text("Sign Out")) { signOut(provider) }.settingsButton()
+                        } else {
+                            Button(L10n.text("Sign In")) { login = provider }.settingsButton(prominent: true)
+                        }
+                    }
+                }
+            }
+            if let error { Label(error, systemImage: "exclamationmark.triangle.fill").font(.callout).foregroundStyle(Brand.rose) }
+        }
+        .task { reload() }
+        .fullScreenCover(item: $login) { provider in
+            CloudQRLoginView(drive: provider.qrDrive) { reload() }
+        }
+    }
+    private func reload() {
+        do { accounts = try CloudDriveAccounts.load(); error = nil } catch { self.error = error.localizedDescription }
+    }
+    private func signOut(_ provider: CloudProvider) {
+        var updated = accounts
+        provider.clear(&updated)
+        do { try updated.save(); accounts = updated; error = nil } catch { self.error = error.localizedDescription }
+    }
+}
+#endif
+
+enum CloudProvider: String, Identifiable, CaseIterable {
+    case quark, uc
+    var id: String { rawValue }
+    var name: String { self == .quark ? L10n.text("Quark") : "UC" }
+    var symbol: String { self == .quark ? "icloud.fill" : "externaldrive.fill" }
+    var tint: Color { self == .quark ? .blue : .orange }
+    var domain: String { self == .quark ? "quark.cn" : "uc.cn" }
+    #if os(iOS) || os(tvOS)
+    var qrDrive: CloudDriveQRLogin.Drive { self == .quark ? .quark : .uc }
+    #endif
+    var url: URL { URL(string: self == .quark ? "https://pan.quark.cn/" : "https://drive.uc.cn/")! }
+    func isSignedIn(_ accounts: CloudDriveAccounts) -> Bool {
+        !(self == .quark ? accounts.quarkCookie : accounts.ucCookie).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    func set(_ cookie: String, in accounts: inout CloudDriveAccounts) {
+        if self == .quark {
+            if accounts.quarkCookie != cookie { accounts.quarkServiceTicket = nil }
+            accounts.quarkCookie = cookie
+        } else { accounts.ucCookie = cookie }
+    }
+    func clear(_ accounts: inout CloudDriveAccounts) {
+        set("", in: &accounts)
+        if self == .uc { accounts.ucToken = "" }
+    }
+    /// "Signed In · Quark" style summary for the Settings row.
+    static func summary() -> String {
+        let accounts = (try? CloudDriveAccounts.load()) ?? CloudDriveAccounts()
+        let names = allCases.filter { $0.isSignedIn(accounts) }.map(\.name)
+        return names.isEmpty ? L10n.text("Not Signed In") : L10n.text("Signed In") + " · " + names.joined(separator: ", ")
+    }
+}
+
+#if os(macOS)
+extension CloudProvider {
+    /// Saves a login captured outside the accounts page and restarts plugin sessions.
+    func saveLogin(_ cookie: String) async throws {
+        var accounts = (try? CloudDriveAccounts.load()) ?? CloudDriveAccounts()
+        set(cookie, in: &accounts)
+        try accounts.save()
+        await LocalJarHost.shared.reloadCloudAccounts()
+        await EmbeddedJarHost.shared.reloadCloudAccounts()
     }
 }
 #endif

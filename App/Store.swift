@@ -72,7 +72,15 @@ import TVCore
         let client = CatalogClient(site: site, origin: config?.origin ?? URL(string: "https://example.invalid/")!, jarURL: config?.spiderURL)
             .with(parses: config?.parseServices ?? [])
         let plan = try await client.preparePlayback(item.source.episode, forDownload: true)
-        return try await client.resolvePlayback(plan, choice: plan.choices[0])
+        let channel = try await client.resolvePlayback(plan, choice: plan.choices[0])
+        // A cloud-drive file downloads straight from its CDN, as it plays: through the plugin's
+        // proxy every part costs the embedded runtime download threads and interpreted TLS.
+        let address = try await EmbeddedJarHost.shared.recoverProxy(channel.url)
+        if let media = await EmbeddedJarHost.shared.directMedia(address) {
+            Diagnostics.shared.record(.info, "download", "cloud direct host=\(media.url.host() ?? "-") length=\(media.length)")
+            return Channel(name: channel.name, group: channel.group, url: media.url, headers: media.headers)
+        }
+        return address == channel.url ? channel : Channel(name: channel.name, group: channel.group, url: address, headers: channel.headers)
     }
     /// Large subscriptions run to megabytes, past the defaults size limit that aborts tvOS apps,
     /// so the parsed subscription lives in a file. tvOS only offers Caches, which the system may purge;

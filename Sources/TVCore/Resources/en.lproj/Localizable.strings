@@ -328,6 +328,7 @@
 "Version %@" = "Version %@";
 "Paste Credentials Manually" = "Paste Credentials Manually";
 "Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run.";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.";
 "Sources: %lld · Live playlists: %lld" = "Sources: %lld · Live playlists: %lld";
 "Last updated %@" = "Last updated %@";
 "Run Test" = "Run Test";
