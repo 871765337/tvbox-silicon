@@ -270,3 +270,8 @@ img { display: block; }
 .toast .sf, .acc .sf { margin-top: -.12em; }
 .toast .sf { margin-right: .35em; }
 .dev-row .sf { color: #61666d; }
+
+/* Hongguo episode picker */
+.eps { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6cqw; }
+.eps i { padding: .6cqw 0; border-radius: .7cqw; background: var(--row); font-style: normal; font-size: 1.3cqw; font-weight: 600; text-align: center; }
+.eps i.on { background: #fff; color: #111; }

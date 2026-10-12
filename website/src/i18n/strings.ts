@@ -15,6 +15,8 @@ export type TextKey =
   | "c.site.t"
   | "c.bili.b"
   | "c.bili.t"
+  | "c.hongguo.b"
+  | "c.hongguo.t"
   | "cta.l1"
   | "cta.l2"
   | "cta.sub"
@@ -97,6 +99,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "c.site.t": "Every source gets its own shelf.",
       "c.bili.t": "Bilibili, built in.",
       "c.bili.b": "Recommendations, rankings, anime and live rooms in Bilibili’s own HD streams, with danmaku flying over the video. No subscription needed.",
+      "c.hongguo.t": "Hongguo short dramas, built in.",
+      "c.hongguo.b": "Live-action, animated and AI dramas, plus the trending charts, with every episode of each series. Episodes stream as you watch. No subscription needed.",
       "cta.l1": "Ready",
       "cta.l2": "for every screen.",
       "cta.sub": "Yingxia for Mac is available now. The Apple TV, iPhone and iPad versions are in preview, ready to sideload.",
@@ -149,7 +153,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.hd.t": "Pick the quality",
       "g.hd.b": "1080P60, 1080P+, 720P and more, right from the player menu. Live rooms too.",
       "g.qr.t": "Sign in with a QR code",
-      "g.qr.b": "Scan it with the Bilibili app to bring your following feed, history, Watch Later and favorites.",
+      "g.qr.b": "Scan with the Bilibili app for your feed, history and favorites, or with Quark or UC so cloud-drive sources can play.",
       "q7.q": "Do I need a Bilibili account?",
       "q7.a": "No. Bilibili works without signing in, with videos up to 1080P. Signing in with a QR code adds your own lists and the higher qualities your account allows. The sign-in stays on your device.",
       "shots.note": "",
@@ -172,6 +176,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "c.site.t": "ソースごとに、専用の棚を。",
       "c.bili.t": "ビリビリを内蔵。",
       "c.bili.b": "おすすめ、ランキング、アニメ、生配信を、ビリビリ本来の HD ストリームで。映像の上を弾幕が流れます。サブスクリプションは不要です。",
+      "c.hongguo.t": "Hongguo のショートドラマを内蔵。",
+      "c.hongguo.b": "実写、アニメ、AI ドラマに人気ランキングも。各シリーズの全エピソードがそろい、観ながらストリーミングします。サブスクリプションは不要です。",
       "cta.l1": "どの画面でも、",
       "cta.l2": "すぐに。",
       "cta.sub": "映匣の Mac 版を公開しました。Apple TV、iPhone、iPad 版はプレビューとしてサイドロードできます。",
@@ -224,7 +230,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.hd.t": "画質を選べる",
       "g.hd.b": "1080P60、1080P+、720P などをプレーヤーのメニューから。生配信にも対応。",
       "g.qr.t": "QR コードでログイン",
-      "g.qr.b": "ビリビリアプリで読み取れば、フォロー中の投稿、視聴履歴、あとで見る、お気に入りが使えます。",
+      "g.qr.b": "ビリビリアプリで読み取ればフォロー中の投稿、視聴履歴、お気に入りが、Quark や UC で読み取ればクラウドドライブのソースが使えます。",
       "q7.q": "ビリビリのアカウントは必要ですか？",
       "q7.a": "いいえ。ログインしなくても最大 1080P で視聴できます。QR コードでログインすると、自分のリストと、アカウントで利用できる高画質が加わります。ログイン情報はデバイス内にのみ保存されます。",
       "shots.note": "",
@@ -247,6 +253,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "c.site.t": "소스마다 자신만의 진열대.",
       "c.bili.t": "빌리빌리 내장.",
       "c.bili.b": "추천, 랭킹, 애니메이션, 라이브 방송을 빌리빌리의 HD 스트림으로. 영상 위로 탄막이 흐릅니다. 구독은 필요 없습니다.",
+      "c.hongguo.t": "Hongguo 숏드라마 내장.",
+      "c.hongguo.b": "실사, 애니메이션, AI 드라마와 인기 차트까지. 시리즈의 모든 에피소드를 보는 동안 스트리밍합니다. 구독은 필요 없습니다.",
       "cta.l1": "모든 화면에서",
       "cta.l2": "지금 바로.",
       "cta.sub": "Yingxia Mac 버전이 출시되었습니다. Apple TV, iPhone, iPad 버전은 프리뷰로 사이드로드할 수 있습니다.",
@@ -299,7 +307,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.hd.t": "화질 선택",
       "g.hd.b": "1080P60, 1080P+, 720P 등을 플레이어 메뉴에서 바로. 라이브 방송도 지원합니다.",
       "g.qr.t": "QR 코드로 로그인",
-      "g.qr.b": "빌리빌리 앱으로 스캔하면 팔로우 피드, 시청 기록, 나중에 보기, 즐겨찾기를 가져옵니다.",
+      "g.qr.b": "빌리빌리 앱으로 스캔하면 피드, 시청 기록, 즐겨찾기를, Quark나 UC로 스캔하면 클라우드 드라이브 소스를 쓸 수 있습니다.",
       "q7.q": "빌리빌리 계정이 필요한가요?",
       "q7.a": "아니요. 로그인하지 않아도 최대 1080P로 볼 수 있습니다. QR 코드로 로그인하면 내 목록과 계정에서 허용하는 더 높은 화질이 추가됩니다. 로그인 정보는 기기에만 저장됩니다.",
       "shots.note": "앱은 아직 한국어를 지원하지 않아 스크린샷은 영어 화면입니다.",
@@ -322,6 +330,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "c.site.t": "每個片源，都有自己的片架。",
       "c.bili.t": "內建嗶哩嗶哩。",
       "c.bili.b": "推薦、排行榜、番劇和直播，全是嗶哩嗶哩原生高畫質串流，彈幕隨影片飛過畫面，不需要訂閱。",
+      "c.hongguo.t": "內建紅果短劇。",
+      "c.hongguo.b": "真人劇、漫劇、AI 劇和熱播榜，每部劇集數齊全，邊看邊串流，免訂閱。",
       "cta.l1": "每一塊螢幕，",
       "cta.l2": "現在就能用。",
       "cta.sub": "映匣 Mac 版現已推出，Apple TV、iPhone 與 iPad 版則以預覽形式開放側載。",
@@ -374,7 +384,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.hd.t": "自選畫質",
       "g.hd.b": "1080P60、1080P+、720P 等，直接在播放器選單切換，直播也適用。",
       "g.qr.t": "掃描 QR 碼登入",
-      "g.qr.b": "用嗶哩嗶哩 App 掃描，即可帶來關注動態、觀看紀錄、稍後再看和收藏。",
+      "g.qr.b": "用嗶哩嗶哩 App 掃描，帶來關注動態、觀看紀錄和收藏；用夸克或 UC 掃描，雲端硬碟片源就能播放。",
       "q7.q": "需要嗶哩嗶哩帳號嗎？",
       "q7.a": "不需要。未登入也能觀看最高 1080P 的影片。用 QR 碼登入後，可使用自己的清單以及帳號可用的更高畫質。登入資訊只保存在你的裝置上。",
       "shots.note": "",

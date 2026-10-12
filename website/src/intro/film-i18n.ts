@@ -133,6 +133,17 @@ const T: Record<string, Row> = {
   "Sign in with a QR code from the Bilibili app.": ["ビリビリアプリで QR コードを読み取ってログイン。", "빌리빌리 앱으로 QR 코드를 스캔해 로그인.", "用嗶哩嗶哩 App 掃描 QR 碼登入。"],
   "Your following feed, history and favorites come along.": ["フォロー中の投稿、視聴履歴、お気に入りも一緒に。", "팔로우 피드, 시청 기록, 즐겨찾기도 함께.", "關注動態、觀看紀錄和收藏一起帶來。"],
   "iPhone & iPad": ["iPhone・iPad", "iPhone 및 iPad", "iPhone 和 iPad"],
+
+  // Sources grid and Hongguo
+  "Your sources sit in a grid, like apps on a home screen.": ["ソースはホーム画面のアプリのように並びます。", "소스가 홈 화면의 앱처럼 격자로 놓입니다.", "片源像主畫面上的 App 一樣排成格狀。"],
+  "Bilibili and Hongguo come built in, ahead of your subscription.": ["ビリビリと Hongguo は内蔵で、配信設定のソースより先に並びます。", "빌리빌리와 Hongguo는 내장되어 있어 구독 소스보다 앞에 놓입니다.", "嗶哩嗶哩與紅果短劇為內建片源，排在訂閱之前。"],
+  "Hongguo": ["Hongguo", "Hongguo", "紅果短劇"],
+  "Hongguo short dramas come built in too.": ["Hongguo のショートドラマも内蔵。", "Hongguo 숏드라마도 내장되어 있습니다.", "也內建紅果短劇。"],
+  "Live-action, animated and AI dramas. Every episode streams as you watch.": ["実写、アニメ、AI ドラマ。どのエピソードも、観ながらストリーミング。", "실사, 애니메이션, AI 드라마. 모든 에피소드를 보는 동안 스트리밍합니다.", "真人劇、漫劇、AI 劇，每一集都邊看邊串流。"],
+  "Episode 4 · 1080×1920": ["第 4 話 · 1080×1920", "4화 · 1080×1920", "第 4 集 · 1080×1920"],
+  "Episodes": ["エピソード", "에피소드", "選集"],
+  "69 episodes": ["全 69 話", "총 69화", "共 69 集"],
+  "Coming soon": ["近日公開", "출시 예정", "即將推出"],
 };
 
 const COL: Record<Exclude<Lang, "en">, number> = { ja: 0, ko: 1, "zh-Hant": 2 };
