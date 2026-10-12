@@ -78,6 +78,7 @@ public final class InProcessHost {
         try {
             JSONObject input = new JSONObject(inputText);
             if ("recoverProxy".equals(input.optString("command"))) return recoverProxy(input.getString("url"));
+            if ("directMedia".equals(input.optString("command"))) return directMedia(input.getString("url"));
             if ("trim".equals(input.optString("command"))) return new JSONObject().put("result", trim("memory pressure", true)).toString();
             if ("cancel".equals(input.optString("command"))) return cancel(input.optString("request"));
             requestId = input.optString("request");
@@ -126,6 +127,20 @@ public final class InProcessHost {
                 }
             }
             return new JSONObject().put("result", address).toString();
+        } finally { gate.readLock().unlock(); }
+    }
+
+    /** {@code {"command":"directMedia","url":…}}: the CDN request behind a cloud-drive proxy address. */
+    private static String directMedia(String address) throws Exception {
+        gate.readLock().lock();
+        try {
+            java.util.List<Object> hosts;
+            synchronized (InProcessHost.class) { hosts = runtimes.values().stream().map(Runtime::host).toList(); }
+            for (Object host : hosts) {
+                Object media = host.getClass().getMethod("directMedia", String.class).invoke(host, address);
+                if (media != null) return new JSONObject().put("result", new JSONObject((String) media)).toString();
+            }
+            return new JSONObject().put("result", JSONObject.NULL).toString();
         } finally { gate.readLock().unlock(); }
     }
 

@@ -39,6 +39,33 @@ public final class HttpDiagnostics {
         State playback = activePlayback;
         return playback != null && playback.active ? playback : state.get();
     }
+    /**
+     * The CDN request a cloud-drive proxy made for a file: the app streams that address itself,
+     * so video bytes never pass through the plugin's per-range download threads.
+     */
+    public static final class MediaRequest {
+        public final String url; public final java.util.Map<String,String> headers; public final long length;
+        MediaRequest(String url, java.util.Map<String,String> headers, long length) { this.url = url; this.headers = headers; this.length = length; }
+    }
+    private static volatile boolean capturingMedia;
+    private static volatile MediaRequest capturedMedia;
+    public static void captureMedia(boolean on) { capturingMedia = on; if (on) capturedMedia = null; }
+    public static MediaRequest capturedMedia() { return capturedMedia; }
+    private static final java.util.Set<String> hopHeaders = java.util.Set.of("range", "host", "accept-encoding", "connection", "content-length", "if-range");
+    private static void recordMedia(Response response) {
+        if (!capturingMedia || response.code() != 206 || capturedMedia != null) return;
+        var sent = response.networkResponse() != null ? response.networkResponse().request() : response.request();
+        if (sent.header("Range") == null) return;
+        var range = response.header("Content-Range");
+        var match = range == null ? null : java.util.regex.Pattern.compile("bytes \\d+-\\d+/(\\d+)").matcher(range);
+        if (match == null || !match.matches()) return;
+        var headers = new java.util.LinkedHashMap<String,String>();
+        for (String name : sent.headers().names()) {
+            if (!hopHeaders.contains(name.toLowerCase(java.util.Locale.ROOT))) headers.put(name, String.join("; ", sent.headers(name)));
+        }
+        capturedMedia = new MediaRequest(sent.url().toString(), headers, Long.parseLong(match.group(1)));
+    }
+
     public static String host() { return state.get().host; }
     public static void recordStatus(String host, int status) { State current = state.get(); current.host = host; current.status = status; }
 
@@ -67,6 +94,7 @@ public final class HttpDiagnostics {
             Response response = call.execute();
             if (local) return response;
             System.err.println("SOURCE_HTTP " + response.request().url().host() + response.request().url().encodedPath() + " " + response.code());
+            recordMedia(response);
             State current = state.get();
             if (!response.isSuccessful()) {
                 current.host = remote; current.status = response.code(); current.networkError = null;

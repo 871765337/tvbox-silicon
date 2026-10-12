@@ -158,6 +158,8 @@ Scripts/verify.sh
 
 The localization check verifies translation coverage, format arguments, and static Swift key references. `Scripts/verify.sh` runs the Swift tests and unsigned macOS, iOS device-SDK, and tvOS device-SDK builds. Successful builds do not establish plugin compatibility or device playback support.
 
+`Scripts/test-tv-ui.sh <tvOS simulator UUID>` drives the Siri Remote in a separate tvOS bundle (no JAR runtime, isolated data) against `Scripts/qa-server.py`: `TVNavigationUITests` opens a video page whose details never arrive (`-qaPage open-detail:qa-stall:1`) and checks that Back returns to the previous page instead of leaving the app. Focus starts in the tab sidebar, so the test moves right into the page.
+
 The command-line probe supports controlled static DEX execution and live-playlist inspection:
 
 ```sh
@@ -271,6 +273,14 @@ Open Settings → Cloud Drive Accounts → Manage Cloud Accounts. Quark and UC o
 The host supplies `Cloud-drive` JSON (`quarkCookie`, `ucCookie`, `ucToken`, `token`) and existing `cookie`/`uc_cookie`/`token` extension references through a per-process loopback server with an unguessable URL. It preserves other source settings. CatVod proxy responses retain status, headers, range requests, and streaming bodies. FTY `ProxyOrigin.getUrl` and `getOwnProxyUrl` use the host's server, including its separate `proxyDrive` routing. Recent proxy traffic keeps the source process alive.
 
 Validation includes controlled configuration/streaming checks, Swift tests, and a real WoGG initialization with synthetic credentials: all four cloud initializers fetched the configuration, and Quark retained credential state. This does **not** verify account authorization or end-to-end playback. Real playback still needs the user's valid account, provider access, compatible media, and a working source. Android plugin QR dialogs are not emulated; use the account settings login page.
+
+### Cloud drive playback
+
+A plugin's cloud-drive file (a `/drive/` address on the plugin's loopback proxy) is not played through that proxy. FTY's Quark proxy starts a set of download threads for every range AVPlayer opens; on a 4K file (1.4–2 GB) the abandoned ranges exhausted the embedded JVM's threads (`OutOfMemoryError: unable to create native thread`) and playback stalled at 0 bytes/s. Instead, the Java host's `directMedia` command asks the proxy for two bytes and records the CDN request the plugin makes to answer them (`HttpDiagnostics` sees every plugin OkHttp call): its URL, headers and file length. `CloudStreams` then serves AVPlayer from that address through a resource loader, in 2 MB chunks over up to six parallel connections (drives cap each connection), reading a bounded window ahead of each reader. A file whose audio sits far from its video is read in two places at once, so the stream tracks several readers and never cancels a chunk someone waits on. The container comes from the file's first bytes, not its name (a 4K MP4 named `.mp3`). An expired address is resolved again through the plugin; when no CDN request is revealed, playback falls back to the proxy.
+
+Two AVFoundation rules the loader follows: answer from a copied `Data`, never a slice of a cached chunk, and never call `respond(with:)` or `finishLoading` while holding the delegate queue (AVFoundation can wait on that queue while holding its request lock, which deadlocked playback). When a newer request arrives for the same stream, deliveries to older requests pause briefly so AVFoundation's cancel lands first; bytes handed to a request it had just abandoned made it report the movie as damaged. `CloudStreamsTests` cover byte-exact reads, two distant readers, expired addresses, and, with `TVBOX_CLOUD_MEDIA=<an MP4>`, AVPlayer opening, playing and seeking a movie through the loader three times; they serve ranges from memory (`RangeServer`), not a shared port.
+
+On the living-room Apple TV (2026-10-13), FTY's 4K Quark episodes (1.63 GB MP4, and a 1.94 GB MP4 named `.mp3`) played at 3840×2160 in real time with 2.0–3.8 MB/s from the CDN, where the proxy had managed 0.4–0.6 MB/s and then stalled. One network and one account; not a guarantee for every drive or file.
 
 ### Software update and What's New
 

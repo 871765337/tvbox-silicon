@@ -369,7 +369,8 @@ struct VideoDetailView: View {
                         } else if let error {
                             errorCard(error).padding(.top, 12)
                         } else {
-                            DetailSkeleton().loadingFocus { dismiss() }
+                            // The Play placeholder in the header holds focus while details load.
+                            DetailSkeleton()
                         }
                     }
                     .pageContainer()
@@ -584,7 +585,9 @@ struct VideoDetailView: View {
                 }
             }
         } else if error == nil {
-            SkeletonBlock(cornerRadius: 10).frame(width: 150, height: 40)
+            // On Apple TV the hero fills the screen and the skeleton below it is off-screen: the
+            // Play button's placeholder holds focus, so Back leaves the page instead of the app.
+            SkeletonBlock(cornerRadius: 10).frame(width: 150, height: 40).loadingFocus(takeFocus: true) { dismiss() }
         }
     }
     private func playButton(_ episode: Episode) -> some View {

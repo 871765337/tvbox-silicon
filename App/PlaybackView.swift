@@ -218,6 +218,14 @@ import TVCore
                 guard self.generation == activeGeneration, !Task.isCancelled else { return }
                 self.error = error.localizedDescription; self.loading = false; return
             }
+            // A cloud-drive file streams straight from its CDN: the plugin's proxy only reveals the
+            // address. Otherwise every range AVPlayer opens costs the plugin a set of threads.
+            if let media = await EmbeddedJarHost.shared.directMedia(address) {
+                guard self.generation == activeGeneration, !Task.isCancelled else { return }
+                let proxied = address
+                address = CloudStreams.register(media) { await EmbeddedJarHost.shared.directMedia(proxied) }
+                Diagnostics.shared.record(.info, "player", "cloud direct host=\(media.url.host() ?? "-") length=\(media.length)")
+            }
             // A downloaded episode plays from disk: its file, or its HLS through a loopback server.
             if address.scheme == DownloadLibrary.scheme {
                 do { address = try await DownloadLibrary.shared.playbackAddress(for: address) }
@@ -256,7 +264,7 @@ import TVCore
         #endif
         // Some providers require request headers. AVURLAsset's HTTP-header option is
         // best-effort and is not a guarantee for every redirected HLS segment.
-        let asset = HongguoStreams.asset(for: url) ?? BilibiliStreams.asset(for: url)
+        let asset = CloudStreams.asset(for: url) ?? HongguoStreams.asset(for: url) ?? BilibiliStreams.asset(for: url)
             ?? AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
         let item = AVPlayerItem(asset: asset)
         if url.scheme == HongguoStreams.scheme { item.preferredForwardBufferDuration = HongguoStreams.forwardBufferDuration }
@@ -338,6 +346,9 @@ import TVCore
         let events = item.accessLog()?.events ?? []
         let now = Date()
         var next = Transfer(received: events.reduce(Int64(0)) { $0 + max(0, $1.numberOfBytesTransferred) })
+        // A resource-loader stream's bytes never reach the access log.
+        let cloud = automatic.flatMap(CloudStreams.transfer(for:))
+        if let cloud { next.received = max(next.received, cloud.received) }
         #if os(macOS)
         // HLS goes through the local proxy, which sees upstream bytes as they arrive.
         let upstream = proxy?.stats.snapshot
@@ -358,7 +369,7 @@ import TVCore
         }
         // The Mac plays HLS through a local proxy; name the real server instead.
         let segmentHost = events.last?.uri.flatMap { URL(string: $0)?.host() }
-        next.host = segmentHost.flatMap { ["127.0.0.1", "localhost"].contains($0) ? nil : $0 } ?? origin
+        next.host = segmentHost.flatMap { ["127.0.0.1", "localhost"].contains($0) ? nil : $0 } ?? cloud?.host ?? origin
         #if os(macOS)
         if let upstream {
             next.host = upstream.host ?? next.host
@@ -400,6 +411,7 @@ import TVCore
     func stop() {
         saveHistory()
         if let url = playing?.url { HongguoStreams.stop(url) }
+        if let automatic { CloudStreams.stop(automatic) }
         playing = nil
         catalogDanmaku.clear()
         historyContext = nil; pendingResume = nil; restoringPosition = false

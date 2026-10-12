@@ -107,6 +107,45 @@ public final class CloudDriveBridge implements AutoCloseable {
             + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
     }
 
+    /**
+     * The CDN address and headers behind one of this bridge's drive files, as JSON
+     * {@code {"url","headers","length"}}, or null. It asks the plugin's proxy for two bytes and
+     * records the upstream range request the plugin makes to answer them; when those bytes were
+     * already cached, a second probe in the middle of the file forces a fresh request.
+     */
+    public String directMedia(String address) throws Exception {
+        String local = recoverProxy(address);
+        if (local == null || !URI.create(local).getRawPath().contains("/drive/")) return null;
+        synchronized (CloudDriveBridge.class) {
+            try {
+                long total = -1;
+                for (int probe = 0; probe < 2; probe++) {
+                    HttpDiagnostics.captureMedia(true);
+                    long first = probe == 0 || total < 4 ? 0 : total / 2;
+                    HttpURLConnection connection = (HttpURLConnection)URI.create(local).toURL().openConnection(java.net.Proxy.NO_PROXY);
+                    try {
+                        connection.setConnectTimeout(5000); connection.setReadTimeout(30000); connection.setUseCaches(false);
+                        connection.setRequestProperty("Range", "bytes=" + first + "-" + (first + 1));
+                        int status = connection.getResponseCode();
+                        String range = connection.getHeaderField("Content-Range");
+                        var match = range == null ? null : java.util.regex.Pattern.compile("bytes \\d+-\\d+/(\\d+)").matcher(range);
+                        if (match != null && match.matches()) total = Long.parseLong(match.group(1));
+                        if (status == 206) try (InputStream body = connection.getInputStream()) { body.readNBytes(2); }
+                    } finally { connection.disconnect(); }
+                    // The plugin may still be finishing the upstream request when our two bytes arrive.
+                    for (int wait = 0; wait < 50 && HttpDiagnostics.capturedMedia() == null; wait++) Thread.sleep(100);
+                    HttpDiagnostics.MediaRequest media = HttpDiagnostics.capturedMedia();
+                    if (media != null && (total < 0 || media.length == total)) {
+                        System.err.println("CLOUD_DIRECT_MEDIA length=" + media.length + " probe=" + probe);
+                        return new JSONObject().put("url", media.url).put("headers", new JSONObject(media.headers)).put("length", media.length).toString();
+                    }
+                }
+                System.err.println("CLOUD_DIRECT_MEDIA unavailable");
+                return null;
+            } finally { HttpDiagnostics.captureMedia(false); }
+        }
+    }
+
     /** Hands a media or drive request to the plugin's proxy and streams its answer back. */
     private void relay(com.sun.net.httpserver.HttpExchange exchange, String resource, String method) throws Exception {
         if ((!resource.equals("media") || proxy == null) && (!resource.startsWith("drive/") || driveProxy == null)) { exchange.sendResponseHeaders(404, -1); return; }
@@ -245,6 +284,7 @@ public final class CloudDriveBridge implements AutoCloseable {
             .getMethod("proxyDrive", Map.class, String.class, Map.class, String.class, String.class)
             .invoke(null, params, path, headers, "", "");
     }
+    public void setDriveProxy(DriveProxy value) { driveProxy = value; }
     public void setProxy(Proxy value) { proxy = value; }
 
     public String extension(String original, JSONObject accounts) throws Exception {

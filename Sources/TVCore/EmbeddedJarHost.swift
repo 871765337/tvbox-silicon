@@ -64,6 +64,22 @@ public actor EmbeddedJarHost {
         return try WebAddress.resolve(address)
     }
 
+    /// The CDN address and headers behind a plugin's cloud-drive proxy address, or nil when the
+    /// plugin did not reveal them. The app then streams the file itself (`CloudStreams`).
+    public func directMedia(_ url: URL) async -> CloudStreams.Source? {
+        guard url.scheme == "http", url.host == "127.0.0.1", url.path.contains("/drive/"),
+              Self.available, let resources = Bundle.main.resourcePath,
+              let input = try? JSONEncoder().encode(["command": "directMedia", "url": url.absoluteString]),
+              let response = try? await worker.request(resources: resources, json: String(decoding: input, as: UTF8.self)),
+              let envelope = try? JSONDecoder().decode([String: JSONValue].self, from: Data(response.utf8)),
+              case .object(let media)? = envelope["result"],
+              let address = media["url"]?.string, let direct = URL(string: address), direct.scheme == "https" || direct.scheme == "http",
+              case .number(let length)? = media["length"], length > 0 else { return nil }
+        var headers: [String: String] = [:]
+        if case .object(let values)? = media["headers"] { for (name, value) in values { headers[name] = value.string } }
+        return CloudStreams.Source(url: direct, headers: headers, length: Int(length), name: url.lastPathComponent)
+    }
+
     public func request(site: Site, jarURL: URL, params: [String: String], http: HTTPClient, configurationOrigin: URL, progress: PluginPreparation? = nil) async throws -> [String: JSONValue] {
         guard Self.available, let resources = Bundle.main.resourcePath else { throw TVError.unsupported("The on-device plugin runtime is missing from this build.") }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]

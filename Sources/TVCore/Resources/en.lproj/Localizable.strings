@@ -612,5 +612,6 @@
 "Hongguo returned incomplete data. Please refresh and try again." = "Hongguo returned incomplete data. Please refresh and try again.";
 "Hongguo did not provide a playable source for this episode. Try again later." = "Hongguo did not provide a playable source for this episode. Try again later.";
 "This Hongguo video could not be prepared for playback. Please try again." = "This Hongguo video could not be prepared for playback. Please try again.";
+"This video is an MKV file, which Apple devices can't play." = "This video is an MKV file, which Apple devices can't play.";
 
 "Waiting for an earlier plugin request to finish." = "Waiting for an earlier plugin request to finish.";

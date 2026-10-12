@@ -132,6 +132,17 @@ public final class SharedPluginRuntime {
     /** Closes every idle spider (the heap ran short or the OS asked for memory); returns how many. */
     public synchronized int trim() { return release(true); }
 
+    /** The drive file's CDN request; the probe runs outside this lock, it can take seconds. */
+    public String directMedia(String address) throws Exception {
+        CloudDriveBridge owner = null;
+        synchronized (this) {
+            for (Source source : sources.values()) {
+                if (source.bridge().recoverProxy(address) != null) { owner = source.bridge(); break; }
+            }
+        }
+        return owner == null ? null : owner.directMedia(address);
+    }
+
     public synchronized String recoverProxy(String address) throws Exception {
         for (Source source : sources.values()) {
             String recovered = source.bridge().recoverProxy(address);

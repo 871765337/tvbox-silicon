@@ -612,5 +612,6 @@
 "Hongguo returned incomplete data. Please refresh and try again." = "红果返回的数据不完整，请刷新后重试。";
 "Hongguo did not provide a playable source for this episode. Try again later." = "红果暂未提供本集的可用片源，请稍后重试。";
 "This Hongguo video could not be prepared for playback. Please try again." = "无法准备此红果视频，请重试。";
+"This video is an MKV file, which Apple devices can't play." = "该视频是 MKV 文件，Apple 设备无法播放。";
 
 "Waiting for an earlier plugin request to finish." = "正在等待先前的插件请求结束。";

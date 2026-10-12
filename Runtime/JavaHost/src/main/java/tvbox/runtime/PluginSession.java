@@ -23,6 +23,10 @@ public final class PluginSession {
         return bridge == null ? null : bridge.recoverProxy(address);
     }
 
+    public String directMedia(String address) throws Exception {
+        return bridge == null ? null : bridge.directMedia(address);
+    }
+
     public String request(JSONObject params) throws Exception {
         HttpDiagnostics.beginRequest(params.has("play"));
         PreparationProgress.loading();

@@ -98,7 +98,7 @@ enum QALaunch {
                 guard let first = videoID.flatMap({ id in videos.first { $0.id == id } }) ?? videos.first else { throw QASweep.Failure(message: "No videos") }
                 let video = try await QASweep.limit(60) { try await client.detail(first.id) }
                 let selectedEpisode = UserDefaults.standard.string(forKey: "qaEpisodeName")
-                guard let episode = selectedEpisode.flatMap({ name in video.episodes.first { $0.name == name } })
+                guard let episode = selectedEpisode.flatMap({ name in video.episodes.first { $0.name == name } ?? video.episodes.first { $0.name.contains(name) } })
                     ?? (selectedEpisode == nil ? video.episodes.first : nil) else { throw QASweep.Failure(message: "No episodes") }
                 let channel = try await QASweep.limit(60) { try await client.playback(episode) }
                 let start = UserDefaults.standard.object(forKey: "qaStartAt") == nil ? nil : UserDefaults.standard.double(forKey: "qaStartAt")
@@ -136,6 +136,14 @@ enum QALaunch {
                                      origin: config.origin) {
                     VideoDetailView(video: video, client: CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL))
                 }
+            case "open-detail":
+                if parts.count == 3, let site = config.sites.first(where: { $0.key == parts[1] }),
+                   let video = Video(json: ["vod_id": .string(parts[2]), "vod_name": .string("测试影片 \(parts[2])")], origin: config.origin) {
+                    RouteLink { VideoDetailView(video: video, client: CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL)) } label: {
+                        Text("Open video").font(.title2).padding(24)
+                    }
+                    .accessibilityIdentifier("qa.open-detail")
+                }
             case "channels":
                 if let index = Int(parts.dropFirst().first ?? ""), config.lives.indices.contains(index) {
                     ChannelListView(source: config.lives[index])
@@ -157,7 +165,7 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "detail", "channels", "runtime", "logs", "cache", "licenses", "cloud-login", "bilibili-account", "bilibili-live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "cache", "licenses", "cloud-login", "bilibili-account", "bilibili-live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
     }
 }
 

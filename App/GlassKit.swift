@@ -682,14 +682,33 @@ struct ChipSkeletonRow: View {
 extension View {
     /// While a page is still loading it may have no focusable control. tvOS then sends
     /// the Menu/Back press to the system, which leaves the app instead of going back.
-    @ViewBuilder func loadingFocus(onExit: @escaping () -> Void) -> some View {
+    /// `takeFocus` claims focus for pages with nothing else to focus (a video page's header).
+    @ViewBuilder func loadingFocus(takeFocus: Bool = false, onExit: @escaping () -> Void) -> some View {
         #if os(tvOS)
-        focusable().onExitCommand(perform: onExit)
+        modifier(LoadingFocus(takeFocus: takeFocus, onExit: onExit))
         #else
         self
         #endif
     }
 }
+
+#if os(tvOS)
+/// tvOS does not move focus onto a plain focusable view in a newly pushed page, so the view takes
+/// it once the push settles. Without focus the Back press never reaches `onExitCommand`.
+private struct LoadingFocus: ViewModifier {
+    let takeFocus: Bool
+    let onExit: () -> Void
+    @FocusState private var focused: Bool
+    func body(content: Content) -> some View {
+        content.focusable().focused($focused).onExitCommand(perform: onExit)
+            .task {
+                guard takeFocus else { return }
+                try? await Task.sleep(for: .milliseconds(300))
+                focused = true
+            }
+    }
+}
+#endif
 
 struct DetailSkeleton: View {
     var body: some View {

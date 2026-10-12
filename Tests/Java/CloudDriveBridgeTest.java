@@ -58,8 +58,52 @@ public class CloudDriveBridgeTest {
         ftyFamilyCredentials();
         proxyAddressMethodsUseHost();
         suspendedListenerRecovers();
+        directMediaRevealsTheCdnRequest();
         System.out.println("Cloud bridge checks passed (credentials, capability, range streaming, quality arrays).");
     }
+    /** The app streams drive files itself: the bridge reveals the CDN request behind a proxy address. */
+    static void directMediaRevealsTheCdnRequest() throws Exception {
+        long total = 1_480_000_000L;
+        List<String> upstreamRanges = Collections.synchronizedList(new ArrayList<>());
+        var cdn = new okhttp3.OkHttpClient.Builder().addInterceptor(chain -> {
+            var request = chain.request();
+            String range = request.header("Range");
+            upstreamRanges.add(range);
+            String[] span = range.substring("bytes=".length()).split("-");
+            long first = Long.parseLong(span[0]), last = Long.parseLong(span[1]);
+            return new okhttp3.Response.Builder().request(request).protocol(okhttp3.Protocol.HTTP_1_1).code(206).message("Partial Content")
+                .header("Content-Range", "bytes " + first + "-" + last + "/" + total)
+                .body(okhttp3.ResponseBody.create(new byte[(int)(last - first + 1)], okhttp3.MediaType.get("video/mp4"))).build();
+        }).build();
+        try (var bridge = new CloudDriveBridge(Files.createTempDirectory("cloud-direct-test"))) {
+            // Like FTY's downloader: the requested bytes come from a larger upstream chunk, fetched on its own thread.
+            bridge.setDriveProxy((params, path, headers) -> {
+                String[] span = headers.get("range").substring("bytes=".length()).split("-");
+                long first = Long.parseLong(span[0]), last = Long.parseLong(span[1]);
+                var pipe = new PipedInputStream(); var sink = new PipedOutputStream(pipe);
+                new Thread(() -> {
+                    try (sink) {
+                        var call = cdn.newCall(new okhttp3.Request.Builder().url("https://dl.example.cn/file/abc?sign=s1")
+                            .header("Cookie", "__pus=test-only").header("Referer", "https://pan.example.cn/")
+                            .header("Range", "bytes=" + first + "-" + (first + 1_048_575)).build());
+                        try (var response = tvbox.runtime.HttpDiagnostics.execute(call)) { sink.write(response.body().bytes(), 0, (int)(last - first + 1)); }
+                    } catch (IOException ignored) { }
+                }).start();
+                return new Object[]{206, "video/mp4", pipe, Map.of("Content-Range", "bytes " + first + "-" + last + "/" + total)};
+            });
+            String address = CloudDriveBridge.getOwnProxyUrl("play") + "drive-name/192.mp3";
+            var media = new JSONObject(bridge.directMedia(address));
+            check(media.getString("url").equals("https://dl.example.cn/file/abc?sign=s1"), "CDN address not revealed");
+            check(media.getLong("length") == total, "File length lost");
+            var headers = media.getJSONObject("headers");
+            check("__pus=test-only".equals(headers.optString("Cookie")) && "https://pan.example.cn/".equals(headers.optString("Referer")), "CDN headers lost");
+            check(!headers.has("Range"), "A range was kept as a fixed header");
+            check(upstreamRanges.size() == 1, "The probe should cost one upstream request");
+            check(bridge.directMedia("http://127.0.0.1:9/other/drive/x") == null, "Foreign address accepted");
+            check(bridge.directMedia(CloudDriveBridge.getUrl() + "?do=quark") == null, "Non-drive address probed");
+        }
+    }
+
     static void suspendedListenerRecovers() throws Exception {
         try (var bridge = new CloudDriveBridge(Files.createTempDirectory("cloud-resume-test"))) {
             bridge.setProxy(params -> new Object[]{200, "video/mp4", new ByteArrayInputStream("video".getBytes()), Map.of("Content-Length", "5")});
