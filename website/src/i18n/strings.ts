@@ -66,6 +66,7 @@ export type TextKey =
   | "sec.sub"
   | "shots.note"
   | "soon"
+  | "new"
   | "dl.mac"
   | "g.cast.t"
   | "g.cast.b"
@@ -160,6 +161,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "dl.mac": "Download",
       "dl.req": "For Mac, iPhone, iPad and Apple TV · Free",
       "soon": "Coming soon",
+      "new": "New",
     },
   },
   "ja": {
@@ -237,6 +239,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "dl.mac": "ダウンロード",
       "dl.req": "Mac・iPhone・iPad・Apple TV 対応 · 無料",
       "soon": "近日公開",
+      "new": "新機能",
     },
   },
   "ko": {
@@ -314,6 +317,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "dl.mac": "다운로드",
       "dl.req": "Mac·iPhone·iPad·Apple TV 지원 · 무료",
       "soon": "출시 예정",
+      "new": "새로운 기능",
     },
   },
   "zh-Hant": {
@@ -391,6 +395,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "dl.mac": "下載",
       "dl.req": "支援 Mac、iPhone、iPad 與 Apple TV · 免費",
       "soon": "即將推出",
+      "new": "新功能",
     },
   },
 };

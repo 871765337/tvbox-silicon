@@ -8,7 +8,7 @@ interface Feature {
   shot: string;
   title: TextKey;
   body: TextKey;
-  /** A short label above the title for features not in the current download yet. */
+  /** A short orange label above the title, such as "New" for the latest release's features. */
   eyebrow?: TextKey;
 }
 
@@ -17,7 +17,7 @@ const FEATURES: Feature[] = [
   { shot: "search", title: "c.search.t", body: "c.search.b" },
   { shot: "site", title: "c.site.t", body: "c.site.b" },
   { shot: "bili-danmaku", title: "c.bili.t", body: "c.bili.b" },
-  { shot: "hongguo", title: "c.hongguo.t", body: "c.hongguo.b", eyebrow: "soon" },
+  { shot: "hongguo", title: "c.hongguo.t", body: "c.hongguo.b", eyebrow: "new" },
 ];
 
 export function Features() {

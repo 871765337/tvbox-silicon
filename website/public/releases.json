@@ -1,6 +1,113 @@
 {
   "releases": [
     {
+      "version": "1.3",
+      "date": "2026-10-13",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.3/Yingxia-1.3-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "play.rectangle.on.rectangle.fill",
+          "title": {
+            "en": "Hongguo short dramas, built in",
+            "zh-Hans": "内置红果短剧",
+            "zh-Hant": "內建紅果短劇",
+            "ja": "Hongguo のショートドラマを内蔵"
+          },
+          "detail": {
+            "en": "Live-action, animated and AI dramas from Hongguo, plus the trending charts, with every episode of each series. Episodes stream as you watch, and no subscription is needed.",
+            "zh-Hans": "红果的真人剧、漫剧、AI 剧和热播榜，每部剧集数齐全，边看边播放，无需订阅。",
+            "zh-Hant": "紅果的真人劇、漫劇、AI 劇和熱播榜，每部劇集數齊全，邊看邊播放，免訂閱。",
+            "ja": "Hongguo の実写・アニメ・AI ドラマと人気ランキングを、各シリーズの全エピソードとともに。観ながらストリーミングし、配信設定は不要です。"
+          }
+        },
+        {
+          "symbol": "externaldrive.fill.badge.icloud",
+          "title": {
+            "en": "Big cloud-drive videos play smoothly",
+            "zh-Hans": "网盘大文件流畅播放",
+            "zh-Hant": "網盤大檔案流暢播放",
+            "ja": "大きなクラウドドライブの動画も滑らかに"
+          },
+          "detail": {
+            "en": "Quark and other cloud-drive files now stream straight from the drive over several connections, so 4K episodes of 2 GB play without stalling. Files with the wrong extension, such as a video named .mp3, play too.",
+            "zh-Hans": "夸克等网盘文件现在直接从网盘多线程串流，2 GB 的 4K 剧集也不再卡住。扩展名不对的文件（例如命名为 .mp3 的视频）也能播放。",
+            "zh-Hant": "夸克等網盤檔案現在直接從網盤多線程串流，2 GB 的 4K 劇集也不再卡住。副檔名不對的檔案（例如命名為 .mp3 的影片）也能播放。",
+            "ja": "Quark などのクラウドドライブのファイルを、複数の接続でドライブから直接ストリーミングするようになり、 2 GB の 4K エピソードも止まらず再生できます。 .mp3 という名前の動画など、拡張子が正しくないファイルも再生できます。"
+          }
+        },
+        {
+          "symbol": "square.grid.3x3.fill",
+          "title": {
+            "en": "Sources, laid out like apps",
+            "zh-Hans": "片源像 App 一样排列",
+            "zh-Hant": "片源像 App 一樣排列",
+            "ja": "ソースをアプリのように"
+          },
+          "detail": {
+            "en": "Each source is now a tile with its own icon, and taglines such as 秒播 sit on a second line. Built-in sources come first.",
+            "zh-Hans": "每个片源都是带图标的方块，「秒播」等标签显示在第二行，内置片源排在最前。",
+            "zh-Hant": "每個片源都是帶圖示的方塊，「秒播」等標籤顯示在第二行，內建片源排在最前。",
+            "ja": "各ソースがアイコン付きのタイルになり、「秒播」などのタグは 2 行目に表示されます。内蔵ソースが先頭に並びます。"
+          }
+        },
+        {
+          "symbol": "qrcode.viewfinder",
+          "title": {
+            "en": "Scan to sign in to cloud drives",
+            "zh-Hans": "扫码登录网盘",
+            "zh-Hant": "掃碼登入網盤",
+            "ja": "QR コードでクラウドドライブにログイン"
+          },
+          "detail": {
+            "en": "When a source needs Quark or UC, Yingxia shows its own QR code instead of failing, and keeps the sign-in so cloud-drive videos play. They also keep playing after the app returns from the background.",
+            "zh-Hans": "片源需要夸克或 UC 网盘时，映匣会显示自己的二维码，登录后网盘视频即可播放；应用从后台返回后也能继续播放。",
+            "zh-Hant": "片源需要夸克或 UC 網盤時，映匣會顯示自己的 QR 碼，登入後網盤影片即可播放；App 從背景返回後也能繼續播放。",
+            "ja": "ソースが Quark や UC を必要とするとき、映匣が独自の QR コードを表示し、ログイン後はクラウドドライブの動画を再生できます。バックグラウンドから戻った後も再生を続けます。"
+          }
+        },
+        {
+          "symbol": "magnifyingglass",
+          "platforms": [
+            "tvos"
+          ],
+          "title": {
+            "en": "Search when you’re ready",
+            "zh-Hans": "输入完再搜索",
+            "zh-Hant": "輸入完再搜尋",
+            "ja": "入力し終えてから検索"
+          },
+          "detail": {
+            "en": "Typing or dictating no longer starts a search after every pause. Press Search when your query is ready, and loading more results no longer asks every source at once.",
+            "zh-Hans": "输入或听写时不再一停顿就开始搜索。输入好后按「搜索」即可，加载更多结果时也不再同时请求所有片源。",
+            "zh-Hant": "輸入或聽寫時不再一停頓就開始搜尋。輸入好後按「搜尋」即可，載入更多結果時也不再同時請求所有片源。",
+            "ja": "入力や音声入力の途中で検索が始まらなくなりました。入力し終えたら「検索」を押してください。結果の追加読み込みも、すべてのソースへ一斉に問い合わせなくなりました。"
+          }
+        },
+        {
+          "symbol": "arrow.uturn.backward",
+          "platforms": [
+            "tvos"
+          ],
+          "title": {
+            "en": "Back while a video page loads",
+            "zh-Hans": "加载时也能返回",
+            "zh-Hant": "載入時也能返回",
+            "ja": "読み込み中でも戻れる"
+          },
+          "detail": {
+            "en": "Pressing Back on the Siri Remote while a video’s details are still loading now returns to the previous page instead of leaving the app.",
+            "zh-Hans": "视频详情还在加载时按 Siri Remote 的返回键，现在会回到上一页，而不是退出应用。",
+            "zh-Hant": "影片詳情還在載入時按 Siri Remote 的返回鍵，現在會回到上一頁，而不是離開 App。",
+            "ja": "動画の詳細を読み込んでいるあいだに Siri Remote の戻るボタンを押すと、アプリを終了せず前のページに戻るようになりました。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.2.2",
       "date": "2026-10-12",
       "links": {
