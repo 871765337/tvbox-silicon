@@ -59,7 +59,7 @@ const T: Record<string, Row> = {
   "Episode 4 · 1080×1920": ["第 4 話 · 1080×1920", "4화 · 1080×1920", "第 4 集 · 1080×1920"],
   "Episodes": ["エピソード", "에피소드", "選集"],
   "69 episodes": ["全 69 話", "총 69화", "共 69 集"],
-  "Coming soon": ["近日公開", "출시 예정", "即將推出"],
+  "New": ["新機能", "새로운 기능", "新功能"],
   "Hongguo short dramas come built in. Every episode streams as you watch.": ["Hongguo のショートドラマも内蔵。どのエピソードも、観ながらストリーミング。", "Hongguo 숏드라마도 내장. 모든 에피소드를 보는 동안 스트리밍합니다.", "也內建紅果短劇，每一集都邊看邊串流。"],
 
   // Live TV
