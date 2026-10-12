@@ -1,6 +1,35 @@
 {
   "releases": [
     {
+      "version": "1.2.2",
+      "date": "2026-10-12",
+      "links": {
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "arrow.down.app.fill",
+          "platforms": [
+            "ios",
+            "tvos"
+          ],
+          "title": {
+            "en": "Installs with SideStore",
+            "zh-Hans": "支持用 SideStore 安装",
+            "zh-Hant": "支援用 SideStore 安裝",
+            "ja": "SideStore でインストール可能に"
+          },
+          "detail": {
+            "en": "Fixes the “FAT slice bounds” error when installing with SideStore. The app now holds far fewer files, so sideloading is also much faster.",
+            "zh-Hans": "修复用 SideStore 安装时出现的「FAT slice bounds」错误。应用内的文件大幅减少，侧载安装也快了很多。",
+            "zh-Hant": "修正用 SideStore 安裝時出現的「FAT slice bounds」錯誤。App 內的檔案大幅減少，側載安裝也快了很多。",
+            "ja": "SideStore でインストールするときの「FAT slice bounds」エラーを修正しました。アプリ内のファイル数が大幅に減り、サイドロードもずっと速くなりました。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.2.1",
       "date": "2026-10-12",
       "links": {
