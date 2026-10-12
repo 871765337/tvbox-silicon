@@ -14,6 +14,7 @@ const FEATURES: Feature[] = [
   { shot: "live", title: "c.live.t", body: "c.live.b" },
   { shot: "search", title: "c.search.t", body: "c.search.b" },
   { shot: "site", title: "c.site.t", body: "c.site.b" },
+  { shot: "bili-danmaku", title: "c.bili.t", body: "c.bili.b" },
 ];
 
 export function Features() {

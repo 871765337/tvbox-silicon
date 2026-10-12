@@ -8,7 +8,6 @@ const T: Record<string, Row> = {
   // Boot and outro
   "All your sources. One big screen.": ["すべてのソースを、ひとつの大画面で。", "모든 소스를, 하나의 큰 화면에서.", "所有片源，盡在大螢幕。"],
   "A native TVBox player for Apple TV": ["Apple TV のためのネイティブ TVBox プレーヤー", "Apple TV를 위한 네이티브 TVBox 플레이어", "為 Apple TV 打造的原生 TVBox 播放器"],
-  "Coming soon": ["近日公開", "출시 예정", "即將推出"],
   "Yingxia doesn’t host or provide any content. It plays the subscriptions you add.": ["映匣はコンテンツをホスト・提供しません。追加した配信設定を再生するだけです。", "Yingxia는 어떤 콘텐츠도 호스팅하거나 제공하지 않습니다. 추가한 구독을 재생할 뿐입니다.", "映匣不託管也不提供任何內容，只播放你加入的訂閱。"],
 
   // Subscriptions
@@ -74,10 +73,10 @@ const T: Record<string, Row> = {
   "Player": ["プレーヤー", "플레이어", "播放器"],
   "Episode 1 ·": ["第1話 ·", "1화 ·", "第 1 集 ·"],
   "Couldn’t play this video.": ["この動画を再生できませんでした。", "이 동영상을 재생할 수 없습니다.", "無法播放這部影片。"],
+  "Playing": ["再生中", "재생 중", "播放中"],
   "The source returned an expired link.": ["ソースが期限切れのリンクを返しました。", "소스가 만료된 링크를 반환했습니다.", "片源回傳了已過期的連結。"],
   "Retry": ["再試行", "재시도", "重試"],
   "Back": ["戻る", "뒤로", "返回"],
-  "▶ Playing": ["▶ 再生中", "▶ 재생 중", "▶ 播放中"],
   "Video plays through Apple’s own AVPlayer, with HLS.": ["動画は Apple の AVPlayer で再生。HLS にも対応。", "동영상은 Apple의 AVPlayer로 재생되며 HLS를 지원합니다.", "影片透過 Apple 自家的 AVPlayer 播放，支援 HLS。"],
   "When a link fails you get a clear screen and Retry, not an endless spinner.": ["リンクが切れても、終わらない読み込みではなく、わかりやすい画面と再試行ボタンを。", "링크가 실패하면 끝없는 로딩 대신 명확한 화면과 재시도 버튼이 나타납니다.", "連結失效時，你會看到清楚的畫面和重試按鈕，而不是轉不停的圈圈。"],
 
@@ -110,12 +109,9 @@ const T: Record<string, Row> = {
   "How it works": ["仕組み", "작동 방식", "運作方式"],
   "How Yingxia works": ["映匣の仕組み", "Yingxia 작동 방식", "映匣如何運作"],
 
-  // What's new in 1.1
-  "What’s new in Yingxia 1.1": ["映匣 1.1 の新機能", "Yingxia 1.1의 새로운 기능", "映匣 1.1 新功能"],
-  "Bilibili, built in.": ["ビリビリを内蔵。", "빌리빌리 내장.", "內建嗶哩嗶哩。"],
-  "Danmaku, live rooms and casting from your phone.": ["弾幕コメント、生配信、スマホからのキャスト。", "탄막, 라이브 방송, 휴대폰에서 캐스트.", "彈幕、直播，還能從手機投放。"],
+  // Bilibili
   "Bilibili": ["ビリビリ", "빌리빌리", "嗶哩嗶哩"],
-  "Bilibili is now a built-in source.": ["ビリビリが内蔵ソースになりました。", "이제 빌리빌리가 내장 소스입니다.", "嗶哩嗶哩現在是內建片源。"],
+  "Bilibili comes built in, no subscription needed.": ["ビリビリを内蔵。配信設定はいりません。", "빌리빌리가 내장되어 있어 구독이 필요 없습니다.", "內建嗶哩嗶哩，不需要訂閱。"],
   "Recommendations, rankings, anime, films and documentaries.": ["おすすめ、ランキング、アニメ、映画、ドキュメンタリー。", "추천, 랭킹, 애니메이션, 영화, 다큐멘터리.", "推薦、排行榜、番劇、電影和紀錄片。"],
   "Danmaku": ["弾幕", "탄막", "彈幕"],
   "Danmaku List": ["弾幕リスト", "탄막 목록", "彈幕列表"],
@@ -136,18 +132,7 @@ const T: Record<string, Row> = {
   "Sign in": ["ログイン", "로그인", "登入"],
   "Sign in with a QR code from the Bilibili app.": ["ビリビリアプリで QR コードを読み取ってログイン。", "빌리빌리 앱으로 QR 코드를 스캔해 로그인.", "用嗶哩嗶哩 App 掃描 QR 碼登入。"],
   "Your following feed, history and favorites come along.": ["フォロー中の投稿、視聴履歴、お気に入りも一緒に。", "팔로우 피드, 시청 기록, 즐겨찾기도 함께.", "關注動態、觀看紀錄和收藏一起帶來。"],
-  "Pin Bilibili in global search.": ["横断検索でビリビリを固定表示。", "통합 검색에 빌리빌리를 고정하세요.", "在全域搜尋中固定嗶哩嗶哩。"],
-  "Results keep loading as you scroll.": ["スクロールするたびに結果を読み込みます。", "스크롤할수록 결과를 계속 불러옵니다.", "結果隨著捲動持續載入。"],
-  "Software Update": ["ソフトウェア・アップデート", "소프트웨어 업데이트", "軟體更新"],
-  "Yingxia 1.1 is available": ["映匣 1.1 が利用可能です", "Yingxia 1.1을 사용할 수 있습니다", "映匣 1.1 已推出"],
-  "Bilibili, danmaku, live rooms and casting.": ["ビリビリ、弾幕、生配信、キャスト。", "빌리빌리, 탄막, 라이브 방송, 캐스트.", "嗶哩嗶哩、彈幕、直播與投放。"],
-  "Get the Update": ["アップデートを入手", "업데이트 받기", "取得更新"],
-  "Not Now": ["あとで", "나중에", "稍後"],
-  "Yingxia now tells you when a new version is out.": ["新しいバージョンが出ると、映匣がお知らせします。", "새 버전이 나오면 Yingxia가 알려 드립니다.", "有新版本時，映匣會通知你。"],
-  "Yingxia 1.1": ["映匣 1.1", "Yingxia 1.1", "映匣 1.1"],
   "iPhone & iPad": ["iPhone・iPad", "iPhone 및 iPad", "iPhone 和 iPad"],
-  "Watch what’s new": ["新機能を動画で見る", "새로운 기능 영상 보기", "觀看新功能影片"],
-  "What’s new": ["新機能", "새로운 기능", "新功能"],
 };
 
 const COL: Record<Exclude<Lang, "en">, number> = { ja: 0, ko: 1, "zh-Hant": 2 };

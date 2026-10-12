@@ -6,16 +6,16 @@
           <div class="glow"></div>
           <div class="chap" id="chap"><i class="sf" data-sf="chevron.left"></i><span></span></div>
 
-          <!-- 1 · boot (0-8) -->
-          <section class="scene black" data-s="0" data-e="8" data-ch="">
+          <!-- 1 · boot -->
+          <section class="scene black" data-len="8" data-keys="0.3 power" data-ch="">
             <img class="abs app-icon" src="/assets/icon-512.png" alt="The Yingxia app icon" style="left:42cqw;top:10cqw;width:16cqw;animation:pop .7s cubic-bezier(.2,1.4,.4,1) .4s both,dive 1.6s cubic-bezier(.6,0,.9,.4) 6.2s both">
             <div class="abs big center" style="top:29cqw;font-size:6.4cqw;animation:up .6s ease 1.3s both,gone .4s ease 6s both">Yingxia <span class="muted" style="font-weight:500">映匣</span></div>
             <div class="abs center" style="top:38.5cqw;font-size:2.4cqw;animation:up .5s ease 2.1s both,gone .4s ease 6s both"><span class="type" style="--n:33;--d:2.3">All your sources. One big screen.</span></div>
             <div class="abs center muted" style="top:44cqw;font-size:1.6cqw;animation:up .5s ease 4s both,gone .4s ease 6s both">A native TVBox player for Apple TV</div>
           </section>
 
-          <!-- 2 · subscriptions (8-19) -->
-          <section class="scene" data-s="8" data-e="19" data-ch="Subscriptions">
+          <!-- 2 · subscriptions -->
+          <section class="scene" data-len="11" data-ch="Subscriptions">
             <div class="panel zoomwin" style="--d:.2;left:4cqw;top:9cqw;width:44cqw;height:26cqw">
               <h4>tvbox.json</h4>
               <div class="code">
@@ -48,8 +48,8 @@
             <div class="subs"><span class="up" style="--d:6.8">Yingxia reads the same subscriptions, natively, on Apple TV.</span></div>
           </section>
 
-          <!-- 3 · add subscription (19-30) -->
-          <section class="scene" data-s="19" data-e="30" data-ch="Settings">
+          <!-- 3 · add subscription -->
+          <section class="scene" data-len="11" data-keys="1.4 select, 4.2 select" data-ch="Settings">
             <div class="panel zoomwin" style="--d:.2;left:4cqw;top:8cqw;width:28cqw;height:36cqw;padding:1cqw">
               <div class="li focus">Subscriptions <small><i class="sf" data-sf="chevron.right"></i></small></div>
               <div class="li">Sources <small><i class="sf" data-sf="chevron.right"></i></small></div>
@@ -78,8 +78,8 @@
             <div class="subs"><span class="up" style="--d:9.3">If a refresh ever fails, the last working copy stays.</span></div>
           </section>
 
-          <!-- 4 · runtimes (30-44) -->
-          <section class="scene" data-s="30" data-e="44" data-ch="Runtime">
+          <!-- 4 · runtimes -->
+          <section class="scene" data-len="14" data-ch="Runtime">
             <div class="abs muted up" style="--d:.3;left:4cqw;top:10.5cqw;font-size:1.3cqw">Source</div>
             <div class="abs muted up" style="--d:2.3;left:36cqw;top:10.5cqw;font-size:1.3cqw">Runs on device in</div>
             <div class="abs muted up" style="--d:4.3;left:73cqw;top:10.5cqw;font-size:1.3cqw">Same screens for every source</div>
@@ -114,8 +114,8 @@
             <div class="subs"><span class="up" style="--d:7.2">Lightweight JavaScript ports go first. The original plugin is the fallback.</span></div>
           </section>
 
-          <!-- 5 · browse (44-54) -->
-          <section class="scene" data-s="44" data-e="54" data-ch="Sources">
+          <!-- 5 · browse a source -->
+          <section class="scene" data-len="10" data-keys="2.6 right, 4.3 right, 8 select" data-ch="Sources">
             <div class="shot zoomwin" style="--d:.2;left:15cqw;top:7.5cqw;width:70cqw">
               <div class="kb" style="--ox:30%;--oy:62%;--z:1.18;--kd:5.2">
                 <img src="/screenshots/en/site.jpg" alt="A source page in Yingxia with category chips and a poster grid">
@@ -126,8 +126,26 @@
             <div class="subs"><span class="up" style="--d:5.4">All of it, driven by the Siri Remote.</span></div>
           </section>
 
-          <!-- 6 · search (54-64) -->
-          <section class="scene" data-s="54" data-e="64" data-ch="Global Search">
+          <!-- 6 · bilibili, built in -->
+          <section class="scene" data-len="10" data-keys="3 right, 5.5 select" data-ch="">
+            <div class="full fade" style="--d:.1">
+              <div class="kb" style="--ox:40%;--oy:60%;--z:1.16;--kd:4.6"><img src="/screenshots/en/bili.jpg" alt="The built-in Bilibili source: feeds, rankings and zones"></div>
+            </div>
+            <div class="subs" style="animation:gone .3s ease 4.6s both"><span class="up" style="--d:.6">Bilibili comes built in, no subscription needed.</span></div>
+            <div class="subs"><span class="up" style="--d:5">Recommendations, rankings, anime, films and documentaries.</span></div>
+          </section>
+
+          <!-- 7 · bilibili sign-in -->
+          <section class="scene" data-len="7" data-ch="">
+            <div class="full fade" style="--d:.1">
+              <div class="kb" style="--ox:35%;--oy:45%;--z:1.12;--kd:3"><img src="/screenshots/en/bili-signin.jpg" alt="Signing in to Bilibili with a QR code"></div>
+            </div>
+            <div class="subs" style="animation:gone .3s ease 3.6s both"><span class="up" style="--d:.6">Sign in with a QR code from the Bilibili app.</span></div>
+            <div class="subs"><span class="up" style="--d:4">Your following feed, history and favorites come along.</span></div>
+          </section>
+
+          <!-- 8 · global search -->
+          <section class="scene" data-len="10" data-ch="Global Search">
             <div class="shot zoomwin" style="--d:.2;left:4cqw;top:9cqw;width:62cqw">
               <div class="kb" style="--ox:35%;--oy:65%;--z:1.15;--kd:3"><img src="/screenshots/en/search.jpg" alt="Global search streaming results from many sources"></div>
             </div>
@@ -136,7 +154,7 @@
               <div class="bar"><i style="animation:fill 5s linear 1.4s both"></i></div>
               <div class="muted" style="display:flex;justify-content:space-between;font-size:1.25cqw;margin:.4cqw 0 1cqw"><span>Sources answered</span><span><b class="cnt" data-to="19" data-d="1.4" data-dur="5">0</b> / 31</span></div>
               <div class="srow up" style="--d:1.8"><span>瓜子</span><b>68</b></div>
-              <div class="srow up" style="--d:2.4"><span>糯米</span><b>20</b></div>
+              <div class="srow up" style="--d:2.4"><span>哔哩哔哩</span><b>20</b></div>
               <div class="srow up" style="--d:3"><span>奶酪</span><b>20</b></div>
               <div class="srow up" style="--d:3.6"><span>立播</span><b>12</b></div>
               <div class="srow up" style="--d:4.2"><span>我的云盘</span><small>waiting…</small></div>
@@ -146,8 +164,8 @@
             <div class="subs"><span class="up" style="--d:5.4">Results appear as each source answers. Slow ones never hold up the rest.</span></div>
           </section>
 
-          <!-- 7 · player (64-75) -->
-          <section class="scene black" data-s="64" data-e="75" data-ch="Player">
+          <!-- 9 · player -->
+          <section class="scene black" data-len="11" data-keys="1 play, 7.8 select" data-ch="Player">
             <div class="video"><img src="/screenshots/en/home.jpg" alt=""></div>
             <div class="abs up" style="--d:.9;left:5cqw;bottom:16.5cqw"><div style="font-size:3.2cqw;font-weight:700">星河漫游</div><div class="muted" style="font-size:1.4cqw">Episode 1 · <span class="chip sm">HLS · AVPlayer</span></div></div>
             <div class="transport up" style="--d:1"><i style="animation:fill 40s linear 1s both"></i></div>
@@ -165,8 +183,50 @@
             <div class="subs"><span class="up" style="--d:5.6">When a link fails you get a clear screen and Retry, not an endless spinner.</span></div>
           </section>
 
-          <!-- 8 · live (75-84) -->
-          <section class="scene" data-s="75" data-e="84" data-ch="Live TV">
+          <!-- 10 · danmaku -->
+          <section class="scene black" data-len="13" data-keys="7 down, 9.2 select" data-ch="">
+            <div class="full fade" style="--d:.1"><img src="/screenshots/en/bili-clean.jpg" alt="A Bilibili video playing with danmaku over it"></div>
+            <div class="dm" style="top:6cqw;--d:.8">前排！</div>
+            <div class="dm" style="top:9.5cqw;--d:1.6;color:#ffd166">这蓝色绝了</div>
+            <div class="dm" style="top:13cqw;--d:2.2">纳木错 yyds</div>
+            <div class="dm" style="top:6cqw;--d:3.4;color:#8fe3ff">想去西藏了</div>
+            <div class="dm" style="top:16.5cqw;--d:3">4K 看得好清楚</div>
+            <div class="dm" style="top:9.5cqw;--d:4.6">背景音乐是什么？</div>
+            <div class="panel col" style="right:3cqw;top:6cqw;width:31cqw;height:auto;padding-bottom:1.6cqw;animation:zw .45s ease 6.6s both">
+              <h4>Danmaku List</h4>
+              <div class="srow up" style="--d:7"><small>0:03</small><span>前排！</span></div>
+              <div class="srow up" style="--d:7.2"><small>0:41</small><span>这蓝色绝了</span></div>
+              <div class="srow up" style="--d:7.4;animation:up .55s ease 7.4s both,hi .3s ease 9.2s both"><small>2:15</small><span>纳木错 yyds</span></div>
+              <div class="srow up" style="--d:7.6"><small>3:02</small><span>想去西藏了</span></div>
+              <div class="srow up" style="--d:7.8"><small>5:47</small><span>背景音乐是什么？</span></div>
+              <div class="srow up" style="--d:8"><small>8:24</small><span>真正的净土</span></div>
+            </div>
+            <div class="subs" style="animation:gone .3s ease 6.4s both"><span class="up" style="--d:.6">Danmaku fly over the video, in step with playback.</span></div>
+            <div class="subs"><span class="up" style="--d:6.8">Open the list to jump to any comment.</span></div>
+          </section>
+
+          <!-- 11 · quality -->
+          <section class="scene black" data-len="8" data-keys="2.2 down, 3.4 down, 4.1 select" data-ch="">
+            <div class="full dim"><img src="/screenshots/en/bili-clean.jpg" alt=""></div>
+            <div class="panel qmenu" style="right:5cqw;top:7cqw;width:24cqw;padding:1.2cqw;animation:zw .45s ease .5s both">
+              <h4 style="padding:0 .8cqw">Quality</h4>
+              <div class="qrows">
+              <i class="qsel"></i>
+              <div class="li">Auto <small class="qmark" style="animation:gone .2s ease 3.9s both"><i class="sf" data-sf="checkmark"></i></small></div>
+              <div class="li">4K</div>
+              <div class="li">1080P60 <small class="qmark" style="animation:fade .2s ease 4s both"><i class="sf" data-sf="checkmark"></i></small></div>
+              <div class="li">1080P+</div>
+              <div class="li">1080P</div>
+              <div class="li">720P</div>
+              </div>
+            </div>
+            <div class="abs up" style="--d:4.4;left:5cqw;top:7cqw"><span class="toast">1080P60 · HEVC</span></div>
+            <div class="subs" style="animation:gone .3s ease 3.8s both"><span class="up" style="--d:.6">Bilibili’s own HD streams, up to 4K.</span></div>
+            <div class="subs"><span class="up" style="--d:4.2">Choose the quality right from the player.</span></div>
+          </section>
+
+          <!-- 12 · live tv -->
+          <section class="scene" data-len="9" data-keys="2 down, 3 down" data-ch="Live TV">
             <div class="shot zoomwin" style="--d:.2;left:4cqw;top:9cqw;width:62cqw">
               <div class="kb"><img src="/screenshots/en/live.jpg" alt="Live TV with channel groups and a channel list">
                 <i class="focusring" style="left:7.7%;width:84.6%;height:8.4%;animation:ring8 4s linear both"></i>
@@ -184,8 +244,47 @@
             <div class="subs"><span class="up" style="--d:4.8">Search channels and keep your favorites close.</span></div>
           </section>
 
-          <!-- 9 · devices & privacy (84-92) -->
-          <section class="scene" data-s="84" data-e="92" data-ch="Every screen">
+          <!-- 13 · bilibili live -->
+          <section class="scene" data-len="11" data-keys="6 right" data-ch="">
+            <div class="full fade" style="--d:.1">
+              <div class="kb" style="--ox:20%;--oy:40%;--z:1.2;--kd:4.4"><img src="/screenshots/en/bili-live.jpg" alt="Bilibili Live rooms as cards, by area"></div>
+            </div>
+            <div class="full" style="animation:fade .5s ease 4.9s both">
+              <div class="kb" style="--z:1.06;--kd:5"><img src="/screenshots/en/bili-live-play.jpg" alt="A Bilibili live room playing, from the driver’s cab of a train"></div>
+            </div>
+            <div class="dm" style="top:6cqw;--d:5.6">前方隧道！</div>
+            <div class="dm" style="top:9.5cqw;--d:6.3;color:#ffd166">司机师傅辛苦了</div>
+            <div class="dm" style="top:13cqw;--d:6.9">这段风景太美了</div>
+            <div class="dm" style="top:6cqw;--d:7.8;color:#8fe3ff">晚上好！</div>
+            <div class="dm" style="top:16.5cqw;--d:8.2">听着车声好安心</div>
+            <div class="subs" style="animation:gone .3s ease 4.8s both"><span class="up" style="--d:.6">Bilibili Live: the busiest rooms in every area.</span></div>
+            <div class="subs"><span class="up" style="--d:5.2">Live chat arrives as danmaku.</span></div>
+          </section>
+
+          <!-- 14 · cast from a phone -->
+          <section class="scene" data-len="12" data-ch="Cast">
+            <div class="phone zoomwin" style="--d:.3;left:12cqw;top:5cqw">
+              <div class="scr">
+                <img src="/screenshots/en/bili-clean.jpg" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover">
+                <div class="ph-meta"><b>西藏·纳木错 座落在苍蓝天空的圣湖</b><i></i><i style="width:62%"></i><span><i></i><i></i><i></i><i></i></span></div>
+                <div class="sheet up" style="--d:1.4">
+                  <b class="sheet-h">投屏</b>
+                  <div class="dev-row" style="animation:pick .3s ease 3.4s both"><i class="sf" data-sf="tv"></i>映匣 · Apple TV</div>
+                  <div class="dev-row dim"><i class="sf" data-sf="hifispeaker.fill"></i>Living Room Speaker</div>
+                </div>
+              </div>
+            </div>
+            <div class="abs draw" style="--d:4;left:35cqw;top:24cqw;width:12cqw;border-top:.25cqw dashed rgba(255,255,255,.4)"></div>
+            <div class="shot zoomwin" style="--d:4.6;left:49cqw;top:10cqw;width:42cqw">
+              <img src="/screenshots/en/bili-danmaku.jpg" alt="The cast video playing on Apple TV">
+            </div>
+            <div class="abs up" style="--d:5.4;left:49cqw;top:35.5cqw;display:flex;gap:.8cqw"><span class="chip acc">HD</span><span class="chip">Danmaku</span><span class="chip">Pause · Seek · Stop</span></div>
+            <div class="subs" style="animation:gone .3s ease 5s both"><span class="up" style="--d:.6">Cast from the Bilibili app on your phone.</span></div>
+            <div class="subs"><span class="up" style="--d:5.4">Your Apple TV plays the HD stream, with danmaku.</span></div>
+          </section>
+
+          <!-- 15 · devices & privacy -->
+          <section class="scene" data-len="8" data-ch="Every screen">
             <div class="devices" style="top:10cqw">
               <div class="dev pop" style="--d:.3"><div class="d-tv"></div><span>Apple TV</span></div>
               <div class="dev pop" style="--d:.6"><div class="d-pad"></div><span>iPad</span></div>
@@ -202,15 +301,14 @@
             <div class="subs"><span class="up" style="--d:3.8">No account and no analytics. Everything stays on your device.</span></div>
           </section>
 
-          <!-- 10 · outro (92-100) -->
-          <section class="scene black" data-s="92" data-e="100" data-ch="">
+          <!-- 16 · outro -->
+          <section class="scene black" data-len="8" data-ch="">
             <img class="abs app-icon pop" src="/assets/icon-512.png" alt="" style="--d:.2;left:43cqw;top:6cqw;width:14cqw">
             <div class="abs big center up" style="--d:.8;top:22cqw;font-size:5.6cqw">Yingxia <span class="muted" style="font-weight:500">映匣</span></div>
             <div class="abs center up" style="--d:1.2;top:30cqw;font-size:2.2cqw">All your sources. One big screen.</div>
             <div class="abs center up" style="--d:2;top:36cqw;display:flex;justify-content:center;gap:1cqw"><span class="chip">Apple TV · tvOS 26</span><span class="chip">iPhone &amp; iPad · iOS 18</span><span class="chip">Mac · macOS 15</span></div>
-            <div class="abs center up" style="--d:2.8;top:42cqw"><span class="chip acc" style="font-size:1.6cqw">Coming soon</span></div>
-            <div class="abs center muted up" style="--d:3.6;top:48cqw;font-size:1.2cqw">Yingxia doesn’t host or provide any content. It plays the subscriptions you add.</div>
-            <div class="abs center up" style="--d:4.2;top:51.5cqw;font-size:1.5cqw;font-weight:600">yingxia.getmegaportal.com</div>
+            <div class="abs center muted up" style="--d:3;top:42cqw;font-size:1.2cqw">Yingxia doesn’t host or provide any content. It plays the subscriptions you add.</div>
+            <div class="abs center up" style="--d:3.6;top:45.5cqw;font-size:1.5cqw;font-weight:600">yingxia.getmegaportal.com</div>
           </section>
 
         </div>
@@ -235,7 +333,7 @@
 
   <div class="ctl">
     <button id="pp" type="button">Pause</button>
-    <input id="seek" type="range" min="0" max="100" step="0.05" value="0" aria-label="Seek">
-    <output id="clock">0:00 / 1:40</output>
+    <input id="seek" type="range" min="0" max="0" step="0.05" value="0" aria-label="Seek">
+    <output id="clock">0:00 / 0:00</output>
   </div>
 </div>
