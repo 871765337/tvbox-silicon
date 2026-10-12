@@ -606,7 +606,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\nrsync -a \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
+			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\nrsync -a --delete \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
 		};
 		A4DF47F9E069B67C04C29D12 /* Embed on-device Java runtime */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -625,7 +625,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\nrsync -a \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
+			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\nrsync -a --delete \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
