@@ -7,6 +7,7 @@ import type { Lang } from "../i18n/strings";
 import css from "./film.css?inline";
 import markup from "./film.html?raw";
 import { translateFilm, tr } from "./film-i18n";
+import { artSvg } from "./film-art";
 import { sfSvg } from "../sf-icons";
 
 const FADE = 0.45;
@@ -35,11 +36,8 @@ export function mountFilm(host: HTMLElement, { lang, startAt, keys = false }: Fi
   translateFilm(root, lang);
   // SF Symbols: each <i data-sf="name"> becomes the traced symbol, sized like a glyph of the surrounding text.
   for (const icon of root.querySelectorAll<HTMLElement>("[data-sf]")) icon.outerHTML = sfSvg(icon.dataset.sf!);
-  // Same screenshot folders as the site: Korean uses the English app UI.
-  const shots = lang === "ja" || lang === "zh-Hant" ? lang : "en";
-  for (const img of root.querySelectorAll<HTMLImageElement>('img[src^="/screenshots/en/"]')) {
-    img.src = img.getAttribute("src")!.replace("/en/", `/${shots}/`);
-  }
+  // The screens are mocks, not screenshots: <i data-art="name"> becomes a drawn poster or video frame.
+  for (const el of root.querySelectorAll<HTMLElement>("[data-art]")) el.outerHTML = artSvg(el.dataset.art!);
 
   const scenes = Array.from(root.querySelectorAll<HTMLElement>(".scene"));
   const times: [number, number][] = [];
