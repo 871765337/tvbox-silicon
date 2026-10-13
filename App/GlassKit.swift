@@ -564,12 +564,14 @@ private actor PosterLoader {
 struct PosterImage: View {
     let url: URL?
     var headers: [String: String] = [:]
+    /// Shown until the image loads, and when there is none.
+    var symbol = "film"
     @State private var bitmap: PosterBitmap?
     private var resource: PosterResource? { url.map { PosterResource(url: $0, headers: headers) } }
     var body: some View {
         ZStack {
             Color(white: 0.20)
-            Image(systemName: "film").font(.title2).foregroundStyle(.white.opacity(0.55))
+            Image(systemName: symbol).font(.title2).foregroundStyle(.white.opacity(0.55))
             if let bitmap { Color.clear.overlay { Image(decorative: bitmap.image, scale: 1).resizable().scaledToFill() } }
         }
         // A filled cover is wider than its frame; clip its drawing and its hit area, or the overflow
