@@ -13,8 +13,8 @@ We recommend **[cider](https://github.com/Battzz/cider-cli)**, a free command-li
 
   | Device | IPA | Bundle identifier |
   | --- | --- | --- |
-  | iPhone / iPad | [Yingxia-1.5-ios.ipa](https://download.getmegaportal.com/yingxia/1.5/Yingxia-1.5-ios.ipa) | `com.tvbox.yingxia.ios` |
-  | Apple TV | [Yingxia-1.5-tvos.ipa](https://download.getmegaportal.com/yingxia/1.5/Yingxia-1.5-tvos.ipa) | `com.tvbox.yingxia.tv` |
+  | iPhone / iPad | [Yingxia-1.5.1-ios.ipa](https://download.getmegaportal.com/yingxia/1.5.1/Yingxia-1.5.1-ios.ipa) | `com.tvbox.yingxia.ios` |
+  | Apple TV | [Yingxia-1.5.1-tvos.ipa](https://download.getmegaportal.com/yingxia/1.5.1/Yingxia-1.5.1-tvos.ipa) | `com.tvbox.yingxia.tv` |
 
   The two IPAs are not interchangeable. To build your own, see the [developer guide](DEVELOPMENT.md).
 

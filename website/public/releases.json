@@ -1,6 +1,65 @@
 {
   "releases": [
     {
+      "version": "1.5.1",
+      "date": "2026-10-13",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.5.1/Yingxia-1.5.1-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "gearshape.fill",
+          "title": {
+            "en": "Settings, redesigned",
+            "zh-Hans": "全新设置",
+            "zh-Hant": "全新設定",
+            "ja": "設定を一新"
+          },
+          "detail": {
+            "en": "On Apple TV, Settings looks like the TV’s own: the app on the left, a list on the right, and every row shows its current value. On iPhone, iPad and Mac it’s a native list, like the Settings app and System Settings. Each subscription now has its own page to switch it on or off, reorder or remove it.",
+            "zh-Hans": "在 Apple TV 上，设置与系统自带的设置一致：左边是应用，右边是列表，每一行都直接显示当前的值。在 iPhone、iPad 和 Mac 上，它是原生列表，与“设置”App 和“系统设置”一样。每个订阅都有自己的页面，可以开关、调整顺序或移除。",
+            "zh-Hant": "在 Apple TV 上，設定與系統內建的設定一致：左邊是 App，右邊是列表，每一列都直接顯示目前的值。在 iPhone、iPad 和 Mac 上，它是原生列表，與「設定」App 和「系統設定」一樣。每個訂閱都有自己的頁面，可以開關、調整順序或移除。",
+            "ja": "Apple TV の設定は本体の設定と同じ見た目になりました。左にアプリ、右にリストが並び、各項目に現在の値が表示されます。iPhone、iPad、Mac では「設定」App や「システム設定」と同じネイティブのリストです。配信設定ごとに専用のページがあり、オン／オフ、並べ替え、削除ができます。"
+          }
+        },
+        {
+          "symbol": "magnifyingglass",
+          "platforms": [
+            "tvos"
+          ],
+          "title": {
+            "en": "A Search button on Apple TV",
+            "zh-Hans": "Apple TV 上的搜索按钮",
+            "zh-Hant": "Apple TV 上的搜尋按鈕",
+            "ja": "Apple TV に検索ボタン"
+          },
+          "detail": {
+            "en": "On a source’s page and in Global Search, type with the on-screen keyboard, then select the button showing your words to search. Stop and Continue sit next to the results.",
+            "zh-Hans": "在点播源页面和全局搜索中，用屏幕键盘输入后，选择显示着搜索内容的按钮即可开始搜索。“停止”和“继续”就在结果旁边。",
+            "zh-Hant": "在隨選來源頁面和全域搜尋中，用螢幕鍵盤輸入後，選擇顯示著搜尋內容的按鈕即可開始搜尋。「停止」和「繼續」就在結果旁邊。",
+            "ja": "配信ソースのページと横断検索では、画面のキーボードで入力し、入力した語句が表示されたボタンを選ぶと検索が始まります。「停止」と「続ける」は結果の横にあります。"
+          }
+        },
+        {
+          "symbol": "paintpalette.fill",
+          "title": {
+            "en": "A calmer look",
+            "zh-Hans": "更沉静的外观",
+            "zh-Hant": "更沉靜的外觀",
+            "ja": "落ち着いたデザイン"
+          },
+          "detail": {
+            "en": "Buttons and selections are now white and black, like the Apple TV app, the backgrounds take the deep blue of the icon, and colour is left to the posters. Source filters no longer get cut off at the edges.",
+            "zh-Hans": "按钮和选中状态改为黑白两色，与 Apple TV App 一致；背景采用图标的深蓝色，色彩留给海报。点播源的筛选标签也不会再在边缘被截断。",
+            "zh-Hant": "按鈕和選取狀態改為黑白兩色，與 Apple TV App 一致；背景採用圖示的深藍色，色彩留給海報。隨選來源的篩選標籤也不會再在邊緣被截斷。",
+            "ja": "ボタンや選択中の項目は Apple TV App と同じく白と黒になり、背景はアイコンの深い青に。色はポスターに任せました。配信ソースの絞り込みが端で切れることもなくなりました。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.5",
       "date": "2026-10-13",
       "links": {
