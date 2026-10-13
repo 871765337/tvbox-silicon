@@ -10,7 +10,8 @@ struct BilibiliTests {
         let shown = subscription.withBuiltInSites()
         #expect(shown.sites.map(\.key) == ["a", Bilibili.siteKey, Hongguo.siteKey])
         #expect(shown.withBuiltInSites().sites.count == 3)
-        #expect(shown.lives.map(\.isBuiltIn) == [true] && shown.withBuiltInSites().lives.count == 1)
+        // The built-in live platforms (Bilibili, Douyu, Huya, Douyin), each added once.
+        #expect(shown.lives.map(\.platform) == LivePlatform.allCases && shown.withBuiltInSites().lives.count == LivePlatform.allCases.count)
         #expect(BilibiliLive.room(URL(string: "bilibili-live://room/22828499")!) == 22828499)
         let site = Site.bilibili
         #expect(site.isBuiltIn && site.runsLitePort)

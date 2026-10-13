@@ -37,7 +37,7 @@ extension Subscription {
     /// document keeps only its own.
     public func withBuiltInSites() -> Subscription {
         let sites = self.sites + Site.builtInSites.filter { builtin in !self.sites.contains { $0.key == builtin.key } }
-        let lives = self.lives.contains(where: \.isBuiltIn) ? self.lives : [.bilibili] + self.lives
+        let lives = LiveSource.builtIn.filter { builtin in !self.lives.contains { $0.url == builtin.url } } + self.lives
         return Subscription(origin: origin, importedAt: importedAt, sites: sites, lives: lives, raw: raw)
     }
 }

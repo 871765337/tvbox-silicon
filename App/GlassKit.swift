@@ -379,6 +379,8 @@ struct Chip: View {
     var fill = false
     /// Leads with the Bilibili mark.
     var mark = false
+    /// A status dot after the title, such as a source's health.
+    var dot: Color? = nil
     let action: () -> Void
     @Environment(\.stripDrag) private var drag
     var body: some View {
@@ -386,6 +388,7 @@ struct Chip: View {
             HStack(spacing: 5) {
                 if mark { BilibiliGlyph(size: 22).foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(BilibiliMark.blue)) }
                 Text(title).lineLimit(1)
+                if let dot { Image(systemName: "circle.fill").font(.system(size: 12)).foregroundStyle(dot) }
             }.padding(.horizontal, 4).frame(maxWidth: fill ? .infinity : nil)
         }.accessibilityAddTraits(selected ? [.isSelected] : [])
         #if os(tvOS)

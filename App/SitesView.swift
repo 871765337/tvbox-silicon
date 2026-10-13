@@ -23,6 +23,50 @@ struct SitesView: View {
     }
 }
 
+extension Store {
+    /// How a source has been answering lately; see `SourceHealth`.
+    func health(of site: Site) -> SourceHealth.Status {
+        subscription.map { SourceHealth.shared.status(site, origin: $0.origin) } ?? .unknown
+    }
+}
+
+extension SourceHealth.Status {
+    /// The dot that marks it; none until the source has been asked.
+    var tint: Color? {
+        switch self {
+        case .unknown: nil
+        case .healthy: .green
+        case .unstable: Brand.amber
+        case .failing: Brand.rose
+        }
+    }
+    /// Only trouble: in search results every listed source has just answered.
+    var warning: Color? { self == .unstable || self == .failing ? tint : nil }
+    var summary: String {
+        switch self {
+        case .unknown: ""
+        case .healthy: L10n.text("Responding normally")
+        case .unstable: L10n.text("Slow or unreliable lately")
+        case .failing: L10n.text("Failing; searched last for now")
+        }
+    }
+}
+
+/// A source's health as a dot beside its name.
+struct SourceHealthDot: View {
+    let status: SourceHealth.Status
+    #if os(tvOS)
+    private let size: CGFloat = 14
+    #else
+    private let size: CGFloat = 8
+    #endif
+    var body: some View {
+        if let tint = status.tint {
+            Image(systemName: "circle.fill").font(.system(size: size)).foregroundStyle(tint).accessibilityLabel(status.summary)
+        }
+    }
+}
+
 /// A source as an app-icon tile plus its name: the name's emoji becomes the icon, its taglines
 /// ("不卡", "秒播") and engine a quiet second line, so a page of sources reads like a launcher
 /// rather than a wall of identical badges. Use with `tileButton()`: on tvOS the card lights up itself.
@@ -57,8 +101,11 @@ struct SiteCard: View {
                     }
                 }
             VStack(alignment: .leading, spacing: 4) {
-                Text(label.parts[0]).font(.headline).lineLimit(1)
-                    .foregroundStyle(focused ? Color.black : runs ? Color.primary : Color.secondary)
+                HStack(spacing: 6) {
+                    Text(label.parts[0]).font(.headline).lineLimit(1)
+                        .foregroundStyle(focused ? Color.black : runs ? Color.primary : Color.secondary)
+                    if runs { SourceHealthDot(status: store.health(of: site)) }
+                }
                 if !detail.isEmpty {
                     Text(detail).font(.subheadline).lineLimit(1)
                         .foregroundStyle(focused ? Color.black.opacity(0.6) : runs ? Color.secondary : Brand.amber)

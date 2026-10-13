@@ -47,9 +47,13 @@ enum QALaunch {
             try? await Task.sleep(for: .seconds(2))
             store.searchVideos(String(page.dropFirst(7)))
         }
-        // `-qaPlayLive <room>` opens a Bilibili Live room in the player.
-        if let room = UserDefaults.standard.string(forKey: "qaPlayLive"), let url = URL(string: "\(BilibiliLive.scheme)://room/\(room)") {
-            store.playing = Channel(name: "Live \(room)", group: L10n.text("Bilibili Live"), url: url)
+        // `-qaPlayLive [<platform>:]<room>` opens a live room (Bilibili by default) in the player.
+        if let target = UserDefaults.standard.string(forKey: "qaPlayLive") {
+            let parts = target.split(separator: ":", maxSplits: 1).map(String.init)
+            let platform = parts.count == 2 ? LivePlatform(rawValue: parts[0]) ?? .bilibili : .bilibili
+            if let room = parts.last, let url = URL(string: "\(platform.scheme)://room/\(room)") {
+                store.playing = Channel(name: "Live \(room)", group: platform.name, url: url)
+            }
         }
         // `-qaPlay <site key>:<video id>[:<episode index>]` opens that source's video in the player.
         if let target = UserDefaults.standard.string(forKey: "qaPlay"), let config = store.subscription {
@@ -153,7 +157,23 @@ enum QALaunch {
             case "cache": CacheSettingsView()
             case "licenses": LicensesView()
             case "bilibili-account": BilibiliAccountView()
-            case "bilibili-live": BilibiliLiveView()
+            case "douyin-account": DouyinAccountView()
+            #if !os(tvOS)
+            case "douyin-login": DouyinLoginView { _ in }
+            #endif
+            #if os(iOS)
+            // The sheet a scanned Apple TV code opens, for a TV at a made-up address.
+            case "douyin-handoff":
+                if let link = DouyinHandoff.Link(URL(string: "yingxia://douyin-login?host=192.168.1.20&port=50000&key=" + String(repeating: "A", count: 43))!) {
+                    DouyinHandoffView(link: link)
+                }
+            #endif
+            case "bilibili-live": LivePlatformView(platform: .bilibili)
+            // `-qaPage live:<douyu|huya|douyin|bilibili>`, with `-qaQuery <text>` to show its search.
+            case "live":
+                if let platform = parts.dropFirst().first.flatMap(LivePlatform.init(rawValue:)) {
+                    LivePlatformView(platform: platform, initialQuery: UserDefaults.standard.string(forKey: "qaQuery") ?? "")
+                }
             case "danmaku-list": QADanmakuList()
             #if !os(macOS)
             case "cloud-login": CloudQRLoginView(drive: parts.dropFirst().first == "uc" ? .uc : .quark) {}
@@ -165,7 +185,7 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "cache", "licenses", "cloud-login", "bilibili-account", "bilibili-live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "cache", "licenses", "cloud-login", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
     }
 }
 

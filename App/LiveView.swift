@@ -3,14 +3,27 @@ import TVCore
 
 struct LiveView: View {
     @Environment(Store.self) private var store
+    @State private var query = ""
+    private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
     var body: some View {
         Group {
             if let config = store.subscription, !config.lives.isEmpty {
                 ScrollView {
-                    LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
-                        ForEach(config.lives) { SourceCard(source: $0) }
+                    Group {
+                        if trimmed.isEmpty {
+                            LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
+                                ForEach(config.lives) { SourceCard(source: $0) }
+                            }
+                        } else {
+                            LiveSearchResults(query: trimmed, sources: config.lives)
+                        }
                     }.pageContainer()
                 }
+                .catalogSearchable(text: $query, prompt: L10n.text("Search live rooms and channels"))
+                #if DEBUG
+                // `-qaSection live -qaQuery <text>` shows the Live tab's search.
+                .task { if QALaunch.page == nil, let text = UserDefaults.standard.string(forKey: "qaQuery") { query = text } }
+                #endif
             } else {
                 EmptyPage(symbol: AppSection.live.icon, title: L10n.text("Connect a Live Subscription"),
                           message: L10n.text("Import a TVBox configuration containing live playlists in Settings first."),
@@ -25,9 +38,9 @@ struct LiveView: View {
 struct SourceCard: View {
     let source: LiveSource
     var body: some View {
-        RouteLink { if source.isBuiltIn { BilibiliLiveView() } else { ChannelListView(source: source) } } label: {
+        RouteLink { if let platform = source.platform { LivePlatformView(platform: platform) } else { ChannelListView(source: source) } } label: {
             HStack(spacing: 14) {
-                if source.isBuiltIn { BilibiliMark(size: 46) }
+                if let platform = source.platform { LivePlatformMark(platform: platform, size: 46) }
                 else { IconTile(symbol: "antenna.radiowaves.left.and.right", tint: Brand.accent, size: 46) }
                 CardTitle(text: source.name)
                 Spacer(minLength: 0)

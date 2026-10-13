@@ -9,8 +9,16 @@ import TVCore
     let playbackDefaults: UserDefaults
     let pinnedSources: PinnedSources
     var resumingHistoryID: String?
+    /// Every enabled subscription merged in list order, plus the built-in sources.
     var subscription: Subscription?
+    /// The address being typed in to add a subscription.
     var subscriptionAddress: String
+    /// Every subscription the viewer added, in the order they merge.
+    var subscriptions: [SubscriptionEntry] = []
+    /// Why a subscription last failed to refresh, by address; its last good copy stays in use.
+    var subscriptionErrors: [String: String] = [:]
+    /// The last good copy of each subscription, by address.
+    private(set) var documents: [String: Subscription] = [:]
     var favorites: [Channel] = []
     var importing = false
     var error: String?
@@ -47,15 +55,29 @@ import TVCore
         #endif
         pinnedSources = PinnedSources(defaults: playbackDefaults)
         autoPlayNext = defaults.object(forKey: "autoPlayNextEpisode") == nil || defaults.bool(forKey: "autoPlayNextEpisode")
-        subscriptionAddress = defaults.string(forKey: "subscriptionAddress") ?? Self.defaultURL
-        let cached = (try? Data(contentsOf: Self.subscriptionFile)) ?? defaults.data(forKey: "subscription")
-        if let cached { subscription = (try? JSONDecoder().decode(Subscription.self, from: cached))?.withBuiltInSites() }
-        if let subscription { Self.registerPlugins(subscription) }
-        // Older builds kept the whole subscription in defaults; move it to the file and drop the key.
-        if persistsChanges, let legacy = defaults.data(forKey: "subscription") {
-            try? Self.saveSubscription(legacy)
+        let saved = defaults.data(forKey: "subscriptions").flatMap { try? JSONDecoder().decode([SubscriptionEntry].self, from: $0) }
+        var entries = saved ?? [], copies: [String: Subscription] = [:]
+        for entry in entries {
+            if let data = try? Data(contentsOf: Self.file(for: entry)),
+               let value = try? JSONDecoder().decode(Subscription.self, from: data) { copies[entry.address] = value }
+        }
+        // Builds before several subscriptions kept one, in subscription.json, and before that in defaults.
+        let legacyAddress = saved == nil ? defaults.string(forKey: "subscriptionAddress") : nil
+        let legacy = legacyAddress == nil ? nil : (try? Data(contentsOf: Self.legacyFile)) ?? defaults.data(forKey: "subscription")
+        if let legacyAddress {
+            entries = [SubscriptionEntry(address: legacyAddress)]
+            copies[legacyAddress] = legacy.flatMap { try? JSONDecoder().decode(Subscription.self, from: $0) }
+        }
+        subscriptions = entries
+        documents = copies
+        subscriptionAddress = entries.isEmpty ? Self.defaultURL : ""
+        if persistsChanges, let legacyAddress {
+            if let legacy, copies[legacyAddress] != nil { try? Self.save(legacy, to: Self.file(for: entries[0])) }
+            saveSubscriptionList()
+            try? FileManager.default.removeItem(at: Self.legacyFile)
             defaults.removeObject(forKey: "subscription")
         }
+        rebuildSubscription(resetting: false)
         if let data = defaults.data(forKey: "favorites") { favorites = (try? JSONDecoder().decode([Channel].self, from: data)) ?? [] }
         DownloadLibrary.shared.resolver = { [weak self] item in
             guard let self else { throw CancellationError() }
@@ -83,48 +105,135 @@ import TVCore
         return address == channel.url ? channel : Channel(name: channel.name, group: channel.group, url: address, headers: channel.headers)
     }
     /// Large subscriptions run to megabytes, past the defaults size limit that aborts tvOS apps,
-    /// so the parsed subscription lives in a file. tvOS only offers Caches, which the system may purge;
-    /// `restoreSubscription()` refetches it from the saved address when that happens.
-    private static var subscriptionFile: URL {
+    /// so each parsed subscription lives in a file. tvOS only offers Caches, which the system may purge;
+    /// `restoreSubscription()` refetches what is gone from the saved addresses.
+    private static var subscriptionDirectory: URL {
         #if os(tvOS)
-        let directory = URL.cachesDirectory
+        return URL.cachesDirectory
         #else
-        let directory = URL.applicationSupportDirectory
+        return URL.applicationSupportDirectory
         #endif
-        return directory.appending(path: "subscription.json")
     }
-    private static func saveSubscription(_ data: Data) throws {
-        try FileManager.default.createDirectory(at: subscriptionFile.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try data.write(to: subscriptionFile, options: .atomic)
+    private static var legacyFile: URL { subscriptionDirectory.appending(path: "subscription.json") }
+    private static func file(for entry: SubscriptionEntry) -> URL {
+        subscriptionDirectory.appending(path: "subscriptions").appending(path: entry.cacheName)
+    }
+    private static func save(_ data: Data, to file: URL) throws {
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: file, options: .atomic)
     }
     /// Lets sources on a shared spider borrow classes from the subscription's other plugin archives.
     private static func registerPlugins(_ subscription: Subscription) {
         let archives = subscription.pluginArchives
         Task { await PluginLocator.shared.use(archives) }
     }
-    /// Refetches a previously imported subscription whose cached copy is gone.
+    /// Refetches enabled subscriptions whose cached copy is gone.
     func restoreSubscription() async {
-        guard subscription == nil, defaults.string(forKey: "subscriptionAddress") != nil else { return }
-        await importSubscription()
+        let missing = subscriptions.filter { $0.enabled && documents[$0.address] == nil }
+        guard !missing.isEmpty, !importing else { return }
+        importing = true
+        defer { importing = false }
+        await fetch(missing)
     }
+    /// Adds the typed address, or refreshes it when it is already in the list. A directory (多仓)
+    /// adds every subscription it lists, switched off, for the viewer to choose from.
     func importSubscription(address: String? = nil) async {
         guard !importing else { return }
         importing = true; error = nil; notice = nil
         defer { importing = false }
+        let typed = (address ?? subscriptionAddress).trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            let url = try WebAddress.resolve(address ?? subscriptionAddress)
-            let value = try await http.subscription(url)
-            if persistsChanges {
-                try Self.saveSubscription(JSONEncoder().encode(value))
-                defaults.set(url.absoluteString, forKey: "subscriptionAddress")
+            let url = try WebAddress.resolve(typed.isEmpty ? Self.defaultURL : typed)
+            switch try await http.subscriptionImport(url) {
+            case .subscription(let value):
+                let entry = SubscriptionEntry(address: url.absoluteString)
+                if let index = subscriptions.firstIndex(where: { $0.address == entry.address }) { subscriptions[index].enabled = true }
+                else { subscriptions.append(entry) }
+                keep(value, for: entry)
+                if persistsChanges { defaults.set(url.absoluteString, forKey: "subscriptionAddress") }
+                notice = L10n.text("Imported sources: %lld · Live playlists: %lld", value.sites.count, value.lives.count)
+            case .directory(let entries):
+                let added = entries.filter { entry in !subscriptions.contains { $0.address == entry.address } }
+                subscriptions += added
+                notice = L10n.text("This address lists %lld subscriptions. They were added switched off; turn on the ones you want.", added.count)
             }
-            subscriptionAddress = url.absoluteString
-            searchModel.reset()
-            recommendationModel.reset()
-            subscription = value.withBuiltInSites()
-            Self.registerPlugins(value)
-            notice = L10n.text("Imported sources: %lld · Live playlists: %lld", value.sites.count, value.lives.count)
+            if address == nil { subscriptionAddress = "" }
+            saveSubscriptionList()
+            rebuildSubscription()
         } catch { self.error = L10n.text("Import failed: %@", error.localizedDescription) }
+    }
+    /// Fetches every enabled subscription again; one that fails keeps its last good copy.
+    func refreshSubscriptions() async {
+        guard !importing else { return }
+        importing = true; error = nil; notice = nil
+        defer { importing = false }
+        await fetch(subscriptions.filter(\.enabled))
+        let failed = subscriptions.filter { $0.enabled && subscriptionErrors[$0.address] != nil }.count
+        if failed > 0 { notice = L10n.text("%lld subscriptions could not be refreshed; their last copies stay in use.", failed) }
+    }
+    func setSubscription(_ entry: SubscriptionEntry, enabled: Bool) async {
+        guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { return }
+        subscriptions[index].enabled = enabled
+        saveSubscriptionList()
+        if enabled, documents[entry.address] == nil { await restoreSubscription() } else { rebuildSubscription() }
+    }
+    func removeSubscription(_ entry: SubscriptionEntry) {
+        subscriptions.removeAll { $0.address == entry.address }
+        documents[entry.address] = nil; subscriptionErrors[entry.address] = nil
+        if persistsChanges { try? FileManager.default.removeItem(at: Self.file(for: entry)) }
+        saveSubscriptionList()
+        rebuildSubscription()
+    }
+    /// Moves a subscription one place up (-1) or down (1); earlier subscriptions win duplicate sources.
+    func moveSubscription(_ entry: SubscriptionEntry, by offset: Int) {
+        guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }),
+              subscriptions.indices.contains(index + offset) else { return }
+        subscriptions.swapAt(index, index + offset)
+        saveSubscriptionList()
+        rebuildSubscription()
+    }
+
+    /// Fetches subscriptions side by side, keeps what arrives, and shows the merged result. A
+    /// subscription that turns out to be a directory is replaced by the ones it lists, switched off.
+    private func fetch(_ entries: [SubscriptionEntry]) async {
+        let http = http
+        let results = await withTaskGroup(of: (SubscriptionEntry, Result<SubscriptionImport, any Error>).self) { group in
+            for entry in entries {
+                group.addTask {
+                    do { return (entry, .success(try await http.subscriptionImport(WebAddress.resolve(entry.address)))) }
+                    catch { return (entry, .failure(error)) }
+                }
+            }
+            var all: [(SubscriptionEntry, Result<SubscriptionImport, any Error>)] = []
+            for await result in group { all.append(result) }
+            return all
+        }
+        for (entry, result) in results {
+            switch result {
+            case .success(.subscription(let value)): keep(value, for: entry)
+            case .success(.directory(let listed)):
+                guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { continue }
+                let known = Set(subscriptions.map(\.address))
+                subscriptions.replaceSubrange(index...index, with: listed.filter { !known.contains($0.address) })
+            case .failure(let error): subscriptionErrors[entry.address] = error.localizedDescription
+            }
+        }
+        saveSubscriptionList()
+        rebuildSubscription()
+    }
+    private func keep(_ value: Subscription, for entry: SubscriptionEntry) {
+        documents[entry.address] = value
+        subscriptionErrors[entry.address] = nil
+        if persistsChanges, let data = try? JSONEncoder().encode(value) { try? Self.save(data, to: Self.file(for: entry)) }
+    }
+    private func saveSubscriptionList() {
+        if persistsChanges { defaults.set(try? JSONEncoder().encode(subscriptions), forKey: "subscriptions") }
+    }
+    /// Shows every enabled subscription that has a copy, merged in list order.
+    private func rebuildSubscription(resetting: Bool = true) {
+        if resetting { searchModel.reset(); recommendationModel.reset() }
+        subscription = Subscription.merge(subscriptions.filter(\.enabled).compactMap { documents[$0.address] })?.withBuiltInSites()
+        if let subscription { Self.registerPlugins(subscription) }
     }
     func searchVideos(_ title: String) {
         guard let config = subscription else { return }
@@ -136,11 +245,15 @@ import TVCore
         section = .search
     }
     func toggleFavorite(_ channel: Channel) {
-        if let index = favorites.firstIndex(where: { $0.id == channel.id }) { favorites.remove(at: index) }
+        if let index = favorites.firstIndex(where: { Self.same($0, channel) }) { favorites.remove(at: index) }
         else { favorites.append(channel) }
         defaults.set(try? JSONEncoder().encode(favorites), forKey: "favorites")
     }
-    func isFavorite(_ channel: Channel) -> Bool { favorites.contains { $0.id == channel.id } }
+    func isFavorite(_ channel: Channel) -> Bool { favorites.contains { Self.same($0, channel) } }
+    /// A live room's title changes while it streams, so rooms match by their address.
+    private static func same(_ saved: Channel, _ channel: Channel) -> Bool {
+        saved.id == channel.id || (LiveCatalog.isRoom(channel.url) && saved.url == channel.url)
+    }
 
     func orderedSites(_ config: Subscription) -> [Site] {
         let sites = SourceStrategy.arrange(config.sites) { !$0.hidden && $0.canBrowse(jarURL: config.spiderURL) }
@@ -201,8 +314,9 @@ import TVCore
 
     func resumeHistory(_ entry: PlaybackHistoryEntry) async {
         guard resumingHistoryID == nil else { return }
-        guard let config = subscription, config.origin == entry.context.origin,
-              let site = config.sites.first(where: { $0.key == entry.context.sourceKey }) else {
+        // Any enabled subscription can hold the source: it is found by its own origin and original key.
+        guard let config = subscription,
+              let site = config.sites.first(where: { $0.origin(or: config.origin) == entry.context.origin && $0.sourceKey == entry.context.sourceKey }) else {
             error = L10n.text("This history source is no longer in the current subscription. Restore that subscription to continue.")
             return
         }

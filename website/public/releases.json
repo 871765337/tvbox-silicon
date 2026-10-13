@@ -1,6 +1,125 @@
 {
   "releases": [
     {
+      "version": "1.5",
+      "date": "2026-10-13",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.5/Yingxia-1.5-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "dot.radiowaves.left.and.right",
+          "title": {
+            "en": "Douyu, Huya and Douyin live, built in",
+            "zh-Hans": "内置斗鱼、虎牙和抖音直播",
+            "zh-Hant": "內建鬥魚、虎牙和抖音直播",
+            "ja": "Douyu、Huya、Douyin のライブを内蔵"
+          },
+          "detail": {
+            "en": "Live TV now has Douyu, Huya and Douyin next to Bilibili Live. Browse each platform’s categories, open a room, and switch its quality in the player. No subscription needed.",
+            "zh-Hans": "直播页在哔哩哔哩直播之外，新增斗鱼、虎牙和抖音。可按各平台的分区浏览、打开直播间，并在播放器中切换画质，无需订阅。",
+            "zh-Hant": "直播頁在嗶哩嗶哩直播之外，新增鬥魚、虎牙和抖音。可依各平台的分區瀏覽、打開直播間，並在播放器中切換畫質，免訂閱。",
+            "ja": "ライブ TV に、ビリビリ生配信に加えて Douyu、Huya、Douyin が加わりました。各プラットフォームのカテゴリを見て配信を開き、プレーヤーで画質を切り替えられます。配信設定は不要です。"
+          }
+        },
+        {
+          "symbol": "magnifyingglass",
+          "title": {
+            "en": "Search live rooms",
+            "zh-Hans": "搜索直播间",
+            "zh-Hant": "搜尋直播間",
+            "ja": "ライブ配信を検索"
+          },
+          "detail": {
+            "en": "Search one platform from its page, or search the Live tab to see matching rooms from every platform, followed by matching channels from your playlists.",
+            "zh-Hans": "可在单个平台页内搜索，也可在直播页搜索，一次看到各平台的匹配直播间，以及播放列表中的匹配频道。",
+            "zh-Hant": "可在單一平台頁內搜尋，也可在直播頁搜尋，一次看到各平台的符合直播間，以及播放清單中的符合頻道。",
+            "ja": "各プラットフォームのページで検索できるほか、ライブタブで検索すればすべてのプラットフォームの配信と、プレイリストのチャンネルをまとめて表示します。"
+          }
+        },
+        {
+          "symbol": "person.crop.circle.badge.checkmark",
+          "title": {
+            "en": "Sign in to Douyin",
+            "zh-Hans": "登录抖音",
+            "zh-Hant": "登入抖音",
+            "ja": "Douyin にサインイン"
+          },
+          "detail": {
+            "en": "Douyin only answers live searches for signed-in accounts. Sign in on Douyin’s own page on iPhone, iPad or Mac. On Apple TV, open Settings > Douyin and scan its code with your iPhone to send the sign-in over your Wi-Fi, encrypted.",
+            "zh-Hans": "抖音只为已登录账号提供直播搜索。在 iPhone、iPad 或 Mac 上可直接在抖音官方页面登录；在 Apple TV 上打开“设置 > 抖音”，用 iPhone 扫码，登录信息会加密后通过 Wi-Fi 发送到电视。",
+            "zh-Hant": "抖音只為已登入帳號提供直播搜尋。在 iPhone、iPad 或 Mac 上可直接在抖音官方頁面登入；在 Apple TV 上打開「設定 > 抖音」，用 iPhone 掃碼，登入資訊會加密後經 Wi-Fi 傳送到電視。",
+            "ja": "Douyin はサインイン中のアカウントにだけライブ検索を提供します。iPhone、iPad、Mac では Douyin のページでサインインできます。Apple TV では「設定 > Douyin」のコードを iPhone で読み取ると、サインインが暗号化されて Wi-Fi で届きます。"
+          }
+        },
+        {
+          "symbol": "square.stack.3d.up.fill",
+          "title": {
+            "en": "Several subscriptions at once",
+            "zh-Hans": "同时使用多个订阅",
+            "zh-Hant": "同時使用多個訂閱",
+            "ja": "複数の配信設定を同時に"
+          },
+          "detail": {
+            "en": "Add more than one subscription and their sources merge into one list. An address that lists several subscriptions (多仓) adds each of them switched off, so you can choose. A subscription that fails to refresh keeps its last working copy.",
+            "zh-Hans": "可以添加多个订阅，它们的片源会合并成一个列表。多仓地址会把其中的每个订阅都添加为关闭状态，由你自己挑选。刷新失败的订阅会继续使用上一次可用的内容。",
+            "zh-Hant": "可以加入多個訂閱，它們的片源會合併成一個清單。多倉網址會把其中的每個訂閱都加入為關閉狀態，由你自己挑選。更新失敗的訂閱會繼續使用上一次可用的內容。",
+            "ja": "配信設定を複数追加すると、そのソースが 1 つのリストにまとまります。複数の配信設定をまとめたアドレス（多仓）は、それぞれをオフの状態で追加するので、使うものを選べます。更新に失敗した配信設定は、最後に動いた内容を使い続けます。"
+          }
+        },
+        {
+          "symbol": "stethoscope",
+          "title": {
+            "en": "Failing sources wait their turn",
+            "zh-Hans": "失效片源排到后面",
+            "zh-Hant": "失效片源排到後面",
+            "ja": "不調なソースは後回しに"
+          },
+          "detail": {
+            "en": "Sources that keep failing are marked in the source lists and searched after the others, until they answer again.",
+            "zh-Hans": "一直失败的片源会在片源列表中标出，并在其他片源之后才搜索，直到它恢复响应。",
+            "zh-Hant": "一直失敗的片源會在片源清單中標出，並在其他片源之後才搜尋，直到它恢復回應。",
+            "ja": "失敗が続くソースはソース一覧で印が付き、再び応答するまでほかのソースの後に検索されます。"
+          }
+        },
+        {
+          "symbol": "externaldrive.fill.badge.icloud",
+          "title": {
+            "en": "Every cloud drive plays directly",
+            "zh-Hans": "网盘视频直接播放",
+            "zh-Hant": "網盤影片直接播放",
+            "ja": "どのクラウドドライブも直接再生"
+          },
+          "detail": {
+            "en": "Cloud-drive videos from more sources now stream straight from the drive’s servers, and downloads do too. Cloud Drive Accounts in Settings is now on iPhone, iPad and Apple TV as well, with QR sign-in.",
+            "zh-Hans": "更多片源的网盘视频现在直接从网盘服务器串流，下载也是。“设置”中的“网盘账号”也来到了 iPhone、iPad 和 Apple TV，可扫码登录。",
+            "zh-Hant": "更多片源的網盤影片現在直接從網盤伺服器串流，下載也是。「設定」中的「網盤帳號」也來到了 iPhone、iPad 和 Apple TV，可掃碼登入。",
+            "ja": "より多くのソースのクラウドドライブ動画がドライブのサーバーから直接ストリーミングされ、ダウンロードも同様になりました。設定の「クラウドドライブのアカウント」が iPhone、iPad、Apple TV にも加わり、QR コードでログインできます。"
+          }
+        },
+        {
+          "symbol": "arrow.uturn.backward",
+          "platforms": [
+            "tvos"
+          ],
+          "title": {
+            "en": "Back from sign-in pages",
+            "zh-Hans": "登录页也能返回",
+            "zh-Hant": "登入頁也能返回",
+            "ja": "サインイン画面から戻れる"
+          },
+          "detail": {
+            "en": "Pressing Back on the Siri Remote while a Bilibili or Douyin sign-in code is showing now returns to Settings instead of leaving the app.",
+            "zh-Hans": "显示哔哩哔哩或抖音登录二维码时按 Siri Remote 的返回键，现在会回到“设置”，而不是退出应用。",
+            "zh-Hant": "顯示嗶哩嗶哩或抖音登入條碼時按 Siri Remote 的返回鍵，現在會回到「設定」，而不是離開 App。",
+            "ja": "ビリビリや Douyin のサインインコードを表示しているあいだに Siri Remote の戻るボタンを押すと、アプリを終了せず設定に戻るようになりました。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.3",
       "date": "2026-10-13",
       "links": {

@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: '6.0'
-    MARKETING_VERSION: '1.3'
-    CURRENT_PROJECT_VERSION: '8'
+    MARKETING_VERSION: '1.5'
+    CURRENT_PROJECT_VERSION: '9'
     GENERATE_INFOPLIST_FILE: YES
     INFOPLIST_KEY_CFBundleDisplayName: Yingxia
     INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.entertainment
@@ -88,6 +88,10 @@ targets:
       properties:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        # yingxia://douyin-login, the code an Apple TV shows to receive the Douyin sign-in.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.tvbox.yingxia.handoff
+            CFBundleURLSchemes: [yingxia]
   TVBox-tvOS:
     templates: [SharedApp]
     platform: tvOS

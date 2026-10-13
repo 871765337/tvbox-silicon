@@ -153,7 +153,7 @@ import Observation
         // The source chosen last time stays chosen while it is searched.
         let preferred = UserDefaults.standard.string(forKey: Self.sourceKey)
         selectedSource = sites.contains { $0.id == preferred } ? preferred : nil; scrollID = nil
-        rank = Dictionary(SourceStrategy.arrange(sites) { _ in true }.enumerated().map { ($1.id, $0) }) { first, _ in first }
+        rank = Dictionary(SourceStrategy.arrange(sites, where: { _ in true }, failing: failing(config)).enumerated().map { ($1.id, $0) }) { first, _ in first }
         total = sites.count
         if let hit = cache[value], Date().timeIntervalSince(hit.created) < 300 {
             results = hit.results; total = hit.total; completed = results.count; stopped = false
@@ -186,10 +186,13 @@ import Observation
             #if os(macOS)
             warm = await LocalJarHost.shared.reusableSourceKeys()
             #endif
-            let arranged = SourceStrategy.arrange(sites) { _ in true }
+            let failing = self.failing(config)
+            let arranged = SourceStrategy.arrange(sites, where: { _ in true }, failing: failing)
             // Built-in sources answer first: they are quick and the ones most often filtered to.
-            let ordered = (arranged.filter { warm.contains($0.key) } + arranged.filter { !warm.contains($0.key) })
+            // Sources that keep failing go last, warm or not, so they never hold up the rest.
+            let preferred = (arranged.filter { warm.contains($0.key) } + arranged.filter { !warm.contains($0.key) })
                 .enumerated().sorted { ($0.element.isBuiltIn ? 0 : 1, $0.offset) < ($1.element.isBuiltIn ? 0 : 1, $1.offset) }.map(\.element)
+            let ordered = preferred.filter { !failing($0) } + preferred.filter(failing)
             guard self.generation == token else { return }
             await GlobalSearch.search(sites: ordered, origin: config.origin, jarURL: config.spiderURL, query: keyword, http: self.http) { result in
                 await self.receive(result, token: token)
@@ -201,6 +204,13 @@ import Observation
                 if self.cache.count > 6, let oldest = self.cache.min(by: { $0.value.created < $1.value.created })?.key { self.cache[oldest] = nil }
             }
         }
+    }
+
+    /// Sources in a `SourceHealth` cooldown, asked and listed after the others.
+    private func failing(_ config: Subscription) -> @Sendable (Site) -> Bool {
+        let now = Date()
+        let down = Set(config.sites.filter { SourceHealth.shared.deprioritized($0, origin: config.origin, now: now) }.map(\.id))
+        return { down.contains($0.id) }
     }
 
     private func receive(_ result: SearchSourceResult, token: UUID) {

@@ -21,7 +21,7 @@ public struct HTTPClient: Sendable {
         return try Subscription.parse(data, origin: finalURL)
     }
     public func channels(_ source: LiveSource) async throws -> [Channel] {
-        if source.isBuiltIn { return try await BilibiliLive.channels() }
+        if let platform = source.platform { return try await LiveCatalog.channels(platform) }
         let (data, finalURL) = try await get(source.url, headers: source.headers)
         guard let text = String(data: data, encoding: .utf8) else { throw TVError.unsupported(L10n.text("Live playlists must use UTF-8 encoding.")) }
         return try Playlist.parse(text, origin: finalURL, headers: source.headers)

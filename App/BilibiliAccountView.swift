@@ -4,6 +4,7 @@ import TVCore
 /// The Bilibili account: sign in by scanning a code with the Bilibili phone app (there is no
 /// browser on Apple TV), or sign out. Signing in unlocks 1080P+ and the account's PGC rights.
 struct BilibiliAccountView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var account = BilibiliAccount.load()
     @State private var login: BilibiliQRLogin?
     @State private var scanned = false
@@ -25,6 +26,9 @@ struct BilibiliAccountView: View {
                     HStack(alignment: .center, spacing: spacing) { code; details }
                     VStack(alignment: .leading, spacing: spacing) { code; details }
                 }
+                #if os(tvOS)
+                .frame(maxWidth: .infinity)
+                #endif
             }
         }
         .task(id: attempt) { await run() }
@@ -59,6 +63,8 @@ struct BilibiliAccountView: View {
             }
         }
         .frame(width: codeSize, height: codeSize)
+        // While waiting there is no button, and Back with nothing focused would leave the app.
+        .loadingFocus(takeFocus: true) { dismiss() }
     }
 
     @ViewBuilder private var status: some View {

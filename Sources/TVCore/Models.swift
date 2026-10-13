@@ -136,6 +136,8 @@ public struct Site: Identifiable, Codable, Hashable, Sendable {
     public let type: Int
     public let api: String
     public let raw: [String: JSONValue]
+    /// The subscription this source came from, once several are merged; see `Subscription.merge`.
+    public var provenance: SourceProvenance? = nil
     public var id: String { key }
     public var native: Bool { (type == 1 || type == 4) && !missingAPI }
     /// Merged subscriptions sometimes carry entries with an empty api; they cannot run anywhere.

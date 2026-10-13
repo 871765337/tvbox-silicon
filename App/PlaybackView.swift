@@ -146,11 +146,11 @@ import TVCore
     func choose(quality: Int?) {
         guard let channel = playing, quality != self.quality,
               let url = quality.flatMap({ id in qualities.first { $0.id == id }?.url }) ?? automatic else { return }
-        if BilibiliLive.room(url) != nil {
+        if LiveCatalog.isRoom(url) {
             // A live quality is another stream address, fetched now; live has no position to keep.
             let active = generation
             Task {
-                guard let resolved = try? await BilibiliLive.resolve(Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)),
+                guard let resolved = try? await LiveCatalog.resolve(Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)),
                       self.generation == active else { return }
                 if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
                 if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
@@ -196,17 +196,17 @@ import TVCore
         if !DanmakuSource.has(channel.url), channel.historyContext?.sourceKey != Bilibili.siteKey {
             catalogDanmaku.startAutomatic(channel.historyContext)
         }
-        isLive = BilibiliLive.room(channel.url) != nil || channel.group == L10n.text("Bilibili Live")
+        isLive = LiveCatalog.isRoom(channel.url) || channel.group == L10n.text("Bilibili Live")
         let activeGeneration = generation
         Diagnostics.shared.record(.info, "player", "start name=\(channel.name) group=\(channel.group) url=\(channel.url.absoluteString) headers=\(channel.headers.keys.sorted().joined(separator: ","))")
         preparation = Task { [weak self] in
             guard let self else { return }
-            // A Bilibili Live room becomes its current stream address now; the address expires.
+            // A live room becomes its current stream address now; the address expires.
             var channel = channel
             var liveQualities: [StreamQuality] = [], liveQuality: Int?
             if let room = BilibiliLive.room(channel.url) { self.listen(room: room, generation: activeGeneration) }
-            if BilibiliLive.room(channel.url) != nil {
-                do { (channel, liveQualities, liveQuality) = try await BilibiliLive.resolve(channel) }
+            if LiveCatalog.isRoom(channel.url) {
+                do { (channel, liveQualities, liveQuality) = try await LiveCatalog.resolve(channel) }
                 catch {
                     guard self.generation == activeGeneration, !Task.isCancelled else { return }
                     self.error = error.localizedDescription; self.loading = false; return

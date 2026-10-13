@@ -183,6 +183,7 @@ struct SettingsView: View {
     @State private var directURL = ""
     @State private var cloudSummary = ""
     @State private var bilibiliSummary = ""
+    @State private var douyinSummary = ""
     @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
     #if os(tvOS) || os(macOS)
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
@@ -197,7 +198,7 @@ struct SettingsView: View {
         SettingsPage(title: L10n.text("Settings")) {
             // A waiting release leads the page; otherwise update status sits with About.
             if !updates.available.isEmpty { UpdateSettingsGroup() }
-            SettingsGroup(title: L10n.text("Subscription"), footer: store.notice) {
+            SettingsGroup(title: L10n.text("Subscriptions"), footer: store.notice) {
                 VStack(alignment: .leading, spacing: 12) {
                     SettingsField(prompt: L10n.text("TVBox JSON URL"), text: $store.subscriptionAddress)
                     // One row whenever it fits; stack only when a narrow width or large text needs it.
@@ -207,7 +208,8 @@ struct SettingsView: View {
                     }
                 }
                 .padding(14)
-                if let config = store.subscription {
+                ForEach(store.subscriptions) { SubscriptionRow(entry: $0) }
+                if let config = store.subscription, store.subscriptions.filter(\.enabled).count > 1 {
                     SettingsRow(symbol: "checkmark.seal.fill", tint: .green,
                                 title: L10n.text("Sources: %lld · Live playlists: %lld", config.sites.count, config.lives.count),
                                 subtitle: L10n.text("Last updated %@", config.importedAt.formatted(date: .abbreviated, time: .shortened)))
@@ -215,6 +217,7 @@ struct SettingsView: View {
             }
             SettingsGroup(title: L10n.text("Accounts")) {
                 SettingsLinkRow(symbol: "play.tv.fill", tint: .pink, title: L10n.text("Bilibili"), subtitle: bilibiliSummary) { BilibiliAccountView() }
+                SettingsLinkRow(symbol: "music.note", tint: .black, title: L10n.text("Douyin"), subtitle: douyinSummary) { DouyinAccountView() }
                 SettingsLinkRow(symbol: "externaldrive.fill.badge.person.crop", tint: .brown,
                                 title: L10n.text("Cloud Drive Accounts"), subtitle: cloudSummary) { CloudDriveView() }
             }
@@ -258,19 +261,51 @@ struct SettingsView: View {
             if updates.available.isEmpty { UpdateSettingsGroup() }
         }
         // Refreshed whenever Settings reappears, so a sign-in on the account page shows here.
-        .onAppear { bilibiliSummary = BilibiliAccount.load().summary; cloudSummary = CloudProvider.summary() }
+        .onAppear { bilibiliSummary = BilibiliAccount.load().summary; douyinSummary = DouyinAccount.load().summary; cloudSummary = CloudProvider.summary() }
     }
     @ViewBuilder private var subscriptionActions: some View {
         Button { Task { await store.importSubscription() } } label: {
             HStack(spacing: 6) {
                 if store.importing { ProgressView().controlSize(.mini) }
-                Text(store.importing ? L10n.text("Importing…") : L10n.text("Save and Refresh"))
+                Text(store.importing ? L10n.text("Importing…") : L10n.text("Add Subscription"))
                 if store.importing { ElapsedTime() }
             }
         }
         .settingsButton(prominent: true)
         .disabled(store.importing || store.subscriptionAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        if !store.subscriptions.isEmpty {
+            Button(L10n.text("Refresh All")) { Task { await store.refreshSubscriptions() } }.settingsButton().disabled(store.importing)
+        }
         Button(L10n.text("Use Default URL")) { store.subscriptionAddress = Store.defaultURL }.settingsButton()
+    }
+}
+
+/// One added subscription: whether it is on, what it brought or why it last failed, and a menu to
+/// move it (earlier subscriptions win duplicate sources) or remove it.
+private struct SubscriptionRow: View {
+    @Environment(Store.self) private var store
+    let entry: SubscriptionEntry
+    var body: some View {
+        let failure = store.subscriptionErrors[entry.address]
+        let index = store.subscriptions.firstIndex { $0.address == entry.address } ?? 0
+        SettingsRow(symbol: failure == nil ? "list.bullet.rectangle.fill" : "exclamationmark.triangle.fill",
+                    tint: failure != nil ? .orange : entry.enabled ? .blue : .gray, title: entry.title, subtitle: subtitle(failure)) {
+            Toggle(entry.title, isOn: Binding(get: { entry.enabled }, set: { on in Task { await store.setSubscription(entry, enabled: on) } }))
+                .labelsHidden().disabled(store.importing)
+            Menu {
+                if index > 0 { Button(L10n.text("Move Up"), systemImage: "arrow.up") { store.moveSubscription(entry, by: -1) } }
+                if index < store.subscriptions.count - 1 { Button(L10n.text("Move Down"), systemImage: "arrow.down") { store.moveSubscription(entry, by: 1) } }
+                Button(L10n.text("Remove"), systemImage: "trash", role: .destructive) { store.removeSubscription(entry) }
+            } label: {
+                Image(systemName: "ellipsis.circle").accessibilityLabel(L10n.text("More"))
+            }
+            .settingsButton()
+        }
+    }
+    private func subtitle(_ failure: String?) -> String {
+        if let failure { return L10n.text("Couldn't refresh: %@", failure) }
+        guard let copy = store.documents[entry.address] else { return entry.enabled ? L10n.text("Not loaded yet") : entry.address }
+        return L10n.text("Sources: %lld · Live playlists: %lld", copy.sites.count, copy.lives.count)
     }
 }
 

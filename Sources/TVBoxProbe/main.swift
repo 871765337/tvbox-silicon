@@ -141,6 +141,63 @@ import TVCore
             if let first = channels.first { let live = try await BilibiliLive.resolve(first); print("resolved", live.channel.url.absoluteString.prefix(90), "qualities", live.qualities.map { "\($0.id) \($0.label)" }, "current", live.current ?? -1) }
             return
         }
+        if args[1] == "--douyin-sign", args.count >= 4, let now = Int64(args[3]) {
+            // --douyin-sign <query> <epoch ms>: a_bogus with every random draw 0.5, to compare with the reference.
+            print(DouyinSign.aBogus(query: args[2], now: now, random: { 0.5 }))
+            return
+        }
+        if args[1] == "--douyin-handoff" {
+            // --douyin-handoff: a TV-side receiver and an iPhone-side send over the LAN address, plus a
+            // forged send (wrong key) that must be refused.
+            let receiver = DouyinHandoff.Receiver()
+            let got = AsyncStream<DouyinAccount> { continuation in
+                _ = Task { let link = try await receiver.start { continuation.yield($0); continuation.finish() }
+                    print("link", link.url.absoluteString.replacingOccurrences(of: #"key=[^&]+"#, with: "key=…", options: .regularExpression))
+                    var forged = URLComponents(url: link.url, resolvingAgainstBaseURL: false)!
+                    forged.queryItems = forged.queryItems!.map { $0.name == "key" ? URLQueryItem(name: "key", value: String(repeating: "A", count: 43)) : $0 }
+                    do { try await DouyinHandoff.send(DouyinAccount(cookie: "sessionid=forged"), to: DouyinHandoff.Link(forged.url!)!); print("forged send ACCEPTED (bad)") }
+                    catch { print("forged send refused:", error.localizedDescription) }
+                    try await DouyinHandoff.send(DouyinAccount(cookie: "sessionid=test; ttwid=x", name: "probe"), to: DouyinHandoff.Link(link.url)!)
+                    print("sent")
+                }
+            }
+            for await account in got { print("received", account.name, account.cookie) }
+            receiver.stop()
+            return
+        }
+        if args[1] == "--live", args.count >= 3, let platform = LivePlatform(rawValue: args[2]) {
+            // --live <bilibili|douyu|huya|douyin> [keyword|room:<id>]: areas, the first area's rooms (or the
+            // search results), then the first room's stream through AVPlayer for a few seconds.
+            setvbuf(stdout, nil, _IONBF, 0)
+            var rooms: [LiveRoom] = []
+            if args.count > 3, args[3].hasPrefix("room:") {
+                rooms = [] // played directly below
+            } else if args.count > 3 {
+                rooms = try await LiveCatalog.search(platform, keyword: args[3])
+                print("search \(args[3]): \(rooms.count) rooms")
+            } else {
+                let areas = try await LiveCatalog.areas(platform)
+                print("areas \(areas.map(\.name).joined(separator: " "))")
+                let first = try await LiveCatalog.rooms(platform, area: areas[0], page: 1)
+                let second = try await LiveCatalog.rooms(platform, area: areas[0], page: 2)
+                print("\(areas[0].name): page 1 \(first.count) rooms, page 2 \(second.count)")
+                if areas.count > 1 { print("\(areas[1].name): \(try await LiveCatalog.rooms(platform, area: areas[1], page: 1).count) rooms") }
+                rooms = first
+            }
+            for room in rooms.prefix(4) { print("  \(room.roomID) | \(room.host) | \(room.title) | \(room.online) | \(room.area) | \(room.cover?.absoluteString.prefix(50) ?? "-")") }
+            let address = args.count > 3 && args[3].hasPrefix("room:") ? URL(string: "\(platform.scheme)://room/\(args[3].dropFirst(5))")! : rooms.first?.url
+            guard let address else { return }
+            let live = try await LiveCatalog.resolve(Channel(name: "", url: address))
+            print("resolved \(live.channel.name) \(live.channel.url.absoluteString.prefix(110))")
+            print("qualities \(live.qualities.map { "\($0.id) \($0.label)" }) current \(live.current ?? -1)")
+            let item = AVPlayerItem(asset: AVURLAsset(url: live.channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": live.channel.headers]))
+            let player = AVPlayer(playerItem: item); player.isMuted = true; player.play()
+            for second in 1...10 {
+                try await Task.sleep(for: .seconds(1))
+                print("t=\(second) status=\(item.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) size=\(Int(item.presentationSize.width))x\(Int(item.presentationSize.height)) error=\(item.error.map { "\($0)" } ?? "-")")
+            }
+            return
+        }
         if args[1] == "--bili-live", args.count >= 3, let room = Int(args[2]) {
             // --bili-live <room>: a live room's stream through AVPlayer for a few seconds.
             setvbuf(stdout, nil, _IONBF, 0)
