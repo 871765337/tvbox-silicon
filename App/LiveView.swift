@@ -41,7 +41,7 @@ struct SourceCard: View {
         RouteLink { if let platform = source.platform { LivePlatformView(platform: platform) } else { ChannelListView(source: source) } } label: {
             HStack(spacing: 14) {
                 if let platform = source.platform { LivePlatformMark(platform: platform, size: 46) }
-                else { IconTile(symbol: "antenna.radiowaves.left.and.right", tint: Brand.accent, size: 46) }
+                else { IconTile(symbol: "antenna.radiowaves.left.and.right", tint: Brand.cyan, size: 46) }
                 CardTitle(text: source.name)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
@@ -371,9 +371,9 @@ struct ChannelLogo: View {
     let channel: Channel
     var size: CGFloat = 50
     private static let palette: [[Color]] = [
-        [Brand.accent, Color(red: 0.80, green: 0.36, blue: 0.10)], [Brand.terracotta, Color(red: 0.62, green: 0.24, blue: 0.18)],
-        [Brand.rose, Color(red: 0.75, green: 0.20, blue: 0.40)], [Brand.amber, Color(red: 0.85, green: 0.42, blue: 0.15)],
-        [Color(red: 0.85, green: 0.65, blue: 0.40), Color(red: 0.55, green: 0.36, blue: 0.20)],
+        [Brand.cyan, Color(red: 0.05, green: 0.36, blue: 0.75)], [Brand.indigo, Color(red: 0.20, green: 0.22, blue: 0.62)],
+        [Brand.teal, Color(red: 0.04, green: 0.42, blue: 0.55)], [Color(red: 0.62, green: 0.50, blue: 1.0), Color(red: 0.32, green: 0.18, blue: 0.62)],
+        [Color(red: 0.45, green: 0.66, blue: 0.95), Color(red: 0.16, green: 0.30, blue: 0.55)],
     ]
     private var colors: [Color] {
         Self.palette[channel.name.unicodeScalars.reduce(0) { $0 &+ Int($1.value) } % Self.palette.count]

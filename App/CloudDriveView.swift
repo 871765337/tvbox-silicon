@@ -11,7 +11,7 @@ struct CloudDriveView: View {
     @State private var saving = false
     @State private var showsManual = false
     var body: some View {
-        SettingsPage(title: L10n.text("Cloud Drive Accounts")) {
+        SettingsPage(title: L10n.text("Cloud Drive Accounts"), symbol: "externaldrive") {
             SettingsGroup(footer: L10n.text("Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run.")) {
                 ForEach(CloudProvider.allCases) { provider in
                     let signedIn = provider.isSignedIn(accounts)
@@ -28,18 +28,14 @@ struct CloudDriveView: View {
             SettingsGroup(title: L10n.text("Advanced"),
                           footer: L10n.text("You can also paste existing credentials. They are stored locally and supplied to the subscription plugins you run. Saving restarts plugin sessions.")) {
                 DisclosureGroup(isExpanded: $showsManual) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        credential(L10n.text("Quark Cookie"), $accounts.quarkCookie)
-                        credential(L10n.text("UC Cookie"), $accounts.ucCookie)
-                        credential(L10n.text("UC Token (optional)"), $accounts.ucToken)
-                        credential(L10n.text("Aliyun Refresh Token"), $accounts.token)
-                        Button(L10n.text("Save Accounts")) { save() }.settingsButton(prominent: true).disabled(saving)
-                    }
-                    .padding(.top, 10)
+                    SecureField(L10n.text("Quark Cookie"), text: $accounts.quarkCookie)
+                    SecureField(L10n.text("UC Cookie"), text: $accounts.ucCookie)
+                    SecureField(L10n.text("UC Token (optional)"), text: $accounts.ucToken)
+                    SecureField(L10n.text("Aliyun Refresh Token"), text: $accounts.token)
+                    HStack { Spacer(); Button(L10n.text("Save Accounts")) { save() }.settingsButton(prominent: true).disabled(saving) }
                 } label: {
-                    Text(L10n.text("Paste Credentials Manually")).font(.body)
+                    Text(L10n.text("Paste Credentials Manually"))
                 }
-                .padding(14)
             }
             if let notice { Label(notice, systemImage: "checkmark.circle.fill").font(.callout).foregroundStyle(.green) }
             if let error { Label(error, systemImage: "exclamationmark.triangle.fill").font(.callout).foregroundStyle(Brand.rose) }
@@ -51,13 +47,6 @@ struct CloudDriveView: View {
                 save()
             }
         }
-    }
-    private func credential(_ title: String, _ value: Binding<String>) -> some View {
-        SecureField(title, text: value)
-            .textFieldStyle(.plain)
-            .padding(.horizontal, 12).frame(minHeight: 34)
-            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.primary.opacity(0.08)) }
     }
     private func save() {
         saving = true; notice = nil; error = nil
@@ -173,7 +162,7 @@ struct CloudDriveView: View {
     @State private var login: CloudProvider?
     @State private var error: String?
     var body: some View {
-        SettingsPage(title: L10n.text("Cloud Drive Accounts")) {
+        SettingsPage(title: L10n.text("Cloud Drive Accounts"), symbol: "externaldrive") {
             SettingsGroup(footer: L10n.text("Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")) {
                 ForEach(CloudProvider.allCases) { provider in
                     let signedIn = provider.isSignedIn(accounts)

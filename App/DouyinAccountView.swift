@@ -19,7 +19,7 @@ struct DouyinAccountView: View {
     #endif
 
     var body: some View {
-        SettingsPage(title: L10n.text("Douyin Account")) {
+        SettingsPage(title: L10n.text("Douyin Account"), symbol: "music.note") {
             if account.signedIn {
                 SettingsGroup(footer: L10n.text("Douyin Live search uses this sign-in. It stays on this device.")) {
                     SettingsRow(symbol: "person.crop.circle.fill", tint: .black, title: account.name.isEmpty ? L10n.text("Signed In") : account.name,
@@ -126,12 +126,12 @@ struct DouyinAccountView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 20, style: .continuous).fill(.white)
             if let link, let image = QRCode.image(link.url.absoluteString) {
-                Image(image, scale: 1, label: Text(L10n.text("Sign-in code"))).interpolation(.none).resizable().scaledToFit().padding(400 / 12)
+                Image(image, scale: 1, label: Text(L10n.text("Sign-in code"))).interpolation(.none).resizable().scaledToFit().padding(320 / 12)
             } else if error == nil {
                 ProgressView().tint(.black)
             }
         }
-        .frame(width: 400, height: 400)
+        .frame(width: 320, height: 320)
         // While waiting there is no button, and Back with nothing focused would leave the app.
         .loadingFocus(takeFocus: true) { dismiss() }
     }

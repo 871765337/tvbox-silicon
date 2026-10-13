@@ -13,7 +13,7 @@ struct BilibiliAccountView: View {
     @State private var attempt = 0
 
     var body: some View {
-        SettingsPage(title: L10n.text("Bilibili Account")) {
+        SettingsPage(title: L10n.text("Bilibili Account"), symbol: "play.tv") {
             if account.signedIn {
                 SettingsGroup(footer: L10n.text("Bilibili plays the qualities your account allows. Sign-in details stay on this device.")) {
                     SettingsRow(symbol: "person.crop.circle.fill", tint: .pink, title: account.name.isEmpty ? L10n.text("Signed In") : account.name,
@@ -28,6 +28,8 @@ struct BilibiliAccountView: View {
                 }
                 #if os(tvOS)
                 .frame(maxWidth: .infinity)
+                #else
+                .padding(.vertical, 10)
                 #endif
             }
         }
@@ -109,7 +111,7 @@ struct BilibiliAccountView: View {
 
     private var codeSize: CGFloat {
         #if os(tvOS)
-        400
+        320
         #else
         220
         #endif

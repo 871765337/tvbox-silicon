@@ -156,7 +156,7 @@ struct HomeView: View {
 }
 
 /// The app icon artwork, masked like a home-screen icon.
-private struct AppMark: View {
+struct AppMark: View {
     var size: CGFloat
     var body: some View {
         Image("YingxiaLogo").resizable().interpolation(.high).scaledToFill()
@@ -166,9 +166,9 @@ private struct AppMark: View {
     }
 }
 
-/// Decorative poster tiles: staggered columns in the brand's warm hues, fading into the canvas.
+/// Decorative poster tiles: staggered columns in the icon's blues, fading into the canvas.
 private struct PosterWall: View {
-    private static let hues: [Color] = [Brand.accent, Brand.terracotta, Brand.amber, Brand.rose]
+    private static let hues: [Color] = [Brand.cyan, Brand.indigo, Brand.teal, Brand.cyan.opacity(0.6)]
     private static let symbols = ["film", "sparkles.tv", "theatermasks", "music.note.tv", "popcorn", "star"]
     var body: some View {
         GeometryReader { proxy in
@@ -184,7 +184,7 @@ private struct PosterWall: View {
             }
             .rotationEffect(.degrees(-6))
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
-            .background { EllipticalGradient(colors: [Brand.accent.opacity(0.3), .clear], endRadiusFraction: 0.5) }
+            .background { EllipticalGradient(colors: [Brand.cyan.opacity(0.3), .clear], endRadiusFraction: 0.5) }
             // An ellipse that reaches clear at the frame's edges, so no tile meets a hard clip.
             .mask { EllipticalGradient(stops: [.init(color: .black, location: 0), .init(color: .black.opacity(0.75), location: 0.45), .init(color: .clear, location: 1)], endRadiusFraction: 0.5) }
         }
@@ -215,6 +215,6 @@ private struct PosterWall: View {
 
 /// Neutral tile fills that track the canvas on every platform.
 private enum PosterSurface {
-    static let base = Color(light: Color(red: 0.93, green: 0.90, blue: 0.86), dark: Color(red: 0.14, green: 0.11, blue: 0.085))
-    static let raised = Color(light: Color(red: 0.89, green: 0.85, blue: 0.80), dark: Color(red: 0.22, green: 0.17, blue: 0.13))
+    static let base = Color(light: Color(red: 0.88, green: 0.905, blue: 0.94), dark: Color(red: 0.065, green: 0.09, blue: 0.165))
+    static let raised = Color(light: Color(red: 0.83, green: 0.86, blue: 0.91), dark: Color(red: 0.11, green: 0.15, blue: 0.25))
 }

@@ -671,3 +671,10 @@
 "Your Apple TV is now signed in to Douyin." = "你的 Apple TV 已登入抖音。";
 "Send %@'s sign-in to the Apple TV at %@? It goes only to that TV, encrypted." = "將「%1$@」的登入傳送到位於 %2$@ 的 Apple TV？登入資訊會加密，只傳送到那台 Apple TV。";
 "Sign in to Douyin on this iPhone first, then send the sign-in to the Apple TV." = "請先在這支 iPhone 上登入抖音，再把登入傳送到 Apple TV。";
+"On" = "開";
+"Off" = "關";
+"%lld sources" = "%lld 個來源";
+"Couldn't refresh" = "無法重新整理";
+"Use This Subscription" = "使用此訂閱";
+"Order" = "順序";
+"Not set" = "未設定";

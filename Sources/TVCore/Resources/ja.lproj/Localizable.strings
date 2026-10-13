@@ -671,3 +671,10 @@
 "Your Apple TV is now signed in to Douyin." = "Apple TVがDouyinにサインインしました。";
 "Send %@'s sign-in to the Apple TV at %@? It goes only to that TV, encrypted." = "%1$@のサインインを%2$@のApple TVに送信しますか？ 暗号化され、そのApple TVにだけ届きます。";
 "Sign in to Douyin on this iPhone first, then send the sign-in to the Apple TV." = "先にこのiPhoneでDouyinにサインインしてから、Apple TVに送信してください。";
+"On" = "オン";
+"Off" = "オフ";
+"%lld sources" = "%lld 件のソース";
+"Couldn't refresh" = "更新できません";
+"Use This Subscription" = "この購読を使用";
+"Order" = "順序";
+"Not set" = "未設定";

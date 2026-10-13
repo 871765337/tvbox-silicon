@@ -90,11 +90,7 @@ struct GlobalSearchView: View {
                 if let config = store.subscription {
                     let query = model.draft.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !query.isEmpty, query != model.keyword {
-                        Button { submit(config) } label: {
-                            Label(L10n.text("Search"), systemImage: "magnifyingglass")
-                        }
-                        .controlButton(prominent: true)
-                        .accessibilityIdentifier("search.submit")
+                        SearchQueryButton(query: query) { submit(config) }.accessibilityIdentifier("search.submit")
                     }
                     if !model.keyword.isEmpty {
                         searchHeader(config).padding(.horizontal, -Layout.gutter)
@@ -226,7 +222,7 @@ struct GlobalSearchView: View {
                 }
                 if sourceItems.count > 1 {
                     #if os(tvOS)
-                    ScrollView(.horizontal, showsIndicators: false) {
+                    ChipRow {
                         HStack(spacing: 8) {
                             ForEach(sourceItems) { item in
                                 Chip(title: item.count.map { "\(item.name) · \($0)" } ?? item.name, selected: (model.selectedSource ?? "") == item.id,
@@ -234,7 +230,7 @@ struct GlobalSearchView: View {
                                     model.select(item.id.isEmpty ? nil : item.id)
                                 }
                             }
-                        }.padding(.vertical, 4)
+                        }
                     }
                     #else
                     SourceStrip(items: sourceItems.map { .init(id: $0.id, name: $0.name, count: $0.count, dot: $0.dot) }, selection: model.selectedSource ?? "") { id in
@@ -279,11 +275,20 @@ struct GlobalSearchView: View {
         }
     }
 
+    /// tvOS pills lead with a symbol, as the search pill does; elsewhere the title stands alone.
+    @ViewBuilder private func searchActionLabel(_ title: String, symbol: String) -> some View {
+        #if os(tvOS)
+        Label(title, systemImage: symbol)
+        #else
+        Text(title)
+        #endif
+    }
+
     @ViewBuilder private func searchActionButtons(_ config: Subscription) -> some View {
         if model.busy {
-            Button(L10n.text("Stop")) { model.stop() }.searchAction()
+            Button { model.stop() } label: { searchActionLabel(L10n.text("Stop"), symbol: "stop.fill") }.searchAction()
         } else if model.completed < model.total {
-            Button(L10n.text("Continue search")) { model.resume(config: config) }.searchAction()
+            Button { model.resume(config: config) } label: { searchActionLabel(L10n.text("Continue search"), symbol: "arrow.clockwise") }.searchAction()
         }
         if !model.failures.isEmpty {
             Button { showFailures = true } label: {
@@ -496,7 +501,7 @@ private struct QuietPillStyle: ButtonStyle {
 private extension View {
     @ViewBuilder func searchAction() -> some View {
         #if os(tvOS)
-        controlButton()
+        glassPill()
         #else
         buttonStyle(QuietPillStyle())
         #endif

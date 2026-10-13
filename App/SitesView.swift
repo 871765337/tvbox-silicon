@@ -143,7 +143,7 @@ struct SourceIcon: View {
     let label: SourceLabel
     var size: CGFloat
     private static let tints: [Color] = [
-        Brand.terracotta, Brand.amber, Brand.rose,
+        Brand.indigo, Brand.amber, Brand.rose,
         Color(red: 0.30, green: 0.66, blue: 0.60), Color(red: 0.42, green: 0.56, blue: 0.92),
         Color(red: 0.62, green: 0.48, blue: 0.88), Color(red: 0.52, green: 0.72, blue: 0.38),
     ]
@@ -228,6 +228,15 @@ struct SiteView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
+                        #if os(tvOS)
+                        // The remote's keyboard has no return key, so typing only edits the query; as in
+                        // the Search tab, a focusable button below the keyboard runs the search.
+                        let pending = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !pending.isEmpty, pending != browser.query {
+                            SearchQueryButton(query: pending) { startRequest { await search() } }
+                                .accessibilityIdentifier("site.search.submit")
+                        }
+                        #endif
                         if site.isBilibili && !BilibiliAccount.load().signedIn { BilibiliSignInBanner() }
                         if !browser.categories.isEmpty { categoryBar } else if initialLoading { ChipSkeletonRow() }
                         if isIndex && !browser.videos.isEmpty {
@@ -290,6 +299,8 @@ struct SiteView: View {
                     if let category = UserDefaults.standard.string(forKey: "qaCategory") {
                         await browser.load(.list(category: category, query: "", page: 1), client: client)
                     }
+                    // `-qaSearchDraft <text>` types a query without running it, for the remote's Search button.
+                    if let draft = UserDefaults.standard.string(forKey: "qaSearchDraft") { query = draft }
                     #endif
                 }
                 else { query = initialQuery; await search(); await browser.loadCategories(client: client) }
@@ -744,12 +755,12 @@ struct VideoDetailView: View {
     @ViewBuilder private var flagPicker: some View {
         if flags.count > 1 {
             #if os(tvOS)
-            ScrollView(.horizontal, showsIndicators: false) {
+            ChipRow {
                 HStack(spacing: 8) {
                     ForEach(flags, id: \.self) { flag in
                         Chip(title: flag.isEmpty ? L10n.text("Play") : flag, selected: flag == activeFlag) { selectedFlag = flag }
                     }
-                }.padding(.vertical, 2)
+                }
             }.tvFocusSection()
             #else
             SourceStrip(items: flags.map { .init(id: $0, name: $0.isEmpty ? L10n.text("Play") : $0) }, selection: activeFlag) { selectedFlag = $0 }

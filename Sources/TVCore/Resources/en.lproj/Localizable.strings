@@ -671,3 +671,10 @@
 "Your Apple TV is now signed in to Douyin." = "Your Apple TV is now signed in to Douyin.";
 "Send %@'s sign-in to the Apple TV at %@? It goes only to that TV, encrypted." = "Send %@'s sign-in to the Apple TV at %@? It goes only to that TV, encrypted.";
 "Sign in to Douyin on this iPhone first, then send the sign-in to the Apple TV." = "Sign in to Douyin on this iPhone first, then send the sign-in to the Apple TV.";
+"On" = "On";
+"Off" = "Off";
+"%lld sources" = "%lld sources";
+"Couldn't refresh" = "Couldn't refresh";
+"Use This Subscription" = "Use This Subscription";
+"Order" = "Order";
+"Not set" = "Not set";

@@ -38,7 +38,14 @@ enum QALaunch {
             }
         }
         if UserDefaults.standard.bool(forKey: "qaResetCache") { MediaCache.shared.clear() }
-        if let subscription = UserDefaults.standard.string(forKey: "qaSubscription") { await store.importSubscription(address: subscription) }
+        if let subscription = UserDefaults.standard.string(forKey: "qaSubscription") {
+            // With isolated data the QA subscription is the only one, as before several subscriptions:
+            // one left from an earlier run would come first and win the duplicate source keys.
+            if UserDefaults.standard.bool(forKey: "qaIsolatedData") {
+                for entry in store.subscriptions where entry.address != subscription { store.removeSubscription(entry) }
+            }
+            await store.importSubscription(address: subscription)
+        }
         else if store.subscription == nil { await store.importSubscription() }
         if QASweep.enabled, let config = store.subscription { Task.detached(priority: .utility) { await QASweep.run(config) } }
         if let section { store.section = section }
