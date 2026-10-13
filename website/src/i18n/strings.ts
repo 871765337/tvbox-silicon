@@ -9,6 +9,8 @@ export type TextKey =
   | "brand"
   | "c.live.b"
   | "c.live.t"
+  | "c.lives.b"
+  | "c.lives.t"
   | "c.search.b"
   | "c.search.t"
   | "c.site.b"
@@ -94,6 +96,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "brand": "Yingxia",
       "c.live.b": "Bring M3U or TXT playlists. Browse by group, search channels, and keep your favorites close.",
       "c.live.t": "Live TV, laid out like a guide.",
+      "c.lives.t": "Douyu, Huya and Douyin, built in.",
+      "c.lives.b": "Browse each platform’s categories next to Bilibili Live, switch the quality in the player, and search live rooms on every platform at once. No subscription needed.",
       "c.search.b": "One query runs across every source in your subscription. Results appear as they arrive.",
       "c.search.t": "Search everything at once.",
       "c.site.b": "Browse the categories and pages of any source with nothing but the Siri Remote.",
@@ -120,8 +124,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.private.t": "Private by design",
       "g.runtime.b": "Runs JSON, JavaScript and JAR sources, plus Python on Mac. Lightweight ports first, the original plugin as fallback.",
       "g.runtime.t": "Plugins on device",
-      "g.sub.b": "Import any TVBox JSON subscription by URL. A failed refresh never wipes the last working copy.",
-      "g.sub.t": "Your subscription, kept safe",
+      "g.sub.b": "Import TVBox JSON subscriptions by URL, several at once, merged into one list of sources. A failed refresh never wipes the last working copy.",
+      "g.sub.t": "Your subscriptions, kept safe",
       "hero.film": "Watch the intro film",
       "hero.l1": "All your sources.",
       "hero.l2": "One big screen.",
@@ -172,6 +176,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "brand": "映匣",
       "c.live.b": "M3U や TXT のプレイリストを読み込み、グループで絞り込み、チャンネルを検索し、お気に入りを手元に。",
       "c.live.t": "ライブ TV を、番組ガイドのように。",
+      "c.lives.t": "Douyu、Huya、Douyin を内蔵。",
+      "c.lives.b": "ビリビリ生配信と並んで、各プラットフォームのカテゴリを見て回り、プレーヤーで画質を切り替え、すべてのプラットフォームの配信をまとめて検索できます。サブスクリプションは不要です。",
       "c.search.b": "ひとつのキーワードで、配信設定内のすべてのソースを検索。結果は届いた順に表示されます。",
       "c.search.t": "すべてを一度に検索。",
       "c.site.b": "どのソースのカテゴリーやページも、Siri Remote だけで閲覧できます。",
@@ -198,7 +204,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.private.t": "プライバシー重視",
       "g.runtime.b": "JSON・JavaScript・JAR ソースを実行し、Mac では Python にも対応。軽量版を優先し、元のプラグインをフォールバックに。",
       "g.runtime.t": "プラグインをデバイス上で",
-      "g.sub.b": "TVBox の JSON 配信設定を URL から読み込み。更新に失敗しても、最後に動いていた内容は消えません。",
+      "g.sub.b": "TVBox の JSON 配信設定を URL から読み込み。複数をまとめて 1 つのソース一覧に。更新に失敗しても、最後に動いていた内容は消えません。",
       "g.sub.t": "配信設定を安全に保持",
       "hero.film": "紹介動画を見る",
       "hero.l1": "すべてのソースを、",
@@ -250,6 +256,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "brand": "Yingxia",
       "c.live.b": "M3U 또는 TXT 재생 목록을 불러와 그룹별로 탐색하고, 채널을 검색하고, 즐겨찾기를 가까이 두세요.",
       "c.live.t": "실시간 TV를 편성표처럼.",
+      "c.lives.t": "Douyu, Huya, Douyin 내장.",
+      "c.lives.b": "빌리빌리 라이브와 함께 각 플랫폼의 카테고리를 둘러보고, 플레이어에서 화질을 바꾸고, 모든 플랫폼의 라이브 방송을 한 번에 검색하세요. 구독은 필요 없습니다.",
       "c.search.b": "검색어 하나로 구독의 모든 소스를 검색합니다. 결과는 도착하는 대로 표시됩니다.",
       "c.search.t": "모든 소스를 한 번에 검색.",
       "c.site.b": "어떤 소스든 카테고리와 페이지를 Siri Remote만으로 둘러볼 수 있습니다.",
@@ -276,7 +284,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.private.t": "프라이버시 중심 설계",
       "g.runtime.b": "JSON, JavaScript, JAR 소스를 실행하며 Mac에서는 Python도 지원합니다. 가벼운 포트를 먼저, 원래 플러그인은 대체 수단으로.",
       "g.runtime.t": "기기에서 실행되는 플러그인",
-      "g.sub.b": "TVBox JSON 구독을 URL로 가져오세요. 새로 고침에 실패해도 마지막으로 작동한 내용은 사라지지 않습니다.",
+      "g.sub.b": "TVBox JSON 구독을 URL로 가져오세요. 여러 개를 하나의 소스 목록으로 합칩니다. 새로 고침에 실패해도 마지막으로 작동한 내용은 사라지지 않습니다.",
       "g.sub.t": "구독을 안전하게",
       "hero.film": "소개 영상 보기",
       "hero.l1": "모든 소스를,",
@@ -328,6 +336,8 @@ export const LOCALES: Record<Lang, Locale> = {
       "brand": "映匣",
       "c.live.b": "匯入 M3U 或 TXT 播放清單，依分組瀏覽、搜尋頻道，常看的加入收藏。",
       "c.live.t": "直播電視，像節目表一樣清楚。",
+      "c.lives.t": "內建鬥魚、虎牙和抖音。",
+      "c.lives.b": "與嗶哩嗶哩直播並列，可依各平台分區瀏覽、在播放器切換畫質，還能一次搜尋所有平台的直播間，不需要訂閱。",
       "c.search.b": "一個關鍵字就能搜尋訂閱中的所有片源，結果隨到隨顯示。",
       "c.search.t": "一次搜尋所有片源。",
       "c.site.b": "只用 Siri Remote 就能瀏覽任何片源的分類與頁面。",
@@ -354,7 +364,7 @@ export const LOCALES: Record<Lang, Locale> = {
       "g.private.t": "隱私至上",
       "g.runtime.b": "執行 JSON、JavaScript 與 JAR 片源，Mac 上另支援 Python。優先使用輕量版，原始外掛作為備援。",
       "g.runtime.t": "外掛在裝置上執行",
-      "g.sub.b": "透過網址匯入任何 TVBox JSON 訂閱。更新失敗也不會清除最後一次可用的內容。",
+      "g.sub.b": "透過網址匯入 TVBox JSON 訂閱，可同時使用多個，片源合併成一個清單。更新失敗也不會清除最後一次可用的內容。",
       "g.sub.t": "訂閱妥善保存",
       "hero.film": "觀看介紹影片",
       "hero.l1": "所有片源，",
