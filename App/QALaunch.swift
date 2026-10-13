@@ -12,6 +12,7 @@ enum QALaunch {
         switch UserDefaults.standard.string(forKey: "qaSection") {
         case "home": .home
         case "live": .live
+        case "music": .music
         case "search": .search
         case "sites": .sites
         case "favorites": .favorites

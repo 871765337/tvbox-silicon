@@ -4,6 +4,9 @@ import TVCore
 @MainActor @Observable final class Store {
     static let defaultURL = "https://raw.githubusercontent.com/qist/tvbox/master/fty.json"
     let searchModel = SearchModel()
+    /// Song search and the music player; both outlive the Music page, so a song keeps playing elsewhere in the app.
+    let musicSearch = MusicSearchModel()
+    let music = MusicPlaybackSession()
     let recommendationModel = RecommendationModel()
     let playbackHistory: PlaybackHistory
     let playbackDefaults: UserDefaults
