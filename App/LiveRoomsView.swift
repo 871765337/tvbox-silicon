@@ -334,6 +334,15 @@ struct LivePlatformMark: View {
 extension View {
     /// The system search, on platforms that can search.
     @ViewBuilder func liveSearchable(_ enabled: Bool, text: Binding<String>, prompt: String) -> some View {
-        if enabled { catalogSearchable(text: text, prompt: prompt) } else { self }
+        if enabled && !Self.hidesSearchForScreenshots { catalogSearchable(text: text, prompt: prompt) } else { self }
+    }
+    /// `-qaHideSearch 1` (debug builds) leaves out the search field, whose tvOS keyboard would fill
+    /// the top of website screenshots.
+    private static var hidesSearchForScreenshots: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "qaHideSearch")
+        #else
+        false
+        #endif
     }
 }
