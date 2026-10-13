@@ -44,6 +44,9 @@ public class NativeProbe extends AbstractJni {
         if (login != null) {
             System.err.println("PLUGIN_LOGIN_REQUIRED " + login.drive);
             result.put("errorCode", "cloud_login_required").put("drive", login.drive);
+        } else if (chain.stream().anyMatch(link -> link instanceof HttpDiagnostics.RequestStopped)) {
+            System.err.println("PLUGIN_STOPPED " + java.time.LocalTime.now().withNano(0));
+            result.put("errorCode", "source_timeout");
         } else if (error instanceof HttpDiagnostics.SourceHTTPException remote) {
             result.put("errorCode", "source_http").put("host", remote.host).put("status", remote.status);
         } else if (error instanceof PluginSession.EmptyContentException) {
@@ -178,6 +181,8 @@ public class NativeProbe extends AbstractJni {
             System.out.println("SPIDER=" + spider.getClass().getName());
             com.github.catvod.crawler.Spider actual = (com.github.catvod.crawler.Spider)spider;
             actual.siteKey = input.optString("key");
+            // FTY keeps Baidu/Aliyun sign-ins in its own encrypted files; exchange them with the app's.
+            bridge.syncFtyAccounts(accounts, context.getFilesDir().toPath(), cache.toPath());
             actual.init(context, input.optString("ext"));
             bridge.restoreFtyQuarkAccount(accounts, actual.getClass());
             bridge.setDriveProxy(dalvik.system.DexClassLoader.current);

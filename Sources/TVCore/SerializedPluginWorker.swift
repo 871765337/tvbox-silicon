@@ -100,14 +100,28 @@ final class SerializedPluginWorker: @unchecked Sendable {
     }
 
     /// A slow call (first preparation, heavy plugin crypto on the interpreter) is not a stuck
-    /// runtime: fail only its callers. It keeps its slot until Java returns, so widths stay honest.
+    /// runtime: fail only its callers. It keeps its slot until Java returns, so widths stay honest,
+    /// and the host hears `cancel`, which stops the plugin at its next wait.
     private func expire(_ work: Work) {
         lock.lock()
         guard running.contains(where: { $0 === work }) else { lock.unlock(); return }
         let waiters = Array(work.waiters.values); work.waiters.removeAll()
         lock.unlock()
-        Diagnostics.shared.record(.warning, "jar.timing", "search=\(work.search) timed out after \(Int(timeout))s; its slot stays busy until the plugin returns")
+        Diagnostics.shared.record(.warning, "jar.timing", "search=\(work.search) timed out after \(Int(timeout))s; asked the plugin to stop")
         for waiter in waiters { waiter.resume(throwing: TVError.unsupported("The source took too long to respond.")) }
+        if let abandon { DispatchQueue.global(qos: .utility).async { abandon(work.resources, work.id) } }
+    }
+
+    /// A host command that never enters a plugin's request queue (the CDN address behind a drive
+    /// proxy, reopening a proxy). Playback needs it at once, so it never waits behind plugin calls.
+    func immediate(resources: String, json: String) async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            let thread = Thread { [execute] in continuation.resume(with: execute(resources, json)) }
+            thread.name = "On-device plugins (host command)"
+            thread.qualityOfService = .userInitiated
+            thread.stackSize = 8 * 1024 * 1024
+            thread.start()
+        }
     }
 
     /// Starts queued work in arrival order within each lane. Call with `lock` held.

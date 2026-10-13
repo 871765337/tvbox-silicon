@@ -109,9 +109,13 @@ enum QALaunch {
                 guard let first = videoID.flatMap({ id in videos.first { $0.id == id } }) ?? videos.first else { throw QASweep.Failure(message: "No videos") }
                 let video = try await QASweep.limit(60) { try await client.detail(first.id) }
                 let selectedEpisode = UserDefaults.standard.string(forKey: "qaEpisodeName")
-                guard let episode = selectedEpisode.flatMap({ name in video.episodes.first { $0.name == name } ?? video.episodes.first { $0.name.contains(name) } })
-                    ?? (selectedEpisode == nil ? video.episodes.first : nil) else { throw QASweep.Failure(message: "No episodes") }
-                let channel = try await QASweep.limit(60) { try await client.playback(episode) }
+                // `-qaEpisodeFlag <text>` keeps to lines whose name contains it (嘟嘟 for Baidu).
+                let line = UserDefaults.standard.string(forKey: "qaEpisodeFlag")
+                let episodes = line.map { line in video.episodes.filter { $0.flag.contains(line) } } ?? video.episodes
+                guard let episode = selectedEpisode.flatMap({ name in episodes.first { $0.name == name } ?? episodes.first { $0.name.contains(name) } })
+                    ?? (selectedEpisode == nil ? episodes.first : nil) else { throw QASweep.Failure(message: "No episodes") }
+                // Long enough for a Baidu or Aliyun line's sign-in code to be scanned (PluginSignIn).
+                let channel = try await QASweep.limit(240) { try await client.playback(episode) }
                 let start = UserDefaults.standard.object(forKey: "qaStartAt") == nil ? nil : UserDefaults.standard.double(forKey: "qaStartAt")
                 store.playing = store.catalogChannel(channel, video: video, episode: episode, client: client, resumePosition: start)
             } catch {
@@ -182,9 +186,9 @@ enum QALaunch {
                     LivePlatformView(platform: platform, initialQuery: UserDefaults.standard.string(forKey: "qaQuery") ?? "")
                 }
             case "danmaku-list": QADanmakuList()
-            #if !os(macOS)
-            case "cloud-login": CloudQRLoginView(drive: parts.dropFirst().first == "uc" ? .uc : .quark) {}
-            #endif
+            // `-qaPage cloud-login:<quark|uc|baidu|aliyun>`; `cloud-accounts` shows the accounts page.
+            case "cloud-login": CloudQRLoginView(drive: parts.dropFirst().first.flatMap(CloudDriveQRLogin.Drive.init(rawValue:)) ?? .quark) {}
+            case "cloud-accounts": CloudDriveView()
             default: EmptyView()
             }
         }
@@ -192,7 +196,7 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "cache", "licenses", "cloud-login", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "cache", "licenses", "cloud-login", "cloud-accounts", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
     }
 }
 

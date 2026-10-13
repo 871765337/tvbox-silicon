@@ -8,7 +8,9 @@ import TVCore
     let playbackHistory: PlaybackHistory
     let playbackDefaults: UserDefaults
     let pinnedSources: PinnedSources
-    var resumingHistoryID: String?
+    /// The history entry being resumed; another entry, or leaving the page, replaces or cancels it.
+    private(set) var resumingHistoryID: String?
+    private var resumeTask: Task<Void, Never>?
     /// Every enabled subscription merged in list order, plus the built-in sources.
     var subscription: Subscription?
     /// The address being typed in to add a subscription.
@@ -287,7 +289,19 @@ import TVCore
         return catalog(for: channel)?.playlist.previous(before: context)
     }
 
-    func selectEpisode(_ episode: Episode, from channel: Channel) {
+    /// The same episode on a transcoded line (FTY's 智 lines are the drive's own HLS) when the
+    /// playing original can't play here. The same drive's line comes first: 夸父原1 → 夸父智1.
+    func transcodedLine(for channel: Channel) -> Episode? {
+        guard let context = channel.historyContext, let catalog = catalog(for: channel) else { return nil }
+        let current = context.episodeFlag
+        let candidates = catalog.video.episodes.filter {
+            $0.name == context.episodeName && $0.flag != current && $0.flag.contains("智")
+        }
+        let sameDrive = current.replacingOccurrences(of: "原", with: "智").replacingOccurrences(of: "无限", with: "智")
+        return candidates.first { $0.flag == sameDrive } ?? candidates.first
+    }
+
+    func selectEpisode(_ episode: Episode, from channel: Channel, failed: ((String) -> Void)? = nil) {
         guard playing == channel, let catalog = catalog(for: channel),
               catalog.video.episodes.contains(episode) else { return }
         cancelEpisodeSelection()
@@ -303,6 +317,7 @@ import TVCore
             } catch {
                 guard !Task.isCancelled, self.episodeRequest == request, self.playing == channel else { return }
                 self.episodeError = error.localizedDescription
+                failed?(error.localizedDescription)
             }
         }
     }
@@ -312,17 +327,30 @@ import TVCore
         episodeTask?.cancel(); episodeTask = nil; resolvingEpisode = nil
     }
 
+    /// Resumes a watched title. Choosing another title while one is still being prepared switches
+    /// to it: the earlier request is cancelled, which also stops its plugin call.
+    func resume(_ entry: PlaybackHistoryEntry) {
+        guard resumingHistoryID != entry.id else { return }
+        resumeTask?.cancel()
+        resumingHistoryID = entry.id
+        resumeTask = Task { await resumeHistory(entry) }
+    }
+
+    func cancelResume() {
+        resumeTask?.cancel(); resumeTask = nil
+        resumingHistoryID = nil
+    }
+
     func resumeHistory(_ entry: PlaybackHistoryEntry) async {
-        guard resumingHistoryID == nil else { return }
+        resumingHistoryID = entry.id
+        defer { if resumingHistoryID == entry.id, !Task.isCancelled { resumingHistoryID = nil } }
         // Any enabled subscription can hold the source: it is found by its own origin and original key.
         guard let config = subscription,
               let site = config.sites.first(where: { $0.origin(or: config.origin) == entry.context.origin && $0.sourceKey == entry.context.sourceKey }) else {
             error = L10n.text("This history source is no longer in the current subscription. Restore that subscription to continue.")
             return
         }
-        resumingHistoryID = entry.id
         let previousPlayback = playing
-        defer { resumingHistoryID = nil }
         do {
             let client = CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL).with(parses: config.parseServices)
             // Plugin/API sources resolve an episode again. Direct-file APIs must refresh
@@ -343,7 +371,7 @@ import TVCore
             guard !Task.isCancelled, playing == previousPlayback, subscription?.origin == config.origin else { return }
             playing = catalogChannel(channel, video: video, episode: episode, client: client, resumePosition: entry.resumePosition)
         } catch {
-            guard !(error is CancellationError) else { return }
+            guard !(error is CancellationError), !Task.isCancelled else { return }
             self.error = L10n.text("Unable to resume playback: %@", error.localizedDescription)
         }
     }

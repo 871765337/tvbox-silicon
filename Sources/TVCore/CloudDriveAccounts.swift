@@ -7,8 +7,28 @@ public struct CloudDriveAccounts: Codable, Sendable {
     public var quarkServiceTicket: String?
     public var ucCookie = ""
     public var ucToken = ""
+    /// Aliyun Drive refresh token (32 characters); plugins read it as `token`.
     public var token = ""
+    /// Baidu Netdisk sign-in cookies, "BDUSS=…; PTOKEN=…; STOKEN=…"; older saves omit it.
+    public var baiduCookie: String?
     public init() {}
+
+    /// Keeps a sign-in a plugin made through its own QR code (`baiduCookie`, `token`) as the app's
+    /// account for that drive, so every source can use it. True when something changed.
+    @discardableResult
+    public static func adopt(_ offered: [String: Any]) -> Bool {
+        var accounts = (try? load()) ?? Self()
+        var changed = false
+        if let cookie = offered["baiduCookie"] as? String, cookie.contains("BDUSS="), accounts.baiduCookie != cookie {
+            accounts.baiduCookie = cookie; changed = true
+        }
+        if let token = offered["token"] as? String, token.count == 32, accounts.token != token {
+            accounts.token = token; changed = true
+        }
+        guard changed, (try? accounts.save()) != nil else { return false }
+        Diagnostics.shared.record(.info, "cloud.signin", "saved a plugin sign-in for \(offered.keys.sorted().joined(separator: ","))")
+        return true
+    }
     /// The plugin runtime reads accounts from this file.
     public static var fileURL: URL {
         #if os(tvOS)
@@ -52,9 +72,11 @@ public struct CloudDriveAccounts: Codable, Sendable {
     #endif
 }
 
-/// The plugin tried to open an Android-only QR login flow. The app presents its own login.
+/// The plugin tried to open an Android-only QR login flow. The app presents its own login for
+/// Quark and UC. Baidu and Aliyun sign in inside the plugin (PluginSignIn shows its code); this
+/// only reaches the viewer when that code couldn't be read.
 public enum CloudDriveLoginRequired: String, LocalizedError, Sendable {
-    case quark, uc
+    case quark, uc, baidu, aliyun
 
     init?(envelope: [String: JSONValue]) {
         guard envelope["errorCode"]?.string == "cloud_login_required",
@@ -63,8 +85,14 @@ public enum CloudDriveLoginRequired: String, LocalizedError, Sendable {
     }
 
     public func message(language: String? = nil) -> String {
-        L10n.text("Your %@ sign-in is missing or has expired. Sign in again to play this episode.",
-                  L10n.text(self == .quark ? "Quark" : "UC", language: language), language: language)
+        switch self {
+        case .quark, .uc:
+            return L10n.text("Your %@ sign-in is missing or has expired. Sign in again to play this episode.",
+                             L10n.text(self == .quark ? "Quark" : "UC", language: language), language: language)
+        case .baidu, .aliyun:
+            return L10n.text("This line plays from %@, but its sign-in code couldn't be shown. Choose another line.",
+                             L10n.text(self == .baidu ? "Baidu Netdisk" : "Aliyun Drive", language: language), language: language)
+        }
     }
     public var errorDescription: String? { message() }
 }

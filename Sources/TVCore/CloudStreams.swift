@@ -41,6 +41,13 @@ public enum CloudStreams {
         return (stream.counter.value, stream.host)
     }
 
+    /// Whether the file is Matroska/WebM, which AVFoundation can't open, judged from its first bytes.
+    /// False when they can't be read: the player reports network failures itself.
+    public static func isMatroska(_ url: URL) async -> Bool {
+        guard let stream = CloudStreamStore.shared.stream(url) else { return false }
+        return await stream.isMatroska()
+    }
+
     public static func stop(_ url: URL) {
         CloudResourceLoader.shared.cancel(url)
         if let stream = CloudStreamStore.shared.stream(url) { Task { await stream.clear() } }
@@ -140,6 +147,11 @@ actor CloudByteStream {
         type = value
         Diagnostics.shared.record(.info, "cloud.stream", "open host=\(host ?? "-") length=\(source.length) type=\(value)")
         return value
+    }
+
+    func isMatroska() async -> Bool {
+        guard let head = try? await chunk(0) else { return false }
+        return [UInt8](head.prefix(4)) == [0x1A, 0x45, 0xDF, 0xA3]
     }
 
     /// Up to `count` bytes at `offset`, never past the chunk that holds it.

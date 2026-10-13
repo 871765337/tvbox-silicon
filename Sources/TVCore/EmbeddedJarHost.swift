@@ -66,7 +66,7 @@ public actor EmbeddedJarHost {
         guard Self.isPluginProxy(url), Self.available, let resources = Bundle.main.resourcePath else { return url }
         let input = ["command": "recoverProxy", "url": url.absoluteString]
         let json = String(decoding: try JSONEncoder().encode(input), as: UTF8.self)
-        let response = try await worker.request(resources: resources, json: json)
+        let response = try await worker.immediate(resources: resources, json: json)
         let envelope = try JSONDecoder().decode([String: JSONValue].self, from: Data(response.utf8))
         if let error = envelope["error"]?.string { throw TVError.unsupported(error) }
         guard let address = envelope["result"]?.string else { return url }
@@ -79,7 +79,7 @@ public actor EmbeddedJarHost {
         guard Self.isPluginProxy(url),
               Self.available, let resources = Bundle.main.resourcePath,
               let input = try? JSONEncoder().encode(["command": "directMedia", "url": url.absoluteString]),
-              let response = try? await worker.request(resources: resources, json: String(decoding: input, as: UTF8.self)),
+              let response = try? await worker.immediate(resources: resources, json: String(decoding: input, as: UTF8.self)),
               let envelope = try? JSONDecoder().decode([String: JSONValue].self, from: Data(response.utf8)),
               case .object(let media)? = envelope["result"],
               let address = media["url"]?.string, let direct = URL(string: address), direct.scheme == "https" || direct.scheme == "http",
@@ -136,12 +136,27 @@ public actor EmbeddedJarHost {
         let monitor = progress?.observe(job.appendingPathComponent("preparation-progress.json"))
         defer { monitor?.cancel() }
         input["params"] = .object(params.mapValues(JSONValue.string))
+        let kind = Self.kind(params)
+        // Once the spider starts on it, the host stops a request at its deadline: plugins wait for
+        // Android sign-ins that never come here, and the source takes one request at a time.
+        input["deadline"] = .number(Self.deadline(kind))
         let json = String(decoding: try encoder.encode(input), as: UTF8.self)
-        Diagnostics.shared.record(.info, "jar.request", "source=\(site.key) begin; first preparation can take several minutes")
-        var response = try await worker.request(resources: resources, json: json, search: params["wd"] != nil) {
-            progress?.report(PluginPreparation.runtimeReady ? .loading : .preparing)
+        Diagnostics.shared.record(.info, "jar.request", "source=\(site.key) \(kind)\(params["flag"].map { " flag=\($0)" } ?? "") begin")
+        // A Baidu or Aliyun line may wait for its sign-in code to be scanned: the app shows it meanwhile.
+        let signIn = params["wd"] == nil ? PluginSignIn.watch(folder: job, source: site.name) : nil
+        var response: String
+        do {
+            response = try await worker.request(resources: resources, json: json, search: params["wd"] != nil) {
+                progress?.report(PluginPreparation.runtimeReady ? .loading : .preparing)
+            }
+            await signIn?.end()
+        } catch {
+            await signIn?.end()
+            throw error
         }
         PluginPreparation.runtimeReady = true
+        // A Baidu or Aliyun sign-in only this plugin had becomes the app's, for every source.
+        Self.adoptPluginAccounts(in: job)
         var envelope = try JSONDecoder().decode([String: JSONValue].self, from: Data(response.utf8))
         // NewCz's upstream cookie challenge is intermittent. Retry once; the spider keeps its cookie.
         if site.api == "csp_NewCzGuard", envelope["errorCode"]?.string == "source_http", envelope["status"]?.int == 403 {
@@ -163,8 +178,38 @@ public actor EmbeddedJarHost {
             throw TVError.unsupported(message)
         }
         guard let result = envelope["result"]?.string else { throw TVError.unsupported("The plugin returned no content.") }
-        Diagnostics.shared.record(.info, "jar.request", "source=\(site.key) completed bytes=\(result.utf8.count)")
+        Diagnostics.shared.record(.info, "jar.request", "source=\(site.key) \(kind) completed bytes=\(result.utf8.count)")
         return try JSONDecoder().decode([String: JSONValue].self, from: Data(result.utf8))
+    }
+
+    static func adoptPluginAccounts(in folder: URL) {
+        let file = folder.appendingPathComponent("plugin-accounts.json")
+        guard let data = try? Data(contentsOf: file) else { return }
+        try? FileManager.default.removeItem(at: file)
+        if let offered = try? JSONSerialization.jsonObject(with: data) as? [String: Any] { CloudDriveAccounts.adopt(offered) }
+    }
+
+    /// Signs every source's plugin out of a drive: FTY keeps Baidu in `mybd_cookie` and Aliyun in `ali_*`.
+    public static func forgetPluginSignIns(_ names: [String]) {
+        let manager = FileManager.default
+        for folder in (try? manager.contentsOfDirectory(at: storageRoot, includingPropertiesForKeys: nil)) ?? [] {
+            let files = folder.appendingPathComponent("profile/files", isDirectory: true)
+            for name in names { try? manager.removeItem(at: files.appendingPathComponent(name)) }
+        }
+    }
+
+    static func kind(_ params: [String: String]) -> String {
+        params["play"] != nil ? "play" : params["ids"] != nil ? "detail" : params["wd"] != nil ? "search" : params["t"] != nil ? "category" : "home"
+    }
+
+    /// Seconds a spider may work on a request. Generous: drive sources list many shares for a
+    /// detail page, and a line resolves in seconds when it works at all.
+    static func deadline(_ kind: String) -> Double {
+        switch kind {
+        case "play": 90
+        case "search": 60
+        default: 150
+        }
     }
 
     /// Converted classes take minutes to regenerate, so iOS and macOS keep them out of purgeable

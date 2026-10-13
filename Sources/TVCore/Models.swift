@@ -28,6 +28,7 @@ public enum PluginFailure {
         case "source_network":
             if let host = envelope["host"]?.string { return L10n.text("The source %@ could not be reached. Retry later.", host, language: language) }
         case "source_empty": return L10n.text("The plugin returned no content. Try another source.", language: language)
+        case "source_timeout": return L10n.text("The source took too long to respond, so Yingxia stopped waiting. Try another line, or try again later.", language: language)
         case "unsupported_native_library": return L10n.text("This plugin is not supported: ftyguard_v8.so is missing.", language: language)
         case "unsupported_android":
             if let missing { return L10n.text("This source needs an Android feature that isn't supported yet: %@.", missing, language: language) }

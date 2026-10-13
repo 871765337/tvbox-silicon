@@ -6,21 +6,29 @@ import WebKit
 struct CloudDriveView: View {
     @State private var accounts = CloudDriveAccounts()
     @State private var login: CloudProvider?
+    /// Baidu and Aliyun sign in with a code to scan, as on Apple TV.
+    @State private var scan: CloudProvider?
     @State private var notice: String?
     @State private var error: String?
     @State private var saving = false
     @State private var showsManual = false
     var body: some View {
         SettingsPage(title: L10n.text("Cloud Drive Accounts"), symbol: "externaldrive") {
-            SettingsGroup(footer: L10n.text("Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run.")) {
+            SettingsGroup(footer: L10n.text("Sign in to Quark and UC on their official page, and to Baidu and Aliyun by scanning a code with their phone app. Yingxia stores the login on this Mac and supplies it to the plugins you run.")) {
                 ForEach(CloudProvider.allCases) { provider in
                     let signedIn = provider.isSignedIn(accounts)
                     SettingsRow(symbol: provider.symbol, tint: provider.tint, title: provider.name,
                                 subtitle: L10n.text(signedIn ? "Signed In" : "Not Signed In")) {
                         if signedIn {
-                            Button(L10n.text("Sign Out")) { provider.clear(&accounts); save() }.settingsButton()
+                            Button(L10n.text("Sign Out")) {
+                                provider.clear(&accounts)
+                                EmbeddedJarHost.forgetPluginSignIns(provider.pluginFiles)
+                                save()
+                            }.settingsButton()
                         } else {
-                            Button(L10n.text("Sign In")) { login = provider }.settingsButton(prominent: true)
+                            Button(L10n.text("Sign In")) {
+                                if provider.signsInOnWeb { login = provider } else { scan = provider }
+                            }.settingsButton(prominent: true)
                         }
                     }
                 }
@@ -32,6 +40,7 @@ struct CloudDriveView: View {
                     SecureField(L10n.text("UC Cookie"), text: $accounts.ucCookie)
                     SecureField(L10n.text("UC Token (optional)"), text: $accounts.ucToken)
                     SecureField(L10n.text("Aliyun Refresh Token"), text: $accounts.token)
+                    SecureField(L10n.text("Baidu Cookie (BDUSS, STOKEN)"), text: Binding(get: { accounts.baiduCookie ?? "" }, set: { accounts.baiduCookie = $0.isEmpty ? nil : $0 }))
                     HStack { Spacer(); Button(L10n.text("Save Accounts")) { save() }.settingsButton(prominent: true).disabled(saving) }
                 } label: {
                     Text(L10n.text("Paste Credentials Manually"))
@@ -44,6 +53,12 @@ struct CloudDriveView: View {
         .sheet(item: $login) { provider in
             CloudLoginView(provider: provider) { cookie in
                 provider.set(cookie, in: &accounts)
+                save()
+            }
+        }
+        .sheet(item: $scan) { provider in
+            CloudQRLoginView(drive: provider.qrDrive) {
+                accounts = (try? CloudDriveAccounts.load()) ?? accounts
                 save()
             }
         }
@@ -155,7 +170,7 @@ private struct CloudLoginBrowser: NSViewRepresentable {
     }
 }
 #else
-/// Quark and UC sign-ins on iPhone, iPad and Apple TV, which have no browser to sign in with:
+/// Cloud drive sign-ins on iPhone, iPad and Apple TV, which have no browser to sign in with:
 /// a code to scan with the drive's phone app. Plugins read the saved sign-in on their next request.
 struct CloudDriveView: View {
     @State private var accounts = CloudDriveAccounts()
@@ -189,30 +204,72 @@ struct CloudDriveView: View {
     private func signOut(_ provider: CloudProvider) {
         var updated = accounts
         provider.clear(&updated)
+        // The plugin keeps its own copy of a Baidu or Aliyun sign-in; it goes too.
+        EmbeddedJarHost.forgetPluginSignIns(provider.pluginFiles)
         do { try updated.save(); accounts = updated; error = nil } catch { self.error = error.localizedDescription }
     }
 }
 #endif
 
 enum CloudProvider: String, Identifiable, CaseIterable {
-    case quark, uc
+    case quark, uc, baidu, aliyun
     var id: String { rawValue }
-    var name: String { self == .quark ? L10n.text("Quark") : "UC" }
-    var symbol: String { self == .quark ? "icloud.fill" : "externaldrive.fill" }
-    var tint: Color { self == .quark ? .blue : .orange }
+    var name: String {
+        switch self {
+        case .quark: L10n.text("Quark")
+        case .uc: "UC"
+        case .baidu: L10n.text("Baidu Netdisk")
+        case .aliyun: L10n.text("Aliyun Drive")
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .quark: "icloud.fill"
+        case .uc: "externaldrive.fill"
+        case .baidu: "cloud.fill"
+        case .aliyun: "shippingbox.fill"
+        }
+    }
+    var tint: Color {
+        switch self {
+        case .quark: .blue
+        case .uc: .orange
+        case .baidu: .indigo
+        case .aliyun: .purple
+        }
+    }
+    /// Quark and UC sign in on their web page on a Mac; every other sign-in is a code to scan.
+    var signsInOnWeb: Bool { self == .quark || self == .uc }
     var domain: String { self == .quark ? "quark.cn" : "uc.cn" }
-    #if os(iOS) || os(tvOS)
-    var qrDrive: CloudDriveQRLogin.Drive { self == .quark ? .quark : .uc }
-    #endif
+    var qrDrive: CloudDriveQRLogin.Drive { CloudDriveQRLogin.Drive(rawValue: rawValue)! }
     var url: URL { URL(string: self == .quark ? "https://pan.quark.cn/" : "https://drive.uc.cn/")! }
+    /// Where FTY plugins keep their own copy of the sign-in.
+    var pluginFiles: [String] {
+        switch self {
+        case .baidu: ["mybd_cookie"]
+        case .aliyun: ["ali_user", "ali_oauth", "ali_info"]
+        case .quark, .uc: []
+        }
+    }
     func isSignedIn(_ accounts: CloudDriveAccounts) -> Bool {
-        !(self == .quark ? accounts.quarkCookie : accounts.ucCookie).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let value: String
+        switch self {
+        case .quark: value = accounts.quarkCookie
+        case .uc: value = accounts.ucCookie
+        case .baidu: value = accounts.baiduCookie ?? ""
+        case .aliyun: value = accounts.token
+        }
+        return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     func set(_ cookie: String, in accounts: inout CloudDriveAccounts) {
-        if self == .quark {
+        switch self {
+        case .quark:
             if accounts.quarkCookie != cookie { accounts.quarkServiceTicket = nil }
             accounts.quarkCookie = cookie
-        } else { accounts.ucCookie = cookie }
+        case .uc: accounts.ucCookie = cookie
+        case .baidu: accounts.baiduCookie = cookie.isEmpty ? nil : cookie
+        case .aliyun: accounts.token = cookie
+        }
     }
     func clear(_ accounts: inout CloudDriveAccounts) {
         set("", in: &accounts)

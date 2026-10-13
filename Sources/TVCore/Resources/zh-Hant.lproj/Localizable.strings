@@ -678,3 +678,12 @@
 "Use This Subscription" = "使用此訂閱";
 "Order" = "順序";
 "Not set" = "未設定";
+"The source took too long to respond, so Yingxia stopped waiting. Try another line, or try again later." = "這個來源太久沒有回應，映匣已停止等待。請換一條線路，或稍後再試。";
+"This line plays from %@, but its sign-in code couldn't be shown. Choose another line." = "這條線路來自%@，但無法顯示它的登入 QR 碼。請換一條線路。";
+"Baidu Netdisk" = "百度網盤";
+"Aliyun Drive" = "阿里雲盤";
+"The original file is MKV, which Apple devices can't play, so the %@ line is playing instead." = "原畫檔案是 MKV 格式，Apple 裝置無法播放，已改為播放%@線路。";
+"Sign In to %@" = "登入%@";
+"%@ needs this account for the line you chose. The video plays once you confirm." = "「%@」的這條線路需要該帳號。確認登入後即可播放。";
+"Sign in to Quark and UC on their official page, and to Baidu and Aliyun by scanning a code with their phone app. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "夸克和 UC 在官方頁面登入，百度網盤和阿里雲盤用手機 App 掃碼登入。映匣會將登入資訊儲存在這台 Mac 上，並提供給你執行的外掛。";
+"Baidu Cookie (BDUSS, STOKEN)" = "百度網盤 Cookie（BDUSS、STOKEN）";

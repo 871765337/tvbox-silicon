@@ -313,6 +313,65 @@ public final class CloudDriveBridge implements AutoCloseable {
         }
         return ext.toString();
     }
+    /** Where the plugin offers the app a sign-in only it has (see syncFtyAccounts). */
+    public static final String PLUGIN_ACCOUNTS = "plugin-accounts.json";
+
+    /**
+     * FTY keeps its Baidu sign-in in {@code files/mybd_cookie} and its Aliyun one in
+     * {@code files/ali_user}, both guard-encrypted JSON ({@code bduss}, {@code stoken}, {@code ptoken};
+     * {@code refresh_token}). The app's Baidu account goes in before the spider starts (Aliyun reaches
+     * it as the Cloud-drive {@code token}). A sign-in only the plugin has, made through its own QR code
+     * before the app kept one, is offered back in the session folder for the app to keep.
+     */
+    public void syncFtyAccounts(JSONObject accounts, java.nio.file.Path files, java.nio.file.Path folder) {
+        var offer = new JSONObject();
+        try {
+            String cookie = accounts == null ? "" : accounts.optString("baiduCookie");
+            var saved = files.resolve("mybd_cookie");
+            var fields = new java.util.HashMap<String, String>();
+            for (String part : cookie.split(";")) {
+                int split = part.indexOf('=');
+                if (split > 0) fields.put(part.substring(0, split).trim(), part.substring(split + 1).trim());
+            }
+            String bduss = fields.getOrDefault("BDUSS", "");
+            JSONObject current = readFty(saved);
+            if (!bduss.isEmpty()) {
+                if (current == null || !bduss.equals(current.optString("bduss"))) {
+                    var value = new JSONObject().put("devuid", current == null ? "" : current.optString("devuid"))
+                        .put("stoken", fields.getOrDefault("STOKEN", "")).put("bduss", bduss).put("ptoken", fields.getOrDefault("PTOKEN", ""));
+                    Files.createDirectories(files);
+                    Files.writeString(saved, com.github.catvod.spider.DexNative.encrypt(value.toString()), StandardCharsets.UTF_8);
+                    System.err.println("CLOUD_ACCOUNT_RESTORED baidu");
+                }
+            } else if (current != null && !current.optString("bduss").isEmpty()) {
+                var value = new StringBuilder("BDUSS=").append(current.optString("bduss"));
+                if (!current.optString("ptoken").isEmpty()) value.append("; PTOKEN=").append(current.optString("ptoken"));
+                if (!current.optString("stoken").isEmpty()) value.append("; STOKEN=").append(current.optString("stoken"));
+                offer.put("baiduCookie", value.toString());
+            }
+            if (accounts == null || accounts.optString("token").isBlank()) {
+                JSONObject aliyun = readFty(files.resolve("ali_user"));
+                String token = aliyun == null ? "" : aliyun.optString("refresh_token");
+                if (token.length() == 32) offer.put("token", token);
+            }
+            var offered = folder.resolve(PLUGIN_ACCOUNTS);
+            if (offer.length() > 0) {
+                Files.writeString(offered, offer.toString(), StandardCharsets.UTF_8);
+                System.err.println("CLOUD_ACCOUNT_OFFERED " + offer.names());
+            } else Files.deleteIfExists(offered);
+        } catch (Throwable unavailable) {
+            System.err.println("CLOUD_ACCOUNT_SYNC_FAILED " + unavailable);
+        }
+    }
+
+    private static JSONObject readFty(java.nio.file.Path file) {
+        try {
+            if (!Files.isRegularFile(file)) return null;
+            String plain = com.github.catvod.spider.DexNative.decrypt(Files.readString(file, StandardCharsets.UTF_8).trim());
+            return plain == null || !plain.trim().startsWith("{") ? null : new JSONObject(plain);
+        } catch (Throwable unreadable) { return null; }
+    }
+
     /** Restore the two values FTY normally saves after its Android QR dialog succeeds. */
     public boolean restoreFtyQuarkAccount(JSONObject accounts, Class<?> spiderClass) throws Exception {
         if (accounts == null) return false;

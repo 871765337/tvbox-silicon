@@ -577,6 +577,8 @@ struct VideoDetailView: View {
             let value = try await client.detail(video.id, cached: client.site.type == 3 || client.site.type == 4)
             try Task.checkCancellation()
             detail = value
+            // Start on a line that can play: not one from a drive the viewer has no way to sign in to.
+            if selectedFlag == nil { selectedFlag = CloudDrive.preferredFlag(flags) }
         } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
     }
     private var headerLayout: AnyLayout {
@@ -878,11 +880,28 @@ private struct PlaybackIssue {
 private enum CloudDrive: String, Identifiable {
     case quark, uc
     var id: String { rawValue }
+    /// FTY names its lines after drive nicknames: 夸父 is Quark, 优汐 is UC.
     init?(flag: String) {
         let text = flag.lowercased()
-        if text.contains("夸克") || text.contains("quark") { self = .quark }
-        else if text.hasPrefix("uc") || text.contains("uc网盘") { self = .uc }
+        if text.contains("夸克") || text.contains("夸父") || text.contains("quark") { self = .quark }
+        else if text.hasPrefix("uc") || text.contains("uc网盘") || text.contains("优汐") { self = .uc }
         else { return nil }
+    }
+    /// Lines from drives that sign in through the plugin's own QR code (FTY's 嘟嘟 is Baidu, 阿狸 is
+    /// Aliyun). They ask for a scan the first time, so they never start a title on their own.
+    static func withoutSignIn(_ flag: String) -> Bool {
+        let text = flag.lowercased()
+        return ["嘟嘟", "百度", "度盘", "baidu", "阿狸", "阿里", "aliyun"].contains { text.contains($0) }
+    }
+    /// The first line that can play now: not from a drive without a sign-in, nor one whose sign-in is missing.
+    static func preferredFlag(_ flags: [String]) -> String? {
+        let accounts = (try? CloudDriveAccounts.load()) ?? CloudDriveAccounts()
+        return flags.first { flag in
+            if withoutSignIn(flag) { return false }
+            guard let drive = CloudDrive(flag: flag) else { return true }
+            let cookie = drive == .quark ? accounts.quarkCookie : accounts.ucCookie
+            return !cookie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
     var name: String { self == .quark ? L10n.text("Quark") : "UC" }
     var signInTitle: String { L10n.text(self == .quark ? "Sign In to Quark" : "Sign In to UC") }

@@ -53,40 +53,64 @@ public final class SharedPluginRuntime {
         Path cache = Path.of(input.getString("cache"));
         Files.createDirectories(cache);
         PreparationProgress.begin(cache);
-        Source source;
-        synchronized (this) { source = claim(id); }
-        if (source == null) {
-            var cancelled = OpeningGate.cancelled(input);
-            // The viewer's own requests init their spider before waiting searches; an abandoned
-            // request stops waiting instead of creating a spider nobody wants.
-            opening.enter(OpeningGate.search(input), cancelled);
-            try {
-                synchronized (this) { source = claim(id); }
-                if (source == null) {
-                    // Make room first: spider init allocates, and a full heap fails it.
-                    synchronized (this) { if (HeapBudget.low()) release(false); }
-                    Source opened = openSource(input, cache);
-                    synchronized (this) {
-                        sources.put(id, opened);
-                        busy.merge(id, 1, Integer::sum);
-                        evict();
+        for (int attempt = 1; ; attempt++) {
+            Source source;
+            synchronized (this) { source = claim(id); }
+            if (source == null) {
+                var cancelled = OpeningGate.cancelled(input);
+                // The viewer's own requests init their spider before waiting searches; an abandoned
+                // request stops waiting instead of creating a spider nobody wants.
+                opening.enter(OpeningGate.search(input), cancelled);
+                try {
+                    synchronized (this) { source = claim(id); }
+                    if (source == null) {
+                        // Make room first: spider init allocates, and a full heap fails it.
+                        synchronized (this) { if (HeapBudget.low()) release(false); }
+                        Source opened = openSource(input, cache);
+                        synchronized (this) {
+                            sources.put(id, opened);
+                            busy.merge(id, 1, Integer::sum);
+                            evict();
+                        }
+                        source = opened;
                     }
-                    source = opened;
-                }
-            } finally { opening.leave(); }
-        }
-        try {
-            // A spider keeps per-source state (e.g. the detail loaded before playback).
-            // Waiting searches must be cancellable too, even when this spider is already open.
-            // Detail/playback goes ahead of searches queued against the same source.
-            source.requests().enter(OpeningGate.search(input), OpeningGate.cancelled(input));
+                } finally { opening.leave(); }
+            }
             try {
-                source.bridge().activate();
-                try { return source.session().request(input.getJSONObject("params")); }
-                finally { CloudDriveBridge.deactivate(); }
-            } finally { source.requests().leave(); }
-        } finally {
-            synchronized (this) { busy.computeIfPresent(id, (key, count) -> count > 1 ? count - 1 : null); }
+                // A spider keeps per-source state (e.g. the detail loaded before playback).
+                // Waiting searches must be cancellable too, even when this spider is already open.
+                // Detail/playback goes ahead of searches queued against the same source.
+                try { source.requests().enter(OpeningGate.search(input), OpeningGate.cancelled(input)); }
+                catch (OpeningGate.Stuck stuck) {
+                    // An earlier request still runs in this spider long after it was told to stop:
+                    // retire the spider (it closes when that request returns) and open a fresh one.
+                    if (attempt > 1) throw stuck;
+                    synchronized (this) { if (sources.get(id) == source) sources.remove(id); }
+                    source.requests().retire();
+                    System.err.println("PLUGIN_SOURCE_RETIRED " + java.time.LocalTime.now().withNano(0) + " " + input.optString("key"));
+                    continue;
+                }
+                try {
+                    source.bridge().activate();
+                    try { return source.session().request(input.getJSONObject("params")); }
+                    catch (HttpDiagnostics.SignedIn signedIn) {
+                        // The plugin's own sign-in completed; a fresh spider reads the saved account.
+                        if (attempt > 1) throw signedIn;
+                        synchronized (this) { if (sources.get(id) == source) sources.remove(id); }
+                        source.requests().retire();
+                        OpeningGate.freshDeadline(input);
+                        continue;
+                    }
+                    finally { CloudDriveBridge.deactivate(); }
+                } finally {
+                    source.requests().leave();
+                    if (source.requests().retired() && !streaming(source.cache())) {
+                        try { source.session().closeSource(); } catch (Exception error) { error.printStackTrace(System.err); }
+                    }
+                }
+            } finally {
+                synchronized (this) { busy.computeIfPresent(id, (key, count) -> count > 1 ? count - 1 : null); }
+            }
         }
     }
 
@@ -110,7 +134,7 @@ public final class SharedPluginRuntime {
             long start = System.nanoTime();
             var session = NativeProbe.createStandardSession(runtime, input, bridge, accounts);
             System.err.printf("PLUGIN_SOURCE_READY %s %.3fs %s%n", input.optString("key"), (System.nanoTime() - start) / 1e9, HeapBudget.describe());
-            return new Source(session, bridge, cache, new OpeningGate());
+            return new Source(session, bridge, cache, new OpeningGate(true));
         } catch (Throwable failure) {
             bridge.close();
             throw failure;

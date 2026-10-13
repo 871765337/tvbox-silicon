@@ -60,6 +60,10 @@ struct RootView: View {
         .onChange(of: store.section) { _, section in
             if section != .search { store.searchModel.suspend() }
         }
+        // A Baidu or Aliyun line waiting for its plugin's sign-in code to be scanned.
+        .sheet(item: Binding(get: { PluginSignIn.shared.prompt }, set: { if $0 == nil { PluginSignIn.shared.dismiss() } })) {
+            PluginSignInView(prompt: $0)
+        }
         .modifier(PlayerPresentation(playing: $store.playing))
         .updatePresentation(updates, playing: store.playing != nil)
         .alert(L10n.text("Unable to Complete"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
