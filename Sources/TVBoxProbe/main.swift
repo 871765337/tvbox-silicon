@@ -190,12 +190,15 @@ import TVCore
             let live = try await LiveCatalog.resolve(Channel(name: "", url: address))
             print("resolved \(live.channel.name) \(live.channel.url.absoluteString.prefix(110))")
             print("qualities \(live.qualities.map { "\($0.id) \($0.label)" }) current \(live.current ?? -1)")
-            let item = AVPlayerItem(asset: AVURLAsset(url: live.channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": live.channel.headers]))
+            let item = AVPlayerItem(asset: DouyuStreams.asset(for: live.channel.url)
+                ?? AVURLAsset(url: live.channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": live.channel.headers]))
             let player = AVPlayer(playerItem: item); player.isMuted = true; player.play()
             for second in 1...10 {
                 try await Task.sleep(for: .seconds(1))
                 print("t=\(second) status=\(item.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) size=\(Int(item.presentationSize.width))x\(Int(item.presentationSize.height)) error=\(item.error.map { "\($0)" } ?? "-")")
             }
+            // Recoverable problems too, such as a playlist contradicting an earlier reload (-12312).
+            for event in item.errorLog()?.events ?? [] { print("errorlog \(event.errorStatusCode) \(event.errorComment ?? "-")") }
             return
         }
         if args[1] == "--bili-live", args.count >= 3, let room = Int(args[2]) {

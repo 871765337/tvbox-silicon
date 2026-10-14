@@ -64,7 +64,8 @@ enum DouyuLive {
             guard let rate = setting["rate"]?.int, let name = setting["name"]?.string else { return nil }
             return (rate, name)
         } // Best first, as Douyu lists them (0 is the original, then 4, 3, 2…).
-        return LiveStream(url: url, headers: ["User-Agent": LiveHTTP.mobileAgent, "Referer": "https://m.douyu.com/"],
+        // Its playlists go through DouyuStreams, which mends what Douyu's edge gets wrong.
+        return LiveStream(url: DouyuStreams.address(url), headers: DouyuStreams.headers,
                           qualities: qualities.map { (id: $0.0, label: $0.1) }, current: data?["rate"]?.int ?? quality ?? 0)
     }
 }

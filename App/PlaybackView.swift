@@ -90,6 +90,10 @@ import TVCore
     private(set) var quality: Int?
     private var playing: Channel?
     private var automatic: URL?
+    /// The live room playing (at the quality chosen), and whether it was already given a fresh address.
+    private var liveRoom: Channel?
+    private var liveRetried = false
+    private var liveRetrying = false
     /// A live room's chat, whose comments join `danmaku` as they are sent.
     private var chat: BilibiliLiveChat?
     /// Download state while connecting or buffering, sampled once a second from AVFoundation's logs.
@@ -157,24 +161,52 @@ import TVCore
             Task {
                 guard let resolved = try? await LiveCatalog.resolve(Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)),
                       self.generation == active else { return }
-                if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
-                if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
-                self.endObserver = nil; self.failureObserver = nil
-                self.sampler?.cancel(); self.sampler = nil
+                self.detachItem()
                 self.quality = resolved.current ?? quality
+                self.liveRoom = Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)
                 self.configure(resolved.channel, url: resolved.channel.url, generation: active)
             }
             return
         }
         let time = player.currentTime(), paused = player.rate == 0
-        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
-        if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
-        endObserver = nil; failureObserver = nil
-        sampler?.cancel(); sampler = nil
+        detachItem()
         self.quality = quality
         configure(Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo, headers: channel.headers), url: url, generation: generation)
         player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
         if paused { player.pause() }
+    }
+
+    /// Stops listening to the current item, before another replaces it in the same playback.
+    private func detachItem() {
+        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+        if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
+        endObserver = nil; failureObserver = nil
+        sampler?.cancel(); sampler = nil
+    }
+
+    /// A live room whose playlist contradicted itself (CoreMedia -12312) gets one fresh address before
+    /// the error shows: a platform's edge server can do this while it starts serving the room.
+    private func retryLive(after failure: Error?) -> Bool {
+        if liveRetrying { return true } // The failed item's other report of the same failure.
+        guard let room = liveRoom, !liveRetried, let failure = failure as NSError?,
+              failure.domain == "CoreMediaErrorDomain", failure.code == -12312 else { return false }
+        liveRetried = true; liveRetrying = true; loading = true
+        detachItem(); observation = nil
+        let active = generation
+        Diagnostics.shared.record(.warning, "player", "live retry room=\(room.url.absoluteString)")
+        Task {
+            do {
+                let resolved = try await LiveCatalog.resolve(room)
+                guard self.generation == active else { return }
+                self.liveRetrying = false
+                self.configure(resolved.channel, url: resolved.channel.url, generation: active)
+            } catch {
+                guard self.generation == active else { return }
+                self.liveRetrying = false
+                self.error = error.localizedDescription; self.loading = false
+            }
+        }
+        return true
     }
 
     /// The other line could not be resolved either: show why instead of loading forever.
@@ -208,6 +240,7 @@ import TVCore
             catalogDanmaku.startAutomatic(channel.historyContext)
         }
         isLive = LiveCatalog.isRoom(channel.url) || channel.group == L10n.text("Bilibili Live")
+        liveRoom = LiveCatalog.isRoom(channel.url) ? channel : nil; liveRetried = false; liveRetrying = false
         let activeGeneration = generation
         Diagnostics.shared.record(.info, "player", "start name=\(channel.name) group=\(channel.group) url=\(channel.url.absoluteString) headers=\(channel.headers.keys.sorted().joined(separator: ","))")
         preparation = Task { [weak self] in
@@ -261,7 +294,7 @@ import TVCore
                 }
             }
             #if os(macOS)
-            if address.pathExtension.lowercased() == "m3u8", address.scheme != BilibiliStreams.scheme, channel.url.scheme != DownloadLibrary.scheme {
+            if address.pathExtension.lowercased() == "m3u8", ["http", "https"].contains(address.scheme), channel.url.scheme != DownloadLibrary.scheme {
                 let adapter = HLSProxy(headers: channel.headers)
                 self.proxy = adapter
                 do { address = try await adapter.start(url: address) }
@@ -290,14 +323,15 @@ import TVCore
         #endif
         // Some providers require request headers. AVURLAsset's HTTP-header option is
         // best-effort and is not a guarantee for every redirected HLS segment.
-        let asset = CloudStreams.asset(for: url) ?? HongguoStreams.asset(for: url) ?? BilibiliStreams.asset(for: url)
+        let asset = CloudStreams.asset(for: url) ?? HongguoStreams.asset(for: url) ?? BilibiliStreams.asset(for: url) ?? DouyuStreams.asset(for: url)
             ?? AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
         let item = AVPlayerItem(asset: asset)
         if url.scheme == HongguoStreams.scheme { item.preferredForwardBufferDuration = HongguoStreams.forwardBufferDuration }
         observation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             let status = item.status
-            let message = item.error?.localizedDescription
-            let detail = item.error.map(Self.describe) ?? "-"
+            let failure = item.error
+            let message = failure?.localizedDescription
+            let detail = failure.map(Self.describe) ?? "-"
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
                 if status == .readyToPlay {
@@ -306,8 +340,9 @@ import TVCore
                     Diagnostics.shared.record(.info, "player", "ready host=\(self.transfer.host ?? channel.url.host() ?? "-")")
                 }
                 if status == .failed {
-                    self.loading = false; self.error = message ?? L10n.text("This media cannot be played. Try another channel or source.")
                     Diagnostics.shared.record(.error, "player", "failed host=\(self.transfer.host ?? channel.url.host() ?? "-") \(self.transfer.failure.map { "upstream=\($0) " } ?? "")\(detail)")
+                    if self.retryLive(after: failure) { return }
+                    self.loading = false; self.error = message ?? L10n.text("This media cannot be played. Try another channel or source.")
                 }
             }
         }
@@ -317,6 +352,7 @@ import TVCore
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
                 Diagnostics.shared.record(.error, "player", "interrupted host=\(self.transfer.host ?? channel.url.host() ?? "-") at=\(Int(self.player.currentTime().seconds.isFinite ? self.player.currentTime().seconds : -1))s \(failure.map(Self.describe) ?? "-")")
+                if self.retryLive(after: failure) { return }
                 self.error = message ?? L10n.text("Playback was interrupted."); self.loading = false
             }
         }
