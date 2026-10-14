@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "1.6.2",
+      "date": "2026-10-14",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.6.2/Yingxia-1.6.2-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "dot.radiowaves.left.and.right",
+          "title": {
+            "en": "Douyu live rooms keep playing",
+            "zh-Hans": "斗鱼直播不再中断",
+            "zh-Hant": "鬥魚直播不再中斷",
+            "ja": "Douyu のライブが止まらなくなりました"
+          },
+          "detail": {
+            "en": "A Douyu room could stop with an error two or three seconds after it started, and only played after Retry. Rooms now play straight away. If a live stream still stumbles as it starts, the player fetches a fresh one by itself instead of showing an error.",
+            "zh-Hans": "斗鱼直播间开始播放两三秒后可能出现“播放出错”，需要点“重试”才能观看。现在可以直接播放。若直播流在开头仍出现异常，播放器会自动重新获取一次，而不是直接报错。",
+            "zh-Hant": "鬥魚直播間開始播放兩三秒後可能出現「播放出錯」，需要按「重試」才能觀看。現在可以直接播放。若直播串流在開頭仍出現異常，播放器會自動重新取得一次，而不是直接報錯。",
+            "ja": "Douyu の配信ルームは再生開始から 2〜3 秒でエラーになり、「再試行」しないと見られないことがありましたが、すぐに再生されるようになりました。開始時に配信が乱れた場合も、エラーを表示せずにプレーヤーが自動で取り直します。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.6.1",
       "date": "2026-10-14",
       "links": {
