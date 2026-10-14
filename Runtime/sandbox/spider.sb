@@ -13,6 +13,7 @@
 ;;   CACHE_ROOT  ~/Library/Caches/<bundle-id>  (the host working root)
 ;;   JOB         this request's session directory (also the process TMPDIR and cwd)
 ;;   PROFILE     this source's persistent profile directory
+;;   ACCOUNTS    the saved cloud-drive sign-ins file (read only; the host hands it to spiders)
 ;;   HOME        the user's home directory (everything under it is cut off by default)
 
 (version 1)
@@ -89,7 +90,9 @@
     (path-ancestors (param "RESOURCES"))
     (path-ancestors (param "CACHE_ROOT"))
     (path-ancestors (param "JOB"))
-    (path-ancestors (param "PROFILE")))
+    (path-ancestors (param "PROFILE"))
+    (path-ancestors (param "ACCOUNTS")))
+(allow file-read* file-read-metadata (literal (param "ACCOUNTS")))
 (allow file-read* file-read-metadata file-write*
     (subpath (param "CACHE_ROOT"))
     (subpath (param "JOB"))

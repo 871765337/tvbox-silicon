@@ -42,6 +42,7 @@ enum SpiderSandbox {
                     "-D", "CACHE_ROOT=\(canonical(cacheRoot))",
                     "-D", "JOB=\(canonical(job))",
                     "-D", "PROFILE=\(canonical(profile))",
+                    "-D", "ACCOUNTS=\(canonical(CloudDriveAccounts.fileURL))",
                     "-D", "HOME=\(home)",
                     "--", executable.path]
         argv.append(contentsOf: arguments)

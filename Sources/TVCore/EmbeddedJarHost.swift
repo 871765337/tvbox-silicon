@@ -214,7 +214,8 @@ public actor EmbeddedJarHost {
 
     /// Converted classes take minutes to regenerate, so iOS and macOS keep them out of purgeable
     /// Caches. tvOS only permits Caches; there a purge means preparing the plugin again.
-    private static let storageRoot: URL = {
+    /// The Mac's sandboxed plugin process is granted this folder (see `PluginProcess.start`).
+    static let storageRoot: URL = {
         let manager = FileManager.default
         let cached = manager.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("com.tvbox.yingxia/EmbeddedPlugins", isDirectory: true)
         #if os(iOS) || os(macOS)

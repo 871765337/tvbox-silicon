@@ -87,8 +87,10 @@ final class PluginProcess: @unchecked Sendable {
         environment["TMPDIR"] = root.path
         process.environment = environment
         // Confine the JVM to the kernel Seatbelt sandbox (no-op on fallback). macOS only.
+        // Requests keep their sessions, profiles and converted classes in EmbeddedPlugins under
+        // Application Support, outside this root, so that folder is the profile directory.
         if let executable = process.executableURL {
-            let confined = SpiderSandbox.wrap(executable: executable, arguments: process.arguments ?? [], host: host, cacheRoot: root, job: root, profile: root)
+            let confined = SpiderSandbox.wrap(executable: executable, arguments: process.arguments ?? [], host: host, cacheRoot: root, job: root, profile: EmbeddedJarHost.storageRoot)
             process.executableURL = confined.executable
             process.arguments = confined.arguments
         }
