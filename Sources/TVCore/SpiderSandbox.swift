@@ -35,8 +35,15 @@ enum SpiderSandbox {
         // Seatbelt matches canonical paths, so resolve symlinks (e.g. /var -> /private/var) before
         // injecting. The home directory is cut off wholesale by the profile; the app's own dirs,
         // which live under it, are reopened by the RESOURCES/CACHE_ROOT/JOB/PROFILE parameters.
-        func canonical(_ url: URL) -> String { url.resolvingSymlinksInPath().path }
-        let home = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().path
+        // Not `resolvingSymlinksInPath`: it strips a leading /private, so an app run from /private/tmp
+        // or App Translocation (/private/var/folders/...) could not exec its own interpreter.
+        func canonical(_ url: URL) -> String {
+            if let resolved = realpath(url.path, nil) { defer { free(resolved) }; return String(cString: resolved) }
+            // Not created yet (the accounts file before the first sign-in): resolve its folder.
+            let parent = url.deletingLastPathComponent()
+            return parent.path == url.path ? url.path : canonical(parent) + "/" + url.lastPathComponent
+        }
+        let home = canonical(FileManager.default.homeDirectoryForCurrentUser)
         var argv = ["-f", profileFile.path,
                     "-D", "RESOURCES=\(canonical(host))",
                     "-D", "CACHE_ROOT=\(canonical(cacheRoot))",
