@@ -181,7 +181,6 @@
 		0558AED26E6028C2881DD044 /* PythonHost */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PythonHost; path = build/PythonHost; sourceTree = SOURCE_ROOT; };
 		06D9469858E5C5A118DED875 /* libffi.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = libffi.txt; sourceTree = "<group>"; };
 		084C8344E2997DB3ED8FE974 /* Keystone-GPL2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Keystone-GPL2.txt"; sourceTree = "<group>"; };
-		0880682FDD3D3B413396938B /* tvbox */ = {isa = PBXFileReference; lastKnownFileType = folder; name = tvbox; path = .; sourceTree = SOURCE_ROOT; };
 		08B7C43C763200E67A22E365 /* Capstone-LLVM.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Capstone-LLVM.txt"; sourceTree = "<group>"; };
 		181C983C0018A97F2A086298 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
 		2075419FEF0E1C161A31A9F0 /* RuntimeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeView.swift; sourceTree = "<group>"; };
@@ -242,6 +241,7 @@
 		F25432F6424C7931768C7B6F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F3BE1C0DDC7E09246C2E0A68 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		F7D32FD5D631B4C58A2C3022 /* TVBox-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "TVBox-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FB8C8A2729B74B279EE60736 /* TVCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TVCore; path = Packages/TVCore; sourceTree = SOURCE_ROOT; };
 		FFE4BA19E4F4F2797D929A6F /* AppleRuntime.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppleRuntime.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -385,9 +385,9 @@
 		A8F2C96E75A8FF40AD9C4F24 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				0880682FDD3D3B413396938B /* tvbox */,
+				FB8C8A2729B74B279EE60736 /* TVCore */,
 			);
-			name = Packages;
+			path = Packages;
 			sourceTree = "<group>";
 		};
 		D9AC68A53354DF07C59EC817 /* RuntimeLicenses */ = {
@@ -528,7 +528,7 @@
 			mainGroup = 9DD837D999788C26D512B710;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D7245A415BE68C715CD1A007 /* XCLocalSwiftPackageReference "." */,
+				06AA5CB5721B8F53BE65070A /* XCLocalSwiftPackageReference "Packages/TVCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9E42A71049342AE976D26F4C /* Products */;
@@ -1101,9 +1101,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		D7245A415BE68C715CD1A007 /* XCLocalSwiftPackageReference "." */ = {
+		06AA5CB5721B8F53BE65070A /* XCLocalSwiftPackageReference "Packages/TVCore" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = .;
+			relativePath = Packages/TVCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 

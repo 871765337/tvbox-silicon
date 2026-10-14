@@ -18,8 +18,10 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: ''
 packages:
+  # Symlinks to the root Package.swift, Sources, Vendor and Tests. Xcode walks every file under a
+  # local package before building, so pointing it at the repo root made it scan build/ (minutes).
   TVCore:
-    path: .
+    path: Packages/TVCore
 targetTemplates:
   SharedApp:
     type: application
