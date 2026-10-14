@@ -1,6 +1,107 @@
 {
   "releases": [
     {
+      "version": "1.6.3",
+      "date": "2026-10-15",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.6.3/Yingxia-1.6.3-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "puzzlepiece.extension.fill",
+          "title": {
+            "en": "JAR sources work again on Mac",
+            "zh-Hans": "Mac 上的 JAR 源恢复可用",
+            "zh-Hant": "Mac 上的 JAR 來源恢復可用",
+            "ja": "Mac で JAR ソースが再び使えるように"
+          },
+          "detail": {
+            "en": "Since 1.2, sources that run as JAR plugins, such as 玩偶哥哥, failed on Mac with “Operation not permitted”. They load again, and plugins on Mac can now use your Quark and UC sign-ins too.",
+            "zh-Hans": "从 1.2 版起，Mac 上以 JAR 插件运行的源（例如“玩偶哥哥”）会出现“Operation not permitted”错误而无法加载。现在可以正常加载，Mac 上的插件也能使用你已登录的夸克和 UC 网盘账号。",
+            "zh-Hant": "從 1.2 版起，Mac 上以 JAR 外掛執行的來源（例如「玩偶哥哥」）會出現「Operation not permitted」錯誤而無法載入。現在可以正常載入，Mac 上的外掛也能使用你已登入的夸克和 UC 網盤帳號。",
+            "ja": "バージョン 1.2 以降、Mac で JAR プラグインとして動くソース（「玩偶哥哥」など）が「Operation not permitted」エラーで読み込めませんでした。再び読み込めるようになり、Mac のプラグインでもサインイン済みの Quark と UC のアカウントを使えます。"
+          }
+        },
+        {
+          "symbol": "music.note",
+          "title": {
+            "en": "More songs play in Music",
+            "zh-Hans": "音乐：更多歌曲可以播放",
+            "zh-Hant": "音樂：更多歌曲可以播放",
+            "ja": "ミュージックで再生できる曲が増えました"
+          },
+          "detail": {
+            "en": "Music now also searches Migu and Kuwo and plays from their channels, lossless first. Many songs the QQ Music channels could no longer reach, such as Jay Chou’s, play again in FLAC.",
+            "zh-Hans": "音乐现在也会搜索咪咕和酷我，并从它们的渠道播放，优先无损。许多 QQ 音乐渠道已无法播放的歌曲（例如周杰伦的歌）又能以 FLAC 播放了。",
+            "zh-Hant": "音樂現在也會搜尋咪咕和酷我，並從它們的渠道播放，優先無損。許多 QQ 音樂渠道已無法播放的歌曲（例如周杰倫的歌）又能以 FLAC 播放了。",
+            "ja": "ミュージックで Migu と Kuwo も検索し、それらのチャンネルからロスレス優先で再生するようになりました。QQ Music のチャンネルで再生できなくなっていた曲（周杰倫の曲など）も再び FLAC で再生できます。"
+          }
+        },
+        {
+          "symbol": "play.circle.fill",
+          "title": {
+            "en": "A new music player on iPhone",
+            "zh-Hans": "iPhone 上全新的音乐播放器",
+            "zh-Hant": "iPhone 上全新的音樂播放器",
+            "ja": "iPhone の新しいミュージックプレーヤー"
+          },
+          "detail": {
+            "en": "A mini player sits above the tab bar, and Now Playing opens full screen with a large cover, lyrics, Up Next and AirPlay. Songs now show on the Lock Screen, in Control Center and in the Dynamic Island, where you can play, pause and skip, as you can from your headphones. Search results play one after another.",
+            "zh-Hans": "迷你播放器位于标签栏上方，“正在播放”以全屏打开，显示大幅封面、歌词、待播清单和 AirPlay。歌曲现在会显示在锁定屏幕、控制中心和灵动岛上，可以在那里播放、暂停和切歌，也可以用耳机控制。搜索结果会依次连续播放。",
+            "zh-Hant": "迷你播放器位於標籤列上方，「正在播放」以全螢幕開啟，顯示大幅封面、歌詞、待播清單和 AirPlay。歌曲現在會顯示在鎖定畫面、控制中心和動態島上，可以在那裡播放、暫停和切歌，也可以用耳機控制。搜尋結果會依序連續播放。",
+            "ja": "タブバーの上にミニプレーヤーが表示され、「再生中」は大きなジャケット、歌詞、次に再生、AirPlay を備えた全画面で開きます。曲がロック画面、コントロールセンター、Dynamic Island に表示され、そこで再生、一時停止、スキップができます。ヘッドフォンからも操作できます。検索結果は続けて再生されます。"
+          }
+        },
+        {
+          "symbol": "dot.radiowaves.left.and.right",
+          "title": {
+            "en": "Live TV shows what’s on",
+            "zh-Hans": "直播页显示正在直播的内容",
+            "zh-Hant": "直播頁顯示正在直播的內容",
+            "ja": "ライブで配信中の内容が見えるように"
+          },
+          "detail": {
+            "en": "Each built-in live platform is now a card showing its busiest room, with the streamer and the audience. Playlists appear as tiles, as in Sources.",
+            "zh-Hans": "每个内置直播平台现在显示为一张卡片，展示当前最热门的直播间、主播和观看人数。直播列表以方块显示，与“点播源”页面一致。",
+            "zh-Hant": "每個內建直播平台現在顯示為一張卡片，展示目前最熱門的直播間、主播和觀看人數。直播清單以方塊顯示，與「點播源」頁面一致。",
+            "ja": "内蔵の各ライブプラットフォームが、いま最も賑わっている配信ルームと配信者、視聴者数を表示するカードになりました。プレイリストは「ソース」と同じタイルで表示されます。"
+          }
+        },
+        {
+          "symbol": "square.grid.2x2.fill",
+          "title": {
+            "en": "Choose your iPhone tabs",
+            "zh-Hans": "自定 iPhone 标签栏",
+            "zh-Hant": "自訂 iPhone 標籤列",
+            "ja": "iPhone のタブを選べるように"
+          },
+          "detail": {
+            "en": "More shows every section as a tile with live counts. Tap Edit to drag sections into or out of the tab bar. Settings has a new look, and adding a subscription opens its own sheet.",
+            "zh-Hans": "“更多”以方块显示所有栏目及实时数量。点“编辑”即可把栏目拖进或拖出标签栏。“设置”换上了新外观，添加订阅改为在单独的面板中进行。",
+            "zh-Hant": "「更多」以方塊顯示所有欄目及即時數量。按「編輯」即可把欄目拖進或拖出標籤列。「設定」換上了新外觀，新增訂閱改為在單獨的面板中進行。",
+            "ja": "「その他」ですべてのセクションを件数付きのタイルで表示します。「編集」をタップすると、セクションをタブバーへドラッグして出し入れできます。「設定」のデザインが新しくなり、サブスクリプションの追加は専用のシートで行います。"
+          }
+        },
+        {
+          "symbol": "appletv.fill",
+          "title": {
+            "en": "Source choices reachable on Apple TV",
+            "zh-Hans": "Apple TV 上可以选择片源了",
+            "zh-Hant": "Apple TV 上可以選擇片源了",
+            "ja": "Apple TV でソースを選べるように"
+          },
+          "detail": {
+            "en": "On a video with few episodes, the remote couldn’t move to the source buttons. Now it can, and Play is selected as soon as the details load.",
+            "zh-Hans": "在集数较少的视频页上，遥控器无法移动到片源按钮。现在可以了，详情加载完成后会自动选中“播放”。",
+            "zh-Hant": "在集數較少的影片頁上，遙控器無法移動到片源按鈕。現在可以了，詳細資料載入完成後會自動選取「播放」。",
+            "ja": "エピソードの少ない動画ページで、リモコンがソースボタンへ移動できませんでした。移動できるようになり、詳細の読み込み後は「再生」が選択されます。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.6.2",
       "date": "2026-10-14",
       "links": {
