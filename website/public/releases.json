@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "1.6.1",
+      "date": "2026-10-14",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.6.1/Yingxia-1.6.1-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "chart.bar.fill",
+          "title": {
+            "en": "Bilibili rankings are back",
+            "zh-Hans": "哔哩哔哩排行榜恢复",
+            "zh-Hant": "嗶哩嗶哩排行榜恢復",
+            "ja": "Bilibili のランキングが復活"
+          },
+          "detail": {
+            "en": "In the built-in Bilibili source, 排行榜 and the zone rankings (动画, 音乐, 游戏 and the rest) came up empty after a change on Bilibili’s side. They load again.",
+            "zh-Hans": "内置哔哩哔哩源中的“排行榜”和各分区排行（动画、音乐、游戏等）因 B 站接口变化而显示为空，现在可以正常加载。",
+            "zh-Hant": "內建嗶哩嗶哩來源中的「排行榜」和各分區排行（動畫、音樂、遊戲等）因 B 站介面變更而顯示為空，現在可以正常載入。",
+            "ja": "内蔵の Bilibili ソースで「排行榜」と各カテゴリのランキング（动画、音乐、游戏など）が Bilibili 側の変更で空になっていましたが、再び表示されるようになりました。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.6",
       "date": "2026-10-14",
       "links": {
