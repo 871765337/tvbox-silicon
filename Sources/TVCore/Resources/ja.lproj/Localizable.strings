@@ -766,3 +766,9 @@
 "Reset" = "リセット";
 "Up Next" = "次に再生";
 "Live Platforms" = "ライブ配信サービス";
+"Tab Bar" = "タブバー";
+"Edit" = "編集";
+"Edit Tab Bar" = "タブバーを編集";
+"In More" = "「その他」内";
+"Choose your tabs and their order." = "表示するタブとその順番を選べます。";
+"Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "ドラッグして並べ替えます。タブバーには4つまで置けて、残りは「その他」に入ります。";

@@ -766,3 +766,9 @@
 "Reset" = "重置";
 "Up Next" = "待播清单";
 "Live Platforms" = "直播平台";
+"Tab Bar" = "标签栏";
+"Edit" = "编辑";
+"Edit Tab Bar" = "编辑标签栏";
+"In More" = "在“更多”中";
+"Choose your tabs and their order." = "选择要显示的标签及其顺序。";
+"Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "拖动即可调整顺序。标签栏最多放四项，其余的留在“更多”中。";

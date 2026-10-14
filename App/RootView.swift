@@ -30,6 +30,9 @@ struct RootView: View {
     // Untyped so it can hold both More-tab sections and Route pages.
     @State private var morePath = NavigationPath()
     @State private var moreSection: AppSection = .settings
+    #if os(iOS)
+    @AppStorage(PhoneTabs.storageKey) private var storedTabs = ""
+    #endif
     #if os(macOS)
     /// Pushed pages in the detail column. Cleared on section change: inside NavigationSplitView the
     /// column keeps its pushed views even when the root stack's identity changes.
@@ -37,7 +40,7 @@ struct RootView: View {
     #endif
     private var tabs: [AppSection] {
         #if os(iOS)
-        if sizeClass == .compact { return [.home, .live, .music, .search, .more] }
+        if sizeClass == .compact { return PhoneTabs(stored: storedTabs).bar + [.more] }
         #endif
         return [.home, .live, .music, .search, .sites, .history, .favorites, .downloads, .settings]
     }
@@ -78,8 +81,10 @@ struct RootView: View {
     }
 
     #if !os(macOS)
-    /// Sections a phone reaches through More.
-    private static let inMore: [AppSection] = [.sites, .history, .favorites, .downloads, .settings]
+    #if os(iOS)
+    /// Sections a phone reaches through More, as arranged in the tab bar editor.
+    private var inMore: [AppSection] { PhoneTabs(stored: storedTabs).more }
+    #endif
     private var platformTabs: some View {
         @Bindable var store = store
         return TabView(selection: $store.section) {
@@ -88,21 +93,14 @@ struct RootView: View {
                         if item == .more {
                             NavigationStack(path: $morePath) {
                                 content(.more).routeDestinations()
-                                    .navigationDestination(for: AppSection.self) { destination in
-                                        switch destination {
-                                        case .sites: SitesView()
-                                        case .history: PlaybackHistoryView()
-                                        case .favorites: FavoritesView()
-                                        case .downloads: DownloadsView()
-                                        default: SettingsView()
-                                        }
-                                    }
+                                    // Any section can be moved into More, so any can be pushed here.
+                                    .navigationDestination(for: AppSection.self) { content($0) }
                             }
                         } else { NavigationStack { content(item).tvDefaultControls().routeDestinations() } }
                     }
                     #if os(iOS)
                     // tvOS tab bars have no badges; there the launch sheet and Settings carry the news.
-                    .badge(item.showsUpdateBadge && !updates.available.isEmpty ? Text(L10n.text("New")) : nil)
+                    .badge(showsUpdateBadge(item) && !updates.available.isEmpty ? Text(L10n.text("New")) : nil)
                     #endif
                 }
             }
@@ -110,19 +108,26 @@ struct RootView: View {
             #if os(iOS)
             .minimizesTabBarOnScroll()
             .onChange(of: store.section) { _, section in
-                if sizeClass == .compact && Self.inMore.contains(section) {
+                if sizeClass == .compact && inMore.contains(section) {
                     moreSection = section; morePath = NavigationPath([section])
                     store.section = .more
                 }
             }
             .onChange(of: sizeClass) { _, size in
                 if size != .compact && store.section == .more { store.section = morePath.isEmpty ? .settings : moreSection }
-                else if size == .compact && Self.inMore.contains(store.section) {
+                else if size == .compact && inMore.contains(store.section) {
                     moreSection = store.section; morePath = NavigationPath([store.section]); store.section = .more
                 }
             }
             #endif
     }
+
+    #if os(iOS)
+    /// Software Update lives in Settings, so More carries the badge only while Settings is inside it.
+    private func showsUpdateBadge(_ item: AppSection) -> Bool {
+        item == .more ? sizeClass == .compact && inMore.contains(.settings) : item.showsUpdateBadge
+    }
+    #endif
     #endif
 
 
@@ -146,21 +151,12 @@ struct RootView: View {
         case .history: PlaybackHistoryView()
         case .settings: SettingsView()
         case .more:
-            List {
-                NavigationLink(value: AppSection.sites) { Label(AppSection.sites.title, systemImage: AppSection.sites.icon) }
-                NavigationLink(value: AppSection.history) { Label(AppSection.history.title, systemImage: AppSection.history.icon) }
-                NavigationLink(value: AppSection.favorites) { Label(AppSection.favorites.title, systemImage: AppSection.favorites.icon) }
-                NavigationLink(value: AppSection.downloads) { Label(AppSection.downloads.title, systemImage: AppSection.downloads.icon) }
-                NavigationLink(value: AppSection.settings) { Label(AppSection.settings.title, systemImage: AppSection.settings.icon) }
-                    #if os(iOS)
-                    .badge(updates.available.isEmpty ? nil : Text(L10n.text("New")))
-                    #endif
-            }
-            #if !os(tvOS)
-            .scrollContentBackground(.hidden)
+            // Only the phone's compact tab bar has a More tab.
+            #if os(iOS)
+            MoreView()
+            #else
+            EmptyView()
             #endif
-            .screenBackdrop()
-            .screenTitle(L10n.text("More"))
         }
     }
 }
