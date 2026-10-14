@@ -127,7 +127,7 @@ struct SettingsPage<Content: View>: View {
         #if os(tvOS)
         TVSettingsSubpage(symbol: symbol, title: title, subtitle: subtitle) { content }
         #else
-        Form { content }.settingsForm(title)
+        Form { Group { content }.settingsRows() }.settingsForm(title)
         #endif
     }
 }
@@ -136,6 +136,8 @@ struct SettingsPage<Content: View>: View {
 enum SettingsStyle {
     static let radius: CGFloat = 12
     static let groupFill = Color.primary.opacity(0.05)
+    /// Row fill on the app's canvas on iPhone and iPad: the navy of the More tab's tiles.
+    static let rowFill = Color(light: .white, dark: Color(red: 0.075, green: 0.105, blue: 0.19))
 }
 
 // MARK: Settings
@@ -202,12 +204,23 @@ struct FormLink<Destination: View>: View {
     @ViewBuilder var destination: () -> Destination
     var body: some View {
         RouteLink(destination: destination) {
+            #if os(iOS)
+            // One line, as in the Settings app: the title keeps its width and a long value is cut
+            // short; LabeledContent dropped the value under the title instead.
+            HStack(spacing: 8) {
+                FormLabel(symbol: symbol, tint: tint, title: title).lineLimit(1).layoutPriority(1)
+                Spacer(minLength: 0)
+                if let value, !value.isEmpty { valueText(value) }
+            }
+            #else
             LabeledContent {
-                if let value, !value.isEmpty {
-                    Text(value).lineLimit(1).foregroundStyle(warning ? AnyShapeStyle(Brand.amber) : AnyShapeStyle(.secondary))
-                }
+                if let value, !value.isEmpty { valueText(value) }
             } label: { FormLabel(symbol: symbol, tint: tint, title: title) }
+            #endif
         }
+    }
+    private func valueText(_ value: String) -> some View {
+        Text(value).lineLimit(1).foregroundStyle(warning ? AnyShapeStyle(Brand.amber) : AnyShapeStyle(.secondary))
     }
 }
 
@@ -229,10 +242,23 @@ extension View {
         GeometryReader { proxy in
             let extra = (proxy.size.width - Layout.settingsWidth) / 2
             let form = formStyle(.grouped).tint(systemAccent)
+                #if os(iOS)
+                // The app's navy canvas, as on every other page, instead of the system's black.
+                .scrollContentBackground(.hidden)
+                .background { Backdrop() }
+                #endif
             // Only when there is room to spare: a zero margin would replace the system's own insets.
             if extra > 0 { form.contentMargins(.horizontal, extra, for: .scrollContent) } else { form }
         }
         .screenTitle(title, width: Layout.settingsWidth)
+    }
+    /// Rows in the app's fill on iPhone and iPad; the Mac keeps System Settings' own.
+    @ViewBuilder func settingsRows() -> some View {
+        #if os(iOS)
+        listRowBackground(SettingsStyle.rowFill)
+        #else
+        self
+        #endif
     }
     /// Switches in the system's own colour: green on iPhone and iPad, the accent on the Mac.
     @ViewBuilder func settingsSwitch() -> some View {
@@ -251,6 +277,9 @@ struct FormSettingsView: View {
     @State private var bilibiliSummary = ""
     @State private var douyinSummary = ""
     @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
+    #if os(iOS)
+    @State private var addingSubscription = false
+    #endif
     #if os(macOS)
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
     #endif
@@ -260,31 +289,9 @@ struct FormSettingsView: View {
 
     var body: some View {
         @Bindable var store = store
-        Form {
-            // The app leads, like the account card in Settings; a waiting release sits right under it.
-            Section {
-                HStack(spacing: 14) {
-                    AppMark(size: FormMetrics.hero)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.text("Yingxia")).font(.title3.weight(.semibold))
-                        if let version { Text(version).font(.subheadline).foregroundStyle(.secondary) }
-                        Text(Brand.copyright).font(.caption).foregroundStyle(.tertiary)
-                    }
-                    .lineLimit(1)
-                }
-                .padding(.vertical, 6)
-                .accessibilityElement(children: .combine)
-                if let latest = updates.available.first {
-                    Button(action: updates.show) {
-                        LabeledContent {
-                            NewBadge()
-                        } label: {
-                            FormLabel(symbol: "gift.fill", tint: Brand.cyan, title: L10n.text("Yingxia %@ is available", latest.version),
-                                      subtitle: L10n.text("New features are waiting for you."))
-                        }
-                    }.formRowButton()
-                }
-            }
+        ScrollViewReader { proxy in
+        Form { Group {
+            heroSection
 
             Section {
                 ForEach(store.subscriptions) { entry in
@@ -295,16 +302,35 @@ struct FormSettingsView: View {
                         SubscriptionDetailView(entry: entry)
                     }
                 }
+                #if os(iOS)
+                // One row instead of an always-open field and three text buttons; the address goes in a sheet.
+                Button { addingSubscription = true } label: {
+                    FormLabel(symbol: "plus", tint: .green, title: L10n.text("Add Subscription")).foregroundStyle(.primary)
+                }
+                #else
                 TextField(L10n.text("TVBox JSON URL"), text: $store.subscriptionAddress, prompt: Text(L10n.text("TVBox JSON URL")))
                     .labelsHidden()
                     .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never).keyboardType(.URL)
-                    #endif
                     .onSubmit { add() }
                 subscriptionActions
+                #endif
             } header: {
+                #if os(iOS)
+                HStack {
+                    Text(L10n.text("Subscriptions"))
+                    Spacer()
+                    if store.importing {
+                        ProgressView().controlSize(.small)
+                    } else if !store.subscriptions.isEmpty {
+                        Button { Task { await store.refreshSubscriptions() } } label: {
+                            Label(L10n.text("Refresh All"), systemImage: "arrow.clockwise")
+                        }
+                        .font(.footnote.weight(.semibold)).textCase(nil)
+                    }
+                }
+                #else
                 Text(L10n.text("Subscriptions"))
+                #endif
             } footer: {
                 if let message = store.error ?? store.notice { Text(message) }
             }
@@ -315,10 +341,13 @@ struct FormSettingsView: View {
                 FormLink(symbol: "externaldrive.fill.badge.person.crop", tint: .brown, title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
             }
 
-            Section(L10n.text("Playback")) {
+            Section {
                 Toggle(isOn: $showsDanmaku) {
-                    FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"),
-                              subtitle: L10n.text("Bilibili's bullet comments, drawn over the video. You can also switch them in the player."))
+                    #if os(iOS)
+                    FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"))
+                    #else
+                    FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"), subtitle: danmakuNote)
+                    #endif
                 }
                 .settingsSwitch()
                 #if os(macOS)
@@ -329,9 +358,22 @@ struct FormSettingsView: View {
                 .onChange(of: receivesCasts) { _, on in
                     if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
                 }
+                FormLink(symbol: "play.fill", tint: Brand.indigo, title: L10n.text("Play a URL")) { PlayURLView() }
                 #endif
+            } header: {
+                Text(L10n.text("Playback"))
+            } footer: {
+                // The Settings app explains a switch under its group, not inside the row; the switch
+                // gets a group of its own so the note plainly belongs to it.
+                #if os(iOS)
+                Text(danmakuNote)
+                #endif
+            }
+            #if os(iOS)
+            Section {
                 FormLink(symbol: "play.fill", tint: Brand.indigo, title: L10n.text("Play a URL")) { PlayURLView() }
             }
+            #endif
 
             Section(L10n.text("Advanced")) {
                 FormLink(symbol: "internaldrive", tint: .blue, title: L10n.text("Local Cache")) { CacheSettingsView() }
@@ -339,6 +381,50 @@ struct FormSettingsView: View {
                 FormLink(symbol: "doc.text.magnifyingglass", tint: .gray, title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
             }
 
+            #if os(iOS)
+            // As in the Settings app: one-line rows with their state on the right, and the notes under
+            // each group instead of a second line and a small link inside the row.
+            Section {
+                Button {
+                    if updates.available.isEmpty { Task { await updates.check(manual: true) } } else { updates.show() }
+                } label: {
+                    HStack(spacing: 8) {
+                        FormLabel(symbol: "arrow.triangle.2.circlepath", tint: .gray, title: L10n.text("Software Update"))
+                            .foregroundStyle(.primary).lineLimit(1).layoutPriority(1)
+                        Spacer(minLength: 0)
+                        if updates.checking { ProgressView() }
+                        else if !updates.available.isEmpty { NewBadge() }
+                        else { Text(updates.lastChecked == nil ? L10n.text("Check Now") : L10n.text("Up to Date")).foregroundStyle(.secondary).lineLimit(1) }
+                    }
+                }
+                // Rows that act in place still read like the rows around them, not like links.
+                .tint(.primary)
+                .disabled(updates.checking)
+            } header: {
+                Text(L10n.text("About"))
+            } footer: {
+                if let latest = updates.available.first { Text(L10n.text("Yingxia %@ is available", latest.version)) }
+                else if let checked = updates.lastChecked { Text(L10n.text("Last checked %@", checked.formatted(date: .abbreviated, time: .shortened))) }
+            }
+
+            Section {
+                if !updates.currentNotes.isEmpty {
+                    Button(action: updates.showCurrentNotes) {
+                        HStack(spacing: 8) {
+                            FormLabel(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.current))
+                                .foregroundStyle(.primary).lineLimit(1)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                        }
+                    }
+                    .tint(.primary)
+                }
+                FormLink(symbol: "doc.plaintext.fill", tint: .gray, title: L10n.text("Open Source Licenses")) { LicensesView() }
+                    .id("settings.end")
+            } footer: {
+                Text(L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source."))
+            }
+            #else
             Section {
                 if updates.available.isEmpty {
                     LabeledContent {
@@ -363,17 +449,88 @@ struct FormSettingsView: View {
             } footer: {
                 Text(L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source."))
             }
+            #endif
+        }.settingsRows() }
+        #if DEBUG
+        // `-qaScrollBottom 1` opens Settings at its end for screenshots.
+        .task {
+            guard UserDefaults.standard.bool(forKey: "qaScrollBottom") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            proxy.scrollTo("settings.end", anchor: .bottom)
+        }
+        #endif
         }
         .settingsForm(L10n.text("Settings"))
+        #if os(iOS)
+        .sheet(isPresented: $addingSubscription) { AddSubscriptionSheet() }
+        #if DEBUG
+        // `-qaAddSubscription 1` opens the sheet for screenshots.
+        .onAppear { if UserDefaults.standard.bool(forKey: "qaAddSubscription") { addingSubscription = true } }
+        #endif
+        #endif
         // Refreshed whenever Settings reappears, so a sign-in on the account page shows here.
         .onAppear { bilibiliSummary = BilibiliAccount.load().summary; douyinSummary = DouyinAccount.load().summary; cloudSummary = CloudProvider.summary() }
     }
 
+    @ViewBuilder private var heroSection: some View {
+        #if os(iOS)
+        // The app as a centred card on a glow of its icon's blues; a waiting release is its one button.
+        Section {
+            VStack(spacing: 4) {
+                AppMark(size: 76).padding(.bottom, 10)
+                Text(L10n.text("Yingxia")).font(.title2.weight(.bold))
+                if let version { Text(version).font(.subheadline).foregroundStyle(.secondary) }
+                Text(Brand.copyright).font(.caption).foregroundStyle(.tertiary)
+                if let latest = updates.available.first {
+                    Button(action: updates.show) {
+                        Label(L10n.text("Yingxia %@ is available", latest.version), systemImage: "gift.fill")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Brand.onAccent)
+                            .padding(.horizontal, 16).padding(.vertical, 9)
+                            .background(Brand.accent, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 12)
+                }
+            }
+            .lineLimit(1)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .listRowBackground(SettingsHeroGlow())
+        }
+        #else
+        // The app leads, like the account card in Settings; a waiting release sits right under it.
+        Section {
+            HStack(spacing: 14) {
+                AppMark(size: FormMetrics.hero)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.text("Yingxia")).font(.title3.weight(.semibold))
+                    if let version { Text(version).font(.subheadline).foregroundStyle(.secondary) }
+                    Text(Brand.copyright).font(.caption).foregroundStyle(.tertiary)
+                }
+                .lineLimit(1)
+            }
+            .padding(.vertical, 6)
+            .accessibilityElement(children: .combine)
+            if let latest = updates.available.first {
+                Button(action: updates.show) {
+                    LabeledContent {
+                        NewBadge()
+                    } label: {
+                        FormLabel(symbol: "gift.fill", tint: Brand.cyan, title: L10n.text("Yingxia %@ is available", latest.version),
+                                  subtitle: L10n.text("New features are waiting for you."))
+                    }
+                }.formRowButton()
+            }
+        }
+        #endif
+    }
+
     private var canAdd: Bool { !store.importing && !store.subscriptionAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var danmakuNote: String { L10n.text("Bilibili's bullet comments, drawn over the video. You can also switch them in the player.") }
     private func add() { if canAdd { Task { await store.importSubscription() } } }
 
+    #if os(macOS)
     @ViewBuilder private var subscriptionActions: some View {
-        #if os(macOS)
         // System Settings style: the actions as buttons at the trailing edge, the default one prominent.
         HStack {
             if !store.subscriptions.isEmpty {
@@ -385,19 +542,8 @@ struct FormSettingsView: View {
             Button(store.importing ? L10n.text("Importing…") : L10n.text("Add Subscription")) { add() }
                 .buttonStyle(.borderedProminent).disabled(!canAdd)
         }
-        #else
-        Button { add() } label: {
-            HStack {
-                Text(store.importing ? L10n.text("Importing…") : L10n.text("Add Subscription"))
-                if store.importing { Spacer(); ElapsedTime().foregroundStyle(.secondary); ProgressView() }
-            }
-        }.disabled(!canAdd)
-        Button(L10n.text("Use Default URL")) { store.subscriptionAddress = Store.defaultURL }
-        if !store.subscriptions.isEmpty {
-            Button(L10n.text("Refresh All")) { Task { await store.refreshSubscriptions() } }.disabled(store.importing)
-        }
-        #endif
     }
+    #endif
 
     private func subscriptionValue(_ entry: SubscriptionEntry) -> String {
         if store.subscriptionErrors[entry.address] != nil { return L10n.text("Couldn't refresh") }
@@ -406,6 +552,74 @@ struct FormSettingsView: View {
         return L10n.text("%lld sources", copy.sites.count)
     }
 }
+
+#if os(iOS)
+/// The hero card's fill: the row colour lit from above by the icon's cyan and indigo.
+private struct SettingsHeroGlow: View {
+    var body: some View {
+        ZStack {
+            SettingsStyle.rowFill
+            RadialGradient(colors: [Brand.cyan.opacity(0.32), .clear], center: .top, startRadius: 0, endRadius: 230)
+            RadialGradient(colors: [Brand.indigo.opacity(0.22), .clear], center: .bottomTrailing, startRadius: 0, endRadius: 260)
+        }
+    }
+}
+
+/// Adding a subscription: the address, a shortcut to the default one, and Add in the toolbar.
+/// Closes itself once the import succeeds; a failure stays here under the field.
+private struct AddSubscriptionSheet: View {
+    @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focused: Bool
+    private var canAdd: Bool { !store.importing && !store.subscriptionAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        @Bindable var store = store
+        NavigationStack {
+            Form { Group {
+                Section {
+                    TextField(L10n.text("TVBox JSON URL"), text: $store.subscriptionAddress, prompt: Text(L10n.text("TVBox JSON URL")))
+                        .labelsHidden()
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never).keyboardType(.URL)
+                        .submitLabel(.done)
+                        .focused($focused)
+                        .onSubmit(add)
+                } footer: {
+                    if let error = store.error { Text(error).foregroundStyle(Brand.amber) }
+                    else { Text(L10n.text("Paste the address of a TVBox JSON subscription.")) }
+                }
+                Section {
+                    Button { store.subscriptionAddress = Store.defaultURL } label: {
+                        FormLabel(symbol: "sparkles", tint: Brand.indigo, title: L10n.text("Use Default URL"), subtitle: Store.defaultURL)
+                            .foregroundStyle(.primary)
+                    }
+                }
+            }.settingsRows() }
+            .settingsForm(L10n.text("Add Subscription"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.text("Cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if store.importing { ProgressView() }
+                    else { Button(L10n.text("Add"), action: add).fontWeight(.semibold).disabled(!canAdd) }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .onAppear { store.error = nil; focused = true }
+    }
+
+    private func add() {
+        guard canAdd else { return }
+        Task {
+            await store.importSubscription()
+            if store.error == nil { dismiss() }
+        }
+    }
+}
+#endif
 
 /// One subscription: switch it on or off, move it (earlier subscriptions win duplicate sources), or remove it.
 private struct SubscriptionDetailView: View {
@@ -418,7 +632,7 @@ private struct SubscriptionDetailView: View {
         let index = store.subscriptions.firstIndex { $0.address == entry.address } ?? 0
         let failure = store.subscriptionErrors[entry.address]
         let copy = store.documents[entry.address]
-        Form {
+        Form { Group {
             Section {
                 Toggle(isOn: Binding(get: { current.enabled }, set: { on in Task { await store.setSubscription(current, enabled: on) } })) {
                     FormLabel(symbol: "list.bullet.rectangle.fill", tint: current.enabled ? .blue : .gray, title: L10n.text("Use This Subscription"))
@@ -441,7 +655,7 @@ private struct SubscriptionDetailView: View {
             Section {
                 Button(L10n.text("Remove"), role: .destructive) { confirmsRemoval = true }
             }
-        }
+        }.settingsRows() }
         .settingsForm(current.title)
         .confirmationDialog(L10n.text("Remove"), isPresented: $confirmsRemoval) {
             Button(L10n.text("Remove"), role: .destructive) { store.removeSubscription(current); dismiss() }
@@ -455,7 +669,7 @@ private struct PlayURLView: View {
     @State private var address = ""
     private var empty: Bool { address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     var body: some View {
-        Form {
+        Form { Group {
             Section {
                 TextField(L10n.text("HTTP / HTTPS media URL"), text: $address, prompt: Text(L10n.text("HTTP / HTTPS media URL")))
                     .labelsHidden()
@@ -470,7 +684,7 @@ private struct PlayURLView: View {
                 Button(L10n.text("Open Player"), action: open).disabled(empty)
                 #endif
             }
-        }
+        }.settingsRows() }
         .settingsForm(L10n.text("Play a URL"))
     }
     private func open() {

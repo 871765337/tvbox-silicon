@@ -772,3 +772,6 @@
 "In More" = "在“更多”中";
 "Choose your tabs and their order." = "选择要显示的标签及其顺序。";
 "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "拖动即可调整顺序。标签栏最多放四项，其余的留在“更多”中。";
+"Add" = "添加";
+"Paste the address of a TVBox JSON subscription." = "粘贴 TVBox JSON 订阅地址。";
+"Up to Date" = "已是最新";
