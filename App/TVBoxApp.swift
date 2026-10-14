@@ -3,7 +3,11 @@ import TVCore
 
 @main struct TVBoxApp: App {
     @Environment(\.scenePhase) private var scenePhase
+    #if os(iOS)
+    @State private var store = Store.shared
+    #else
     @State private var store = Store()
+    #endif
     @State private var updates = Updates()
     #if os(iOS)
     /// An Apple TV's Douyin code, scanned with the Camera.
@@ -15,6 +19,9 @@ import TVCore
         // AppKit otherwise draws wide legacy scrollers that crowd poster grids and the episode rail.
         // The app's own defaults domain takes precedence over the global setting.
         UserDefaults.standard.set("WhenScrolling", forKey: "AppleShowScrollBars")
+        #endif
+        #if os(iOS)
+        _ = MusicRemoteControl.shared
         #endif
     }
     var body: some Scene {

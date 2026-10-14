@@ -524,6 +524,11 @@ enum PosterPalette {
                                                                format: .RGBA8, colorSpace: nil)
         return Color(red: Double(pixel[0]) / 255, green: Double(pixel[1]) / 255, blue: Double(pixel[2]) / 255)
     }
+
+    /// The cover itself, from the same cache, for the Lock Screen and Control Center.
+    static func image(_ url: URL, headers: [String: String] = [:]) async -> CGImage? {
+        try? await PosterLoader.shared.load(PosterResource(url: url, headers: headers)).image
+    }
 }
 
 private final class PosterBitmap: @unchecked Sendable {
