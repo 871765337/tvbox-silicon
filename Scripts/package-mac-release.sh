@@ -1,18 +1,24 @@
 #!/bin/bash
 # Build, sign, notarize and package the macOS app.
 #   Scripts/package-mac-release.sh [--identity "Developer ID Application: …"] [--notary-profile <name>] [--skip-build]
-# Without --notary-profile the app is signed but not notarized (local testing only).
+#   Scripts/package-mac-release.sh ... --notary-key <AuthKey_ID.p8> --notary-key-id <ID> --notary-issuer <issuer UUID>
+# Without a notary profile or key the app is signed but not notarized (local testing only). A keychain
+# profile only works while the screen is unlocked (data-protection keychain); an App Store Connect API
+# key is a file, so it also works with the screen locked.
 # Output: build/release-mac/<version>/Yingxia-<version>-macos-arm64.{dmg,zip} + SHA256SUMS.txt
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 IDENTITY="Developer ID Application"
-PROFILE=""
+NOTARY=()
 BUILD=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --identity) IDENTITY="$2"; shift 2 ;;
-    --notary-profile) PROFILE="$2"; shift 2 ;;
+    --notary-profile) NOTARY+=(--keychain-profile "$2"); shift 2 ;;
+    --notary-key) NOTARY+=(--key "$2"); shift 2 ;;
+    --notary-key-id) NOTARY+=(--key-id "$2"); shift 2 ;;
+    --notary-issuer) NOTARY+=(--issuer "$2"); shift 2 ;;
     --skip-build) BUILD=0; shift ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
@@ -70,9 +76,9 @@ codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | tail -2
 
 ZIP="$OUT/Yingxia-$VERSION-macos-arm64.zip"
 DMG="$OUT/Yingxia-$VERSION-macos-arm64.dmg"
-if [ -n "$PROFILE" ]; then
+if [ ${#NOTARY[@]} -gt 0 ]; then
   ditto -c -k --keepParent "$APP" "$OUT/notarize.zip"
-  xcrun notarytool submit "$OUT/notarize.zip" --keychain-profile "$PROFILE" --wait
+  xcrun notarytool submit "$OUT/notarize.zip" "${NOTARY[@]}" --wait
   rm "$OUT/notarize.zip"
   xcrun stapler staple "$APP"
 fi
@@ -80,8 +86,8 @@ ditto -c -k --keepParent "$APP" "$ZIP"
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "Yingxia $VERSION" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
 sign "$DMG"
-if [ -n "$PROFILE" ]; then
-  xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait
+if [ ${#NOTARY[@]} -gt 0 ]; then
+  xcrun notarytool submit "$DMG" "${NOTARY[@]}" --wait
   xcrun stapler staple "$DMG"
   spctl -a -t open --context context:primary-signature -vv "$DMG" 2>&1 | tail -2
   spctl -a -t exec -vv "$APP" 2>&1 | tail -2
