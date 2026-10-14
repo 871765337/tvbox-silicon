@@ -147,9 +147,8 @@ struct HomeView: View {
     private func playlists(_ config: Subscription) -> some View {
         VStack(alignment: .leading, spacing: Layout.headerSpacing) {
             SectionHeader(title: L10n.text("Live TV")) { store.section = .live }
-            LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
-                ForEach(config.lives.prefix(6)) { SourceCard(source: $0) }
-            }
+            // Every platform, then one row of playlists.
+            LiveSourceGrid(sources: config.lives.filter(\.isBuiltIn) + config.lives.filter { !$0.isBuiltIn }.prefix(3), titled: false)
         }
     }
 

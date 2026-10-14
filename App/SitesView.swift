@@ -117,14 +117,19 @@ struct SiteCard: View {
             #endif
         }
         .padding(padding).frame(maxWidth: .infinity, alignment: .leading)
-        .background { surface }
+        .background { TileSurface(focused: focused, radius: radius) }
         .accessibilityElement(children: .combine)
     }
 
     /// Which engine runs a source is an implementation detail; only built-in sources say so.
     private var engine: String? { site.isBuiltIn ? L10n.text("Built-in") : nil }
+}
 
-    @ViewBuilder private var surface: some View {
+/// A launcher tile's own surface (source cards, live playlists).
+struct TileSurface: View {
+    var focused: Bool
+    var radius: CGFloat
+    var body: some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         #if os(tvOS)
         // Like the system's focused buttons: a quiet tile at rest, a bright plate under focus.
@@ -136,36 +141,47 @@ struct SiteCard: View {
     }
 }
 
-/// A source's icon: Bilibili's own mark, otherwise the emoji its name starts with (or the name's
-/// first character) on a tile whose colour is derived from the name, so neighbours differ.
+/// A source's icon: Bilibili's own mark, otherwise a `MonogramIcon`.
 struct SourceIcon: View {
     let site: Site
     let label: SourceLabel
     var size: CGFloat
+    var body: some View {
+        if site.isBilibili { BilibiliMark(size: size) } else {
+            MonogramIcon(seed: site.name, label: label, size: size, systemImage: site.key == Hongguo.siteKey ? "play.rectangle.fill" : nil)
+        }
+    }
+}
+
+/// The emoji a name starts with (or its first character, or a symbol) on a tile whose colour is
+/// derived from the name, so neighbours differ.
+struct MonogramIcon: View {
+    let seed: String
+    let label: SourceLabel
+    var size: CGFloat
+    var systemImage: String?
     private static let tints: [Color] = [
         Brand.indigo, Brand.amber, Brand.rose,
         Color(red: 0.30, green: 0.66, blue: 0.60), Color(red: 0.42, green: 0.56, blue: 0.92),
         Color(red: 0.62, green: 0.48, blue: 0.88), Color(red: 0.52, green: 0.72, blue: 0.38),
     ]
     var body: some View {
-        if site.isBilibili { BilibiliMark(size: size) } else {
-            // A stable hash: `hashValue` changes every launch.
-            let tint = Self.tints[site.name.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF } % Self.tints.count]
-            let shape = RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-            Group {
-                if site.key == Hongguo.siteKey {
-                    Image(systemName: "play.rectangle.fill").font(.system(size: size * 0.42, weight: .semibold)).foregroundStyle(.white)
-                } else if let symbol = label.symbol {
-                    Text(symbol).font(.system(size: size * 0.5))
-                } else {
-                    Text(String(label.parts[0].prefix(1))).font(.system(size: size * 0.44, weight: .bold, design: .rounded)).foregroundStyle(.white)
-                }
+        // A stable hash: `hashValue` changes every launch.
+        let tint = Self.tints[seed.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF } % Self.tints.count]
+        let shape = RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
+        Group {
+            if let systemImage {
+                Image(systemName: systemImage).font(.system(size: size * 0.42, weight: .semibold)).foregroundStyle(.white)
+            } else if let symbol = label.symbol {
+                Text(symbol).font(.system(size: size * 0.5))
+            } else {
+                Text(String(label.parts[0].prefix(1)).uppercased()).font(.system(size: size * 0.44, weight: .bold, design: .rounded)).foregroundStyle(.white)
             }
-            .frame(width: size, height: size)
-            .background(LinearGradient(colors: [tint.opacity(0.85), tint.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing), in: shape)
-            .overlay { shape.strokeBorder(.white.opacity(0.12), lineWidth: 1) }
-            .accessibilityHidden(true)
         }
+        .frame(width: size, height: size)
+        .background(LinearGradient(colors: [tint.opacity(0.85), tint.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing), in: shape)
+        .overlay { shape.strokeBorder(.white.opacity(0.12), lineWidth: 1) }
+        .accessibilityHidden(true)
     }
 }
 

@@ -300,6 +300,136 @@ struct LiveRoomCard: View {
     }
 }
 
+extension LivePlatform {
+    /// The platform's brand colour, behind its mark and its card.
+    var tint: Color {
+        switch self {
+        case .bilibili: Color(red: 0.98, green: 0.45, blue: 0.60)
+        case .douyu: Color(red: 1.0, green: 0.42, blue: 0.10)
+        case .huya: Color(red: 1.0, green: 0.62, blue: 0.0)
+        case .douyin: Color(red: 0.07, green: 0.07, blue: 0.09)
+        }
+    }
+}
+
+/// A room each built-in platform is showing now, for its card: the busiest room with a cover in the
+/// first of its areas that has one (a signed-out "Following" list is empty), asked again after ten
+/// minutes. The fetch outlives the card's appearance: a slow platform would otherwise never finish.
+@MainActor @Observable final class LivePreviews {
+    static let shared = LivePreviews()
+    private(set) var rooms: [LivePlatform: LiveRoom] = [:]
+    @ObservationIgnored private var asked: [LivePlatform: Date] = [:]
+
+    func load(_ platform: LivePlatform) {
+        if let date = asked[platform], Date.now.timeIntervalSince(date) < 600 { return }
+        asked[platform] = .now
+        Task {
+            let areas = (try? await LiveCatalog.areas(platform)) ?? []
+            for area in areas.prefix(3) {
+                let found = (try? await LiveCatalog.rooms(platform, area: area, page: 1)) ?? []
+                if let room = found.filter({ $0.cover != nil }).max(by: { $0.online < $1.online }) {
+                    rooms[platform] = room
+                    return
+                }
+            }
+            // Nothing to show: ask again next time the card shows.
+            asked[platform] = nil
+        }
+    }
+}
+
+/// A built-in platform as a 16:9 card: its mark and name over a room it is showing now, or over its
+/// brand colour until that loads. Use with `tileButton()`: on tvOS the card draws its own focus ring.
+struct LivePlatformCard: View {
+    let platform: LivePlatform
+    @Environment(\.isFocused) private var isFocused
+    #if os(tvOS)
+    private var focused: Bool { isFocused }
+    private let mark: CGFloat = 56, padding: CGFloat = 22, radius: CGFloat = 26
+    private let titleFont = Font.system(size: 30, weight: .bold), detailFont = Font.system(size: 22, weight: .medium)
+    #else
+    private let focused = false
+    private let mark: CGFloat = 28, padding: CGFloat = 10, radius: CGFloat = 16
+    private let titleFont = Font.subheadline.weight(.semibold), detailFont = Font.caption2
+    #endif
+    private var room: LiveRoom? { LivePreviews.shared.rooms[platform] }
+    #if os(iOS)
+    private static let compact = true
+    #else
+    private static let compact = false
+    #endif
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        Color.clear.aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .background { backdrop }
+            // Shade under the caption so white text reads on any cover.
+            .overlay { LinearGradient(stops: [.init(color: .black.opacity(0.15), location: 0), .init(color: .clear, location: 0.3), .init(color: .black.opacity(0.85), location: 1)], startPoint: .top, endPoint: .bottom) }
+            .overlay(alignment: .topTrailing) { if room != nil { badge.padding(padding) } }
+            .overlay(alignment: .bottomLeading) { caption.padding(padding) }
+            .clipShape(shape)
+            .overlay { shape.strokeBorder(.white.opacity(focused ? 0.95 : 0.1), lineWidth: focused ? 4 : 1) }
+            .animation(.easeOut(duration: 0.3), value: room)
+            .onAppear { LivePreviews.shared.load(platform) }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(platform.name)
+    }
+
+    @ViewBuilder private var backdrop: some View {
+        ZStack {
+            platform.tint
+            LinearGradient(colors: [.white.opacity(0.18), .black.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            if platform == .douyin {
+                RadialGradient(colors: [Color(red: 0.15, green: 0.96, blue: 0.94).opacity(0.35), .clear], center: .topTrailing, startRadius: 0, endRadius: 260)
+                RadialGradient(colors: [Color(red: 1.0, green: 0.17, blue: 0.33).opacity(0.35), .clear], center: .bottomLeading, startRadius: 0, endRadius: 260)
+            }
+            if let cover = room?.cover {
+                AsyncImage(url: cover) { phase in
+                    if let image = phase.image { image.resizable().scaledToFill().transition(.opacity) }
+                }
+            }
+        }
+    }
+
+    private var caption: some View {
+        HStack(spacing: padding * 0.7) {
+            LivePlatformMark(platform: platform, size: mark)
+            details
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(platform.name).font(titleFont).lineLimit(1)
+            HStack(spacing: 10) {
+                if let room {
+                    // A phone's card has room for the audience only.
+                    if !Self.compact || room.online == 0 { Text(room.host.isEmpty ? room.title : room.host).lineLimit(1) }
+                    if room.online > 0 {
+                        Label(room.online.formatted(.number.notation(.compactName)), systemImage: "person.2.fill")
+                            .labelStyle(.titleAndIcon).lineLimit(1).layoutPriority(1)
+                    }
+                } else {
+                    Text(L10n.text("Built-in"))
+                }
+            }
+            .font(detailFont).foregroundStyle(.white.opacity(0.8))
+        }
+    }
+
+    private var badge: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "dot.radiowaves.left.and.right")
+            Text(L10n.text("LIVE"))
+        }
+        .font(.caption2.weight(.bold)).foregroundStyle(.white)
+        .padding(.horizontal, 8).padding(.vertical, 4)
+        .background(Brand.rose, in: Capsule())
+    }
+}
+
 /// A built-in platform's icon: Bilibili's own mark; the others as their initial on the platform's colour.
 struct LivePlatformMark: View {
     let platform: LivePlatform
@@ -311,10 +441,10 @@ struct LivePlatformMark: View {
         #endif
         switch platform {
         case .bilibili: BilibiliMark(size: size)
-        case .douyu: tile("斗", Color(red: 1.0, green: 0.42, blue: 0.10), size: size)
-        case .huya: tile("虎", Color(red: 1.0, green: 0.62, blue: 0.0), size: size)
+        case .douyu: tile("斗", platform.tint, size: size)
+        case .huya: tile("虎", platform.tint, size: size)
         // Douyin's glyph with its cyan and red offsets, on black.
-        case .douyin: tile("抖", Color(red: 0.07, green: 0.07, blue: 0.09), size: size, split: true)
+        case .douyin: tile("抖", platform.tint, size: size, split: true)
         }
     }
 

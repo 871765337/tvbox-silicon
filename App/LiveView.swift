@@ -11,9 +11,7 @@ struct LiveView: View {
                 ScrollView {
                     Group {
                         if trimmed.isEmpty {
-                            LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
-                                ForEach(config.lives) { SourceCard(source: $0) }
-                            }
+                            LiveSourceGrid(sources: config.lives)
                         } else {
                             LiveSearchResults(query: trimmed, sources: config.lives)
                         }
@@ -35,20 +33,83 @@ struct LiveView: View {
     }
 }
 
-struct SourceCard: View {
-    let source: LiveSource
+/// Live sources as the Live tab and Home show them: the built-in platforms as a row of brand cards
+/// showing a room that is live now, then the subscription's playlists as launcher tiles.
+struct LiveSourceGrid: View {
+    let sources: [LiveSource]
+    /// Section titles; Home's Live TV section has its own header and leaves them out.
+    var titled = true
     var body: some View {
-        RouteLink { if let platform = source.platform { LivePlatformView(platform: platform) } else { ChannelListView(source: source) } } label: {
-            HStack(spacing: 14) {
-                if let platform = source.platform { LivePlatformMark(platform: platform, size: 46) }
-                else { IconTile(symbol: "antenna.radiowaves.left.and.right", tint: Brand.cyan, size: 46) }
-                CardTitle(text: source.name)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+        let platforms = sources.compactMap(\.platform)
+        let playlists = sources.filter { !$0.isBuiltIn }
+        VStack(alignment: .leading, spacing: titled ? Layout.sectionSpacing : Layout.cardSpacing) {
+            if !platforms.isEmpty {
+                VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+                    if titled { SectionHeader(title: L10n.text("Live Platforms")) }
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: Layout.tileMin), spacing: Layout.cardSpacing)], spacing: Layout.cardSpacing) {
+                        ForEach(platforms) { platform in
+                            RouteLink { LivePlatformView(platform: platform) } label: { LivePlatformCard(platform: platform) }.tileButton()
+                        }
+                    }
+                }.tvFocusSection()
             }
-            .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .contentPanel()
-        }.cardButton()
+            if !playlists.isEmpty {
+                VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+                    if titled { SectionHeader(title: L10n.text("Live Playlists")) }
+                    LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
+                        ForEach(playlists) { source in
+                            RouteLink { ChannelListView(source: source) } label: { LiveSourceCard(source: source) }.tileButton()
+                        }
+                    }
+                }.tvFocusSection()
+            }
+        }
+    }
+}
+
+/// A live playlist as a launcher tile, like a source card: a monogram icon, its name, and the note
+/// its name carries in brackets ("需开启V6网络") as a quiet second line. Use with `tileButton()`.
+struct LiveSourceCard: View {
+    @Environment(\.isFocused) private var isFocused
+    let source: LiveSource
+    #if os(tvOS)
+    private var focused: Bool { isFocused }
+    private let icon: CGFloat = 88, padding: CGFloat = 20, radius: CGFloat = 28
+    #else
+    private let focused = false
+    private let icon: CGFloat = 48, padding: CGFloat = 12, radius: CGFloat = 16
+    #endif
+    var body: some View {
+        let name = Self.split(source.name)
+        let label = SourceLabel(name.title)
+        let detail = (label.parts.dropFirst() + [name.note].compactMap { $0 }).joined(separator: " · ")
+        HStack(spacing: padding) {
+            MonogramIcon(seed: source.name, label: label, size: icon)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label.parts[0]).font(.headline).lineLimit(1)
+                    .foregroundStyle(focused ? Color.black : Color.primary)
+                if !detail.isEmpty {
+                    Text(detail).font(.subheadline).lineLimit(1)
+                        .foregroundStyle(focused ? Color.black.opacity(0.6) : Color.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+            #if !os(tvOS)
+            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            #endif
+        }
+        .padding(padding).frame(maxWidth: .infinity, alignment: .leading)
+        .background { TileSurface(focused: focused, radius: radius) }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "范明明（需开启V6网络）" → ("范明明", "需开启V6网络").
+    static func split(_ name: String) -> (title: String, note: String?) {
+        let text = name.trimmingCharacters(in: .whitespaces)
+        guard let last = text.last, "）)".contains(last),
+              let open = text.lastIndex(where: { "（(".contains($0) }), open > text.startIndex else { return (text, nil) }
+        let note = text[text.index(after: open)..<text.index(before: text.endIndex)].trimmingCharacters(in: .whitespaces)
+        return (text[..<open].trimmingCharacters(in: .whitespaces), note.isEmpty ? nil : note)
     }
 }
 
