@@ -32,7 +32,7 @@ let mid = 0;            // the signed-in account's id; -1 when the login has exp
 const cursors = {};     // cursor-paged lists: list -> page -> where that page starts
 
 const headers = () => ({ 'User-Agent': UA, Referer: 'https://www.bilibili.com/', Cookie: cookie });
-const api = (url) => JSON.parse(globalThis.req(url, { headers: headers() }).content || '{}');
+const api = (url, extra = {}) => JSON.parse(globalThis.req(url, { headers: { ...headers(), ...extra } }).content || '{}');
 const clean = text => String(text || '').replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 const pic = url => { const u = String(url || ''); return u.startsWith('//') ? 'https:' + u : u.replace(/^http:/, 'https:'); };
 const two = n => String(n).padStart(2, '0');
@@ -142,7 +142,9 @@ function feed(tid, page) {
     }
     if (tid.startsWith('rank_')) {
         if (page > 1) return { list: [], more: false };
-        const data = retrying(() => api('https://api.bilibili.com/x/web-interface/ranking/v2?' + wbi({ rid: tid.slice(5), type: 'all', web_location: 333.934 }))).data || {};
+        // The ranking answers -352 (risk control) unless the request comes from the ranking page.
+        const data = retrying(() => api('https://api.bilibili.com/x/web-interface/ranking/v2?' + wbi({ rid: tid.slice(5), type: 'all', web_location: 333.934 }),
+            { Referer: 'https://www.bilibili.com/v/popular/rank/all' })).data || {};
         return { list: (data.list || []).filter(v => v.bvid).map(ugcItem), more: false };
     }
     return null;

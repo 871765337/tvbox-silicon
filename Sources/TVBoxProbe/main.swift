@@ -298,6 +298,22 @@ import TVCore
             HongguoStreams.stop(channel.url)
             return
         }
+        if args[1] == "--bili-categories" {
+            // --bili-categories [filter]: every category of the built-in Bilibili source with its first page's size.
+            setvbuf(stdout, nil, _IONBF, 0)
+            let client = CatalogClient(site: .bilibili, origin: URL(string: "https://example.invalid/")!)
+            let home = try await client.home()
+            print("home categories=\(home.categories.count) videos=\(home.videos.count)")
+            for category in home.categories where args.count < 3 || category.id.contains(args[2]) || category.name.contains(args[2]) {
+                do {
+                    let page = try await client.list(category: category.id, query: "", page: 1)
+                    print("\(page.videos.isEmpty ? "EMPTY" : "OK   ") \(category.id) \(category.name) videos=\(page.videos.count)")
+                } catch {
+                    print("FAIL  \(category.id) \(category.name) \(error.localizedDescription)")
+                }
+            }
+            return
+        }
         if args[1] == "--bili-play", args.count >= 3 {
             // --bili-play <BV id | season_N> [part index] [seconds]: the built-in Bilibili source end to end,
             // through its script port, playback resolution and AVPlayer.
