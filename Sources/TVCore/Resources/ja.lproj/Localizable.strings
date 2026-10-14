@@ -775,3 +775,17 @@
 "Add" = "追加";
 "Paste the address of a TVBox JSON subscription." = "TVBox JSON サブスクリプションのアドレスを貼り付けます。";
 "Up to Date" = "最新";
+"Migu Music" = "咪咕音楽";
+"Kuwo Music" = "酷我音楽";
+"Migu" = "咪咕";
+"Nianxin" = "念心";
+"Xinghai" = "星海";
+"Kuwo Music and NetEase Cloud Music" = "酷我音楽と NetEase Cloud Music";
+"Kuwo Music and NetEase Cloud Music, when the others fail" = "酷我音楽と NetEase Cloud Music（ほかが失敗したとき）";
+"Source: Xinghai (yy.zddyr.top)" = "音源：星海（yy.zddyr.top）";
+"Xinghai (yy.zddyr.top) asks to be credited and not overused, so it is only asked when the other channels fail." = "星海（yy.zddyr.top）は出典の明記と使いすぎないよう求めているため、ほかのチャンネルが失敗したときだけ使います。";
+"None of the catalogs has lyrics for this song." = "どのカタログにもこの曲の歌詞がありません。";
+"Nothing Up Next" = "次に再生する曲はありません";
+"Play a song from search results, an album or a playlist, and the songs after it play next." = "検索結果、アルバム、プレイリストから曲を再生すると、その後の曲が続けて再生されます。";
+"Playback Position" = "再生位置";
+"Volume" = "音量";

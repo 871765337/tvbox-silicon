@@ -253,10 +253,12 @@ public struct MusicResolver: Sendable {
     /// For one selection, resolution and probing together.
     var budget: TimeInterval = 15
     var parallel = 2
-    /// Primary providers per catalog, then fallbacks.
-    static let order: [(MusicPlatform, MusicProviderID)] = [(.qq, .vkeys), (.netease, .gdstudio), (.qq, .hyw)]
+    /// Primary providers per catalog, then fallbacks. Migu's own servers and Kuwo through Nianxin
+    /// lead: in the 2026-10-14 test they played songs VKeys and GD no longer reach (Jay Chou's).
+    static let primaries: [(MusicPlatform, MusicProviderID)] = [(.migu, .migu), (.kuwo, .nianxin), (.qq, .vkeys), (.netease, .gdstudio)]
+    static let order: [(MusicPlatform, MusicProviderID)] = primaries + [(.kuwo, .xinghai), (.netease, .nianxin), (.qq, .hyw), (.netease, .xinghai)]
     static func isPrimary(_ candidate: MusicCandidate) -> Bool {
-        (candidate.platform == .qq && candidate.provider == .vkeys) || (candidate.platform == .netease && candidate.provider == .gdstudio)
+        primaries.contains { $0.0 == candidate.platform && $0.1 == candidate.provider }
     }
 
     public init(providers: [any MusicStreamProvider], prober: MusicProber = MusicProber(), health: MusicHealth = .shared,
@@ -271,8 +273,11 @@ public struct MusicResolver: Sendable {
         if preferences.enabled(.vkeys) { list.append(VKeysProvider(transport: transport)) }
         if preferences.enabled(.gdstudio) { list.append(GDStudioProvider(transport: transport, health: health)) }
         if preferences.enabled(.hyw) { list.append(HYWProvider(key: preferences.hywKey, transport: transport)) }
+        if preferences.enabled(.migu) { list.append(MiguProvider(transport: transport)) }
+        if preferences.enabled(.nianxin) { list.append(NianxinProvider(transport: transport)) }
+        if preferences.enabled(.xinghai) { list.append(XinghaiProvider(transport: transport, health: health)) }
         self.init(providers: list, prober: MusicProber(transport: transport), health: health,
-                  companions: MusicCompanionFinder(catalogs: [QQMusicCatalog(transport: transport), NeteaseMusicCatalog(transport: transport, health: health)]))
+                  companions: MusicCompanionFinder(catalogs: MusicSearchModel.defaultCatalogs(transport: transport, health: health)))
     }
 
     public func candidates(for track: MusicTrack) -> [MusicCandidate] {

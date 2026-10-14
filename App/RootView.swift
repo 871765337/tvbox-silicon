@@ -107,6 +107,9 @@ struct RootView: View {
             .tabViewStyle(.sidebarAdaptable)
             #if os(iOS)
             .minimizesTabBarOnScroll()
+            .musicAccessory(enabled: store.music.track != nil && sizeClass == .compact)
+            // Opened from the mini player; swiping down closes it, as in Music.
+            .sheet(isPresented: Binding(get: { store.music.presentsPlayer }, set: { store.music.presentsPlayer = $0 })) { MusicNowPlayingScreen() }
             .onChange(of: store.section) { _, section in
                 if sizeClass == .compact && inMore.contains(section) {
                     moreSection = section; morePath = NavigationPath([section])

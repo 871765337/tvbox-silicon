@@ -8,6 +8,7 @@ extension View {
 
 private struct MusicPlayerInset: ViewModifier {
     @Environment(Store.self) private var store
+    @Environment(\.horizontalSizeClass) private var sizeClass
     func body(content: Content) -> some View {
         #if os(tvOS)
         // The remote could only reach a bottom panel through every result above it; Apple TV has
@@ -15,20 +16,40 @@ private struct MusicPlayerInset: ViewModifier {
         content
         #else
         content.safeAreaInset(edge: .bottom, spacing: 0) {
-            if store.music.track != nil { MusicNowPlaying().padding(.horizontal, Layout.gutter).padding(.bottom, 10) }
+            if store.music.track != nil {
+                #if os(iOS)
+                if sizeClass == .compact {
+                    // A phone has Music's strip: in the tab bar's accessory slot where the system has
+                    // one (it is drawn there, not here), otherwise floating just above the bar.
+                    if !MusicAccessory.used(compact: true) {
+                        MusicMiniPlayer().frame(height: 56)
+                            .glassSurface(.regular.interactive(), in: Capsule())
+                            .padding(.horizontal, Layout.gutter).padding(.bottom, 8)
+                    }
+                } else {
+                    MusicNowPlaying().padding(.horizontal, Layout.gutter).padding(.bottom, 10)
+                }
+                #else
+                MusicNowPlaying().padding(.horizontal, Layout.gutter).padding(.bottom, 10)
+                #endif
+            }
         }
         #endif
     }
 }
 
 /// A spinner while a channel is found, bars while sound plays.
+/// In a fixed square: the symbols differ in width, and a row would shift as they change.
 struct MusicActivityMark: View {
     @Environment(Store.self) private var store
     var body: some View {
-        if store.music.busy { ProgressView().controlSize(.small) }
-        else if store.music.phase == .playing { Image(systemName: "waveform").foregroundStyle(Brand.accent).symbolEffect(.variableColor.iterative) }
-        else if store.music.failure != nil { Image(systemName: "exclamationmark.circle").foregroundStyle(Brand.amber) }
-        else { Image(systemName: "speaker.wave.2.fill").foregroundStyle(.secondary) }
+        Group {
+            if store.music.busy { ProgressView().controlSize(.small) }
+            else if store.music.phase == .playing { Image(systemName: "waveform").foregroundStyle(Brand.accent).symbolEffect(.variableColor.iterative) }
+            else if store.music.failure != nil { Image(systemName: "exclamationmark.circle").foregroundStyle(Brand.amber) }
+            else { Image(systemName: "speaker.wave.2.fill").foregroundStyle(.secondary) }
+        }
+        .frame(width: 24, height: 24)
     }
 }
 
@@ -58,16 +79,15 @@ struct MusicNowPlaying: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 14) {
                 Button {
-                    #if os(tvOS)
-                    music.presentsPlayer = true
-                    #else
+                    #if os(macOS)
                     showsLyrics = true
+                    #else
+                    // Apple TV's full-screen player; the Now Playing screen on iPad.
+                    music.presentsPlayer = true
                     #endif
                 } label: {
                     HStack(spacing: 14) {
-                        PosterImage(url: music.track?.artwork, symbol: "music.note")
-                            .frame(width: art, height: art)
-                            .clipShape(RoundedRectangle(cornerRadius: art * 0.16, style: .continuous))
+                        MusicArtwork(url: music.track?.artwork, size: art)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(music.track?.title ?? "").font(.headline).lineLimit(1)
                             Text([music.track?.artistLine, music.queue.flatMap(queueLine)].compactMap { $0 }.joined(separator: " · "))
@@ -155,8 +175,13 @@ struct MusicNowPlaying: View {
     }
 
     @ViewBuilder private func source(_ music: MusicPlaybackSession) -> some View {
-        if music.selection?.candidate.provider == .gdstudio, music.failure == nil {
-            Text(L10n.text("Source: GD Music (music.gdstudio.xyz)")).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+        // Both services ask to be named when their audio plays.
+        if music.failure == nil, let provider = music.selection?.candidate.provider {
+            if provider == .gdstudio {
+                Text(L10n.text("Source: GD Music (music.gdstudio.xyz)")).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+            } else if provider == .xinghai {
+                Text(L10n.text("Source: Xinghai (yy.zddyr.top)")).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+            }
         }
     }
 
@@ -419,8 +444,11 @@ struct MusicSettingsView: View {
                     Text(L10n.text("Lossless first plays the best lossy stream, marked as such, when no channel has lossless audio. Lossless only stops instead."))
                 }
                 Section {
+                    toggle(.migu, detail: L10n.text("Migu Music"), music: music)
+                    toggle(.nianxin, detail: L10n.text("Kuwo Music and NetEase Cloud Music"), music: music)
                     toggle(.vkeys, detail: L10n.text("QQ Music"), music: music)
                     toggle(.gdstudio, detail: L10n.text("NetEase Cloud Music"), music: music)
+                    toggle(.xinghai, detail: L10n.text("Kuwo Music and NetEase Cloud Music, when the others fail"), music: music)
                     toggle(.hyw, detail: L10n.text("QQ Music, when VKeys fails"), music: music)
                     TextField(L10n.text("HYW key"), text: $music.preferences.hywKey)
                         .autocorrectionDisabled()
@@ -430,7 +458,10 @@ struct MusicSettingsView: View {
                 } header: {
                     Text(L10n.text("Channels"))
                 } footer: {
-                    Text(L10n.text("HYW stays off until you enter the key from its published script. GD Music (music.gdstudio.xyz) is for personal, non-commercial use and allows 50 requests every 5 minutes."))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.text("HYW stays off until you enter the key from its published script. GD Music (music.gdstudio.xyz) is for personal, non-commercial use and allows 50 requests every 5 minutes."))
+                        Text(L10n.text("Xinghai (yy.zddyr.top) asks to be credited and not overused, so it is only asked when the other channels fail."))
+                    }
                 }
             }
             #if os(macOS)

@@ -2,11 +2,14 @@ import Foundation
 
 /// A music catalog the app searches. Each has its own song IDs; one recording can carry an ID in each.
 public enum MusicPlatform: String, Codable, Sendable, CaseIterable, Hashable {
-    case qq, netease
+    // Merging takes catalogs in this order: QQ's entries carry durations and covers the others join.
+    case qq, netease, migu, kuwo
     public var name: String {
         switch self {
         case .qq: L10n.text("QQ Music")
         case .netease: L10n.text("NetEase Cloud Music")
+        case .migu: L10n.text("Migu Music")
+        case .kuwo: L10n.text("Kuwo Music")
         }
     }
 }
@@ -138,12 +141,15 @@ public struct MusicProbeResult: Hashable, Codable, Sendable {
 
 /// A service that turns a catalog song ID into a temporary audio address.
 public enum MusicProviderID: String, Codable, Sendable, Hashable, CaseIterable {
-    case vkeys, gdstudio, hyw
+    case vkeys, gdstudio, hyw, migu, nianxin, xinghai
     public var name: String {
         switch self {
         case .vkeys: "VKeys"
         case .gdstudio: L10n.text("GD Music")
         case .hyw: "HYW"
+        case .migu: L10n.text("Migu")
+        case .nianxin: L10n.text("Nianxin")
+        case .xinghai: L10n.text("Xinghai")
         }
     }
     /// Services this provider is known to call itself, so a fallback never repeats a failed one.
@@ -152,6 +158,9 @@ public enum MusicProviderID: String, Codable, Sendable, Hashable, CaseIterable {
         case .vkeys: ["vkeys"]
         case .gdstudio: ["gdstudio"]
         case .hyw: ["hyw"]
+        case .migu: ["migu"]
+        case .nianxin: ["nianxin"]
+        case .xinghai: ["xinghai"]
         }
     }
 }

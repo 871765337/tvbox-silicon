@@ -30,8 +30,28 @@ import Observation
     static let cacheLifetime: TimeInterval = 10 * 60
 
     public init(catalogs: [any MusicCatalogSource]? = nil, health: MusicHealth = .shared) {
-        self.catalogs = catalogs ?? [QQMusicCatalog(), NeteaseMusicCatalog(health: health)]
+        self.catalogs = catalogs ?? Self.defaultCatalogs(health: health)
         self.health = health
+    }
+
+    /// Catalogs searched mainly so their channels can play what the others list.
+    nonisolated static let supplementary: Set<MusicPlatform> = [.migu, .kuwo]
+
+    /// Migu and Kuwo list many unlabelled versions of a song (concert recordings, re-uploads),
+    /// most without a cover, which only repeated the title in the results. A song found only in
+    /// them shows when no other result has its title and artists, and once.
+    nonisolated static func withoutEchoes(_ tracks: [MusicTrack]) -> [MusicTrack] {
+        func key(_ track: MusicTrack) -> String {
+            MusicMatching.normalize(track.title) + "|" + track.artists.map(MusicMatching.normalize).sorted().joined(separator: ",")
+        }
+        let onlySupplementary = { (track: MusicTrack) in track.ids.keys.allSatisfy(supplementary.contains) }
+        var seen = Set(tracks.filter { !onlySupplementary($0) }.map(key))
+        return tracks.filter { !onlySupplementary($0) || seen.insert(key($0)).inserted }
+    }
+
+    public nonisolated static func defaultCatalogs(transport: MusicTransport = URLSessionMusicTransport(), health: MusicHealth = .shared) -> [any MusicCatalogSource] {
+        [QQMusicCatalog(transport: transport), NeteaseMusicCatalog(transport: transport, health: health),
+         MiguMusicCatalog(transport: transport), KuwoMusicCatalog(transport: transport)]
     }
 
     /// Where to fetch a collection's tracks.
@@ -91,8 +111,8 @@ import Observation
                 guard let tracks = await record(platform, result) else { continue }
                 lists[platform] = tracks
                 guard generation == run else { group.cancelAll(); return }
-                // QQ first: its entries carry durations and covers that NetEase matches join.
-                results = MusicMatching.rank(MusicMatching.merge(MusicPlatform.allCases.compactMap { lists[$0] }), query: query)
+                // In MusicPlatform's order: QQ's entries carry durations and covers the others join.
+                results = MusicMatching.rank(Self.withoutEchoes(MusicMatching.merge(MusicPlatform.allCases.compactMap { lists[$0] })), query: query)
             }
         }
     }

@@ -1,5 +1,6 @@
 import SwiftUI
 import ImageIO
+import CoreImage
 import TVCore
 
 extension View {
@@ -508,6 +509,20 @@ struct SectionHeader: View {
         } else {
             Text(title).font(sectionFont)
         }
+    }
+}
+
+/// A cover's average colour, for backdrops tinted by the artwork, as the music player has. It
+/// shares the posters' cache, so a cover already on screen costs no download.
+enum PosterPalette {
+    static func average(_ url: URL, headers: [String: String] = [:]) async -> Color? {
+        guard let bitmap = try? await PosterLoader.shared.load(PosterResource(url: url, headers: headers)) else { return nil }
+        let image = CIImage(cgImage: bitmap.image)
+        guard let output = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: image, kCIInputExtentKey: CIVector(cgRect: image.extent)])?.outputImage else { return nil }
+        var pixel = [UInt8](repeating: 0, count: 4)
+        CIContext(options: [.workingColorSpace: NSNull()]).render(output, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                                                               format: .RGBA8, colorSpace: nil)
+        return Color(red: Double(pixel[0]) / 255, green: Double(pixel[1]) / 255, blue: Double(pixel[2]) / 255)
     }
 }
 

@@ -103,3 +103,65 @@ public struct HYWProvider: MusicStreamProvider {
                                    upstream: json["source"]?.string.map { "hyw:" + $0 } ?? "hyw")
     }
 }
+
+/// Nianxin's free resolver, which the BakaMusic plugins use first for Kuwo; it also answers for
+/// NetEase. Its Kuwo addresses come from Kuwo's in-car player and were FLAC for 13 of 14 songs
+/// tested (2026-10-14). A song without a lossless file answers an empty address, so 320 kbps is
+/// asked next.
+public struct NianxinProvider: MusicStreamProvider {
+    public let id = MusicProviderID.nianxin
+    public let platforms: Set<MusicPlatform> = [.kuwo, .netease]
+    let transport: MusicTransport
+    static let timeout: TimeInterval = 8
+    public init(transport: MusicTransport = URLSessionMusicTransport()) { self.transport = transport }
+
+    public func resolve(_ songID: String, platform: MusicPlatform) async throws -> ResolvedMusicStream {
+        let base = "https://mcp.nianxinxz.com/share/ceshi/" + (platform == .kuwo ? "kw.php" : "wy.php")
+        var lastError = MusicProviderError.noResource
+        for level in ["lossless", "exhigh"] {
+            let url = MusicHTTP.url(base, [("id", songID), ("level", level)])
+            do { return try Self.parse(try await MusicHTTP.json(transport, MusicHTTP.request(url, timeout: Self.timeout), timeout: Self.timeout), level: level) }
+            catch let error as MusicProviderError where error == .noResource { lastError = error }
+        }
+        throw lastError
+    }
+
+    static func parse(_ json: JSONValue, level: String, now: Date = Date()) throws -> ResolvedMusicStream {
+        guard json["code"]?.int == 200 else { throw MusicProviderError.invalidResponse("Nianxin code \(json["code"]?.string ?? "-")") }
+        guard let address = json[path: "data", "url"]?.string ?? json["url"]?.string, !address.isEmpty,
+              let url = URL(string: address), url.host() != nil else { throw MusicProviderError.noResource }
+        return ResolvedMusicStream(url: url, claimedQuality: level, resolvedAt: now, upstream: "nianxin")
+    }
+}
+
+/// Xinghai's free LX Music resolver, the plugins' second choice. Its answers ask callers to
+/// credit it and to keep within an overall request limit, so it is a fallback only, with a budget
+/// of its own, and the player names it as the source.
+public struct XinghaiProvider: MusicStreamProvider {
+    public let id = MusicProviderID.xinghai
+    public let platforms: Set<MusicPlatform> = [.kuwo, .netease]
+    let transport: MusicTransport
+    let health: MusicHealth
+    static let timeout: TimeInterval = 8
+    public init(transport: MusicTransport = URLSessionMusicTransport(), health: MusicHealth = .shared) {
+        self.transport = transport; self.health = health
+    }
+
+    public func resolve(_ songID: String, platform: MusicPlatform) async throws -> ResolvedMusicStream {
+        try await health.admit("xinghai")
+        let url = MusicHTTP.url("https://yy.zddyr.top/lx/api/", [
+            ("source", platform == .kuwo ? "kw" : "netease"), ("name", ""), ("songmid", songID), ("quality", platform == .kuwo ? "flac" : "lossless"),
+        ])
+        return try Self.parse(try await MusicHTTP.json(transport, MusicHTTP.request(url, timeout: Self.timeout), timeout: Self.timeout))
+    }
+
+    static func parse(_ json: JSONValue, now: Date = Date()) throws -> ResolvedMusicStream {
+        guard json["code"]?.int == 200 else {
+            if json["code"]?.int == 429 { throw MusicProviderError.rateLimited(until: nil) }
+            throw MusicProviderError.noResource
+        }
+        guard let address = json["url"]?.string ?? json[path: "data", "url"]?.string, !address.isEmpty,
+              let url = URL(string: address), url.host() != nil else { throw MusicProviderError.noResource }
+        return ResolvedMusicStream(url: url, claimedQuality: json["quality"]?.string, resolvedAt: now, upstream: "xinghai")
+    }
+}

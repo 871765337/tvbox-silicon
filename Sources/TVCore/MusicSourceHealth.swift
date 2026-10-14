@@ -27,7 +27,8 @@ public actor MusicHealth {
     /// Risk control on the provider's upstream account rarely clears within minutes.
     static let riskCooldown: TimeInterval = 10 * 60
     /// Requests allowed per service in `window`; services not listed are unlimited here.
-    static let budgets: [String: Int] = ["gdstudio": 50]
+    /// Xinghai sets no number, only an overall limit and a request not to overuse it.
+    static let budgets: [String: Int] = ["gdstudio": 50, "xinghai": 30]
     static let window: TimeInterval = 5 * 60
 
     private var records: [String: Record] = [:]

@@ -775,3 +775,17 @@
 "Add" = "新增";
 "Paste the address of a TVBox JSON subscription." = "貼上 TVBox JSON 訂閱網址。";
 "Up to Date" = "已是最新";
+"Migu Music" = "咪咕音樂";
+"Kuwo Music" = "酷我音樂";
+"Migu" = "咪咕";
+"Nianxin" = "念心";
+"Xinghai" = "星海";
+"Kuwo Music and NetEase Cloud Music" = "酷我音樂和網易雲音樂";
+"Kuwo Music and NetEase Cloud Music, when the others fail" = "酷我音樂和網易雲音樂，其他通道失敗時使用";
+"Source: Xinghai (yy.zddyr.top)" = "音源：星海（yy.zddyr.top）";
+"Xinghai (yy.zddyr.top) asks to be credited and not overused, so it is only asked when the other channels fail." = "星海（yy.zddyr.top）要求註明來源且勿濫用，因此只在其他通道失敗時使用。";
+"None of the catalogs has lyrics for this song." = "各曲庫都沒有這首歌的歌詞。";
+"Nothing Up Next" = "沒有待播歌曲";
+"Play a song from search results, an album or a playlist, and the songs after it play next." = "從搜尋結果、專輯或歌單中播放一首歌，之後的歌曲會接著播放。";
+"Playback Position" = "播放位置";
+"Volume" = "音量";

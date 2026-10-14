@@ -89,7 +89,12 @@ struct MusicView: View {
         let search = store.musicSearch
         guard let wanted = autoPlayQuery, wanted == search.query, !search.busy else { return }
         autoPlayQuery = nil
-        if let hit = search.directHit, store.music.track?.id != hit.id { store.music.play(hit) }
+        var hit = search.directHit
+        #if DEBUG
+        // `-qaMusicPlay 1` plays the first result when no single one is clearly meant.
+        if hit == nil, UserDefaults.standard.bool(forKey: "qaMusicPlay") { hit = search.results.first }
+        #endif
+        if let hit, store.music.track?.id != hit.id { playResults(from: hit) }
     }
 
     private func kinds(_ search: MusicSearchModel) -> some View {
@@ -125,11 +130,18 @@ struct MusicView: View {
                     .padding(.bottom, 10)
             }
             if search.kind == .songs {
-                ForEach(search.results) { track in MusicTrackRow(track: track) { store.music.play(track) } }
+                ForEach(search.results) { track in MusicTrackRow(track: track) { playResults(from: track) } }
             } else {
                 ForEach(search.collections) { collection in MusicCollectionRow(collection: collection) }
             }
         }
+    }
+
+    /// A song from the results plays with the results after it queued, so the next one follows.
+    private func playResults(from track: MusicTrack) {
+        let results = store.musicSearch.results
+        guard let index = results.firstIndex(of: track) else { store.music.play(track); return }
+        store.music.play(MusicQueue(tracks: results, start: index))
     }
 
     private func failureDetails(_ search: MusicSearchModel) -> String {
@@ -188,9 +200,7 @@ private struct MusicContinueCard: View {
     var body: some View {
         Button { store.music.resume() } label: {
             HStack(spacing: MusicLayout.gap) {
-                PosterImage(url: track.artwork, symbol: "music.note")
-                    .frame(width: MusicLayout.art * 1.4, height: MusicLayout.art * 1.4)
-                    .clipShape(RoundedRectangle(cornerRadius: MusicLayout.art * 0.2, style: .continuous))
+                MusicArtwork(url: track.artwork, size: MusicLayout.art * 1.4)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.text("Continue Playing")).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent)
                     Text(track.title).font(.headline).lineLimit(1)
@@ -224,9 +234,7 @@ struct MusicTrackRow: View {
                     Text("\(number)").font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
                         .frame(width: MusicLayout.art * 0.6, alignment: .trailing)
                 } else {
-                    PosterImage(url: track.artwork, symbol: "music.note")
-                        .frame(width: MusicLayout.art, height: MusicLayout.art)
-                        .clipShape(RoundedRectangle(cornerRadius: MusicLayout.art * 0.16, style: .continuous))
+                    MusicArtwork(url: track.artwork, size: MusicLayout.art)
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(track.title).font(.headline).lineLimit(1)
@@ -257,9 +265,7 @@ private struct MusicCollectionRow: View {
             MusicCollectionView(collection: collection)
         } label: {
             HStack(spacing: MusicLayout.gap) {
-                PosterImage(url: collection.artwork, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
-                    .frame(width: MusicLayout.art * 1.2, height: MusicLayout.art * 1.2)
-                    .clipShape(RoundedRectangle(cornerRadius: MusicLayout.art * 0.18, style: .continuous))
+                MusicArtwork(url: collection.artwork, size: MusicLayout.art, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
                 VStack(alignment: .leading, spacing: 3) {
                     Text(collection.title).font(.headline).lineLimit(1).foregroundStyle(.primary)
                     Text(MusicCollectionView.details(collection)).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
@@ -328,9 +334,7 @@ struct MusicCollectionView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .center, spacing: MusicLayout.gap * 1.4) {
-                PosterImage(url: collection.artwork, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
-                    .frame(width: MusicLayout.header, height: MusicLayout.header)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                MusicArtwork(url: collection.artwork, size: MusicLayout.header, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L10n.text(collection.kind == .album ? "Album" : "Playlist")).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent)
                     Text(collection.title).font(.title2.weight(.bold)).lineLimit(2)
