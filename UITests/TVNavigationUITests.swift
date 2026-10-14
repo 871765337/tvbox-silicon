@@ -54,6 +54,43 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(shown("hello 01", in: app).waitForExistence(timeout: 20), "Pressing Search did not show results")
         XCTAssertFalse(submit.exists, "The Search button stayed after its query ran")
     }
+    /// A video with several sources and one file each: the rail ends above Play, so Right from the
+    /// Play row once found nothing and the source chips were unreachable with the remote.
+    func testRemoteReachesTheSourceChips() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "sites", "-qaPage", "open-detail:qa-standard:drive", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/config.json",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let remote = XCUIRemote.shared
+        let open = app.buttons["qa.open-detail"]
+        XCTAssertTrue(open.waitForExistence(timeout: 60), "The QA page did not appear")
+        let chips = ["夸父原1", "夸父智1", "嘟嘟无限2"].map { app.buttons[$0] }
+        let second = chips[1]
+        for _ in 0..<4 where !second.exists {
+            remote.press(.right); sleep(1); remote.press(.select)
+            _ = second.waitForExistence(timeout: 8)
+        }
+        XCTAssertTrue(second.exists, "The video page did not open")
+        sleep(2)
+        // Play takes focus once the details load; Right passes Download and enters the rail.
+        XCTAssertTrue(app.buttons["Play"].hasFocus, "Play did not take focus when the details loaded")
+        let file = app.buttons["[18.35GB] 玩-居-宗 01.mkv"]
+        remote.press(.right); sleep(1)
+        XCTAssertTrue(app.buttons["Download"].hasFocus, "Right from Play did not reach Download")
+        remote.press(.right); sleep(1)
+        XCTAssertTrue(file.hasFocus || chips.contains { $0.hasFocus }, "Right from Download did not reach the episode rail")
+        if file.hasFocus { remote.press(.up); sleep(1) }
+        XCTAssertTrue(chips.contains { $0.hasFocus }, "Up from the file did not reach the source chips")
+        for _ in 0..<3 where !second.hasFocus {
+            remote.press(chips[0].hasFocus ? .right : .left); sleep(1)
+        }
+        remote.press(.select); sleep(1)
+        XCTAssertTrue(second.isSelected, "Select did not switch the source")
+        // Left from the chips goes back to the left column.
+        for _ in 0..<3 where chips.contains(where: { $0.hasFocus }) { remote.press(.left); sleep(1) }
+        XCTAssertFalse(chips.contains { $0.hasFocus } || file.hasFocus, "Left did not leave the episode rail")
+    }
     /// Poster titles are part of their card's label, so look for the text anywhere in a label.
     private func shown(_ text: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch

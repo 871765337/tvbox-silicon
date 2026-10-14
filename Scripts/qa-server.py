@@ -106,6 +106,10 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/slow':time.sleep(2)
             categories=[{'type_id':'movies','type_name':'电影'},{'type_id':'series','type_name':'电视剧'},{'type_id':'empty','type_name':'空分类'}]
             if 'play' in q:return self.send({'parse':0,'url':base+'/clip.mp4'})
+            if q.get('ids')=='drive':
+                return self.send({'list':[{'vod_id':'drive','vod_name':'玩具总动员 5','vod_pic':base+'/poster.png','vod_remarks':'4K HDR',
+                    'vod_content':'这是一段用于检查详情页布局的简介。 '*24,
+                    'vod_play_from':'夸父原1$$$夸父智1$$$嘟嘟无限2','vod_play_url':'$$$'.join(f'[18.35GB] 玩-居-宗 01.mkv$file-{i}' for i in range(3))}]})
             if 'ids' in q:
                 return self.send({'list':[{'vod_id':q['ids'],'vod_name':'测试影片 '+q['ids'],'vod_pic':base+'/poster.png',
                     'vod_content':'这是一段用于检查详情页布局的简介。 '*24,

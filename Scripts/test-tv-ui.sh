@@ -29,7 +29,7 @@ options:
     tvOS: '26.0'
 packages:
   TVCore:
-    path: ../..
+    path: ../../Packages/TVCore
 targets:
   TVUI:
     type: application

@@ -381,6 +381,8 @@ struct VideoDetailView: View {
     @State private var choosingQuality = false
     @State private var synopsisExpanded = false
     @State private var selectedFlag: String?
+    /// Play takes over focus from the loading placeholder; otherwise nothing is focused once details load.
+    @FocusState private var playFocused: Bool
     @State private var containerWidth: CGFloat = 0
     /// The episode whose playback is being prepared; its row and the Play button show progress.
     @State private var loadingEpisode: Episode.ID?
@@ -430,7 +432,12 @@ struct VideoDetailView: View {
                         .padding(.vertical, Layout.gutter)
                     }
                     .scrollIndicators(.never)
-                    episodePanel(scrolls: true).frame(width: railWidth).padding(.top, Layout.gutter)
+                    // Each column is a full-height focus section: with a few episodes the rail ends
+                    // above Play, and the remote found nothing to its right (no way to the source chips).
+                    .tvFocusSection()
+                    episodePanel(scrolls: true).padding(.top, Layout.gutter)
+                        .frame(width: railWidth).frame(maxHeight: .infinity, alignment: .top)
+                        .tvFocusSection()
                 }
                 .padding(.horizontal, Layout.gutter)
                 .frame(maxWidth: Layout.maxWidth).frame(maxWidth: .infinity)
@@ -595,6 +602,9 @@ struct VideoDetailView: View {
             detail = value
             // Start on a line that can play: not one from a drive the viewer has no way to sign in to.
             if selectedFlag == nil { selectedFlag = CloudDrive.preferredFlag(flags) }
+            #if os(tvOS)
+            Task { try? await Task.sleep(for: .milliseconds(100)); playFocused = true }
+            #endif
         } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
     }
     private var headerLayout: AnyLayout {
@@ -675,6 +685,7 @@ struct VideoDetailView: View {
             .font(.headline).lineLimit(1).fixedSize().padding(.horizontal, 8)
         }
         .controlButton(prominent: true).tint(Brand.accent).controlSize(.large)
+        .focused($playFocused)
     }
     private func downloadButton(iconOnly: Bool) -> some View {
         Button { choosingDownloads = true } label: {
