@@ -125,7 +125,7 @@ Put the Mac and the Apple TV on the same local network.
    ```sh
    cider sign Yingxia-<version>-tvos.ipa --apple-id --install -u <UDID> --refresh
    ```
-4. Wait. Yingxia bundles a Java runtime of about 11,000 small files and cider copies them over Wi-Fi one by one, so the install takes several minutes (7½ min measured). It ends with `✓ Installed to <name>`.
+4. Wait. The IPA is about 140 MB, so the install can take a few minutes over Wi-Fi. It ends with `✓ Installed to <name>`.
 5. Open Yingxia on the TV.
 
 Verified on tvOS 27: `cider device list` and `cider device install` with an already-signed tvOS IPA. Not yet verified: `cider sign --apple-id` for the tvOS IPA. cider requests profiles through Apple's iOS developer endpoints; if the install fails with a provisioning-profile or platform error, use Sideloadly on the Mac for the Apple TV (below).
@@ -194,7 +194,7 @@ Read cider's error before doing anything else. Apple's errors usually arrive wra
 | `DeviceOSVersionTooLow` | Yingxia needs iOS / iPadOS 18 or tvOS 26. Update the device. |
 | `ApplicationVerificationFailed` | The signature or profile was rejected: usually an expired or revoked certificate. Sign and install again. Also check that the IPA matches the device (iOS vs tvOS). |
 | Apple TV install fails with a provisioning-profile or platform error | Not yet verified that cider can sign tvOS apps. Use Sideloadly on the Mac (below). |
-| Install seems stuck on Apple TV | It's copying ~11,000 files over Wi-Fi; give it 5–10 minutes. |
+| Install seems stuck on Apple TV | It's copying about 140 MB over Wi-Fi; give it 5–10 minutes. |
 | "Untrusted Developer" when opening the app | Settings → General → VPN & Device Management → the Apple account → **Trust**. |
 | "Developer Mode Required" | Settings → Privacy & Security → **Developer Mode** → on, restart, confirm. |
 | App stopped opening after a week | Signature expired: `cider refresh run`, or sign and install again with the same account. |

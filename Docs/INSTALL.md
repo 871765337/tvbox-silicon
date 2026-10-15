@@ -61,7 +61,7 @@ cider account team    # only if your account belongs to several teams
    ```
 3. In the folder with the IPA, sign and install it:
    ```sh
-   cider sign Yingxia-1.1-ios.ipa --apple-id --install --refresh
+   cider sign Yingxia-1.6.4-ios.ipa --apple-id --install --refresh
    ```
 4. On the device, open **Settings → General → VPN & Device Management** and trust the developer entry for your Apple account.
 5. If required, turn on **Settings → Privacy & Security → Developer Mode**, then follow the restart and confirmation prompts.
@@ -76,9 +76,9 @@ Apple TV 4K has no USB data connection, so cider installs to it over the network
 3. Pair the Mac with the TV once. cider can only pair over USB, so use Xcode (free in the App Store): open **Window → Devices and Simulators**, select the Apple TV under Discovered, click **Pair** and type the PIN the TV shows. (Sideloadly's **Re-Pair** button works too.)
 4. Find its UDID with `cider device list` (it's listed as `<your TV's name> [WiFi]` with an ID like `00008110-…`), then sign and install:
    ```sh
-   cider sign Yingxia-1.1-tvos.ipa --apple-id --install --refresh -u <UDID>
+   cider sign Yingxia-1.6.4-tvos.ipa --apple-id --install --refresh -u <UDID>
    ```
-   The first install takes a few minutes: Yingxia carries a Java runtime of about 11,000 small files, and they're copied over Wi-Fi one by one. It ends with `✓ Installed to <name>`.
+   The IPA is about 140 MB, so the install can take a few minutes over Wi-Fi. It ends with `✓ Installed to <name>`.
 5. Open **Yingxia** on Apple TV. 🎉
 
 If cider can't install to your Apple TV (for example, a provisioning profile or platform error), use [Sideloadly on a Mac](#sideloadly) instead.
@@ -138,7 +138,7 @@ Turn on **automatic app refreshing** in Sideloadly; it renews the signature only
 | "maximum number of installed apps using a free developer profile" | A free account can have 3 sideloaded apps on a device. Delete one and try again. |
 | "Untrusted Developer" or "Developer Mode Required" when opening the app | Trust your account under **Settings → General → VPN & Device Management**, and turn on **Settings → Privacy & Security → Developer Mode**. |
 | `Too many certificates and failed to revoke any` | Your account is at Apple's certificate limit. Revoke an unused development certificate at developer.apple.com → Certificates, then try again. |
-| The Apple TV install seems stuck | It's copying about 11,000 files over Wi-Fi. Give it 5–10 minutes. |
+| The Apple TV install seems stuck | It's copying about 140 MB over Wi-Fi. Give it 5–10 minutes. |
 | Sideloadly says `GSA returned a non-plist response (HTTP 503 …)` | Its log shows **"Will use Fake Local Anisette"**: Sideloadly couldn't get Apple's sign-in data from your Mac, so Apple rejected the sign-in. It isn't your network. Open Sideloadly settings (gear icon), switch anisette to **On-device Anisette** or **Local Anisette**, and click **Start** again. |
 | Wrong platform or architecture error | Check that you chose the IPA for your device (iOS or tvOS) and that it's a device build, not a simulator build. |
 | The app stopped opening after a week | Its signature expired. Run `cider refresh run`, or sign and install it again. |

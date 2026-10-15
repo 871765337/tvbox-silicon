@@ -6,14 +6,14 @@ Yingxia's original code is licensed under GPL-3.0-only; see the root [LICENSE](.
 
 [DexLoom](https://github.com/speedyfriend433/DexLoom) is distributed under the MIT License. The vendored license and version record are retained in `Vendor/DexRuntime/`. The app includes its license text in `App/Resources/ThirdPartyNotices.txt`.
 
-## Mac plugin runtime
+## Plugin runtime (Java host, all platforms)
 
 | Dependency | License | Notes |
 | --- | --- | --- |
 | [unidbg](https://github.com/zhkl0228/unidbg) | Apache-2.0 | Android native library and JNI compatibility |
 | [Unicorn](https://github.com/unicorn-engine/unicorn) | GPL-2.0 | CPU emulation, distributed through the `unidbg-unicorn2` Maven dependency |
 | [dex2jar](https://github.com/ThexXTURBOXx/dex2jar) | Apache-2.0 | DEX-to-JVM bytecode conversion |
-| [Eclipse Temurin OpenJDK](https://adoptium.net/) | GPL-2.0 with Classpath Exception | The bundled runtime retains its `legal` directory |
+| [Eclipse Temurin OpenJDK](https://adoptium.net/) | GPL-2.0 with Classpath Exception | Mac only; the bundled runtime retains its `legal` directory |
 | OkHttp | Apache-2.0 | HTTP client |
 | Gson | Apache-2.0 | JSON serialization |
 | Android JSON implementation | Apache-2.0 | Android-compatible JSON behavior |
@@ -22,6 +22,25 @@ Yingxia's original code is licensed under GPL-3.0-only; see the root [LICENSE](.
 Direct Maven dependency versions are recorded in `Runtime/JavaHost/pom.xml`. Refer to each dependency's own license and notices for its complete terms and transitive components.
 
 Third-party source plugins are loaded from the configured subscription URL and are not bundled with the app. The controlled test JAR is maintained by this project.
+
+## iPhone, iPad and Apple TV plugin runtime
+
+The iOS and tvOS apps link the JVM and the native emulation stack statically. Their license texts are bundled from `App/Resources/RuntimeLicenses/`.
+
+| Dependency | License | Notes |
+| --- | --- | --- |
+| [OpenJDK mobile](https://github.com/openjdk/mobile) | GPL-2.0 with Classpath Exception | Zero interpreter, commit pinned in `Scripts/build-apple-jvm.sh`, with local patches under `Runtime/AppleRuntime/patches/` |
+| [Unicorn](https://github.com/unicorn-engine/unicorn) | GPL-2.0 (some parts LGPL-2.0) | Built with the TCI interpreter, commit pinned in `Scripts/build-apple-interpreter.sh` |
+| [Capstone](https://github.com/capstone-engine/capstone) | BSD-3-Clause (LLVM-derived parts under the LLVM license) | Disassembler used by unidbg |
+| [Keystone](https://github.com/keystone-engine/keystone) | GPL-2.0 (LLVM-derived parts under the LLVM license) | Assembler used by unidbg |
+| [libffi](https://github.com/libffi/libffi) 3.4.8 | MIT | Foreign calls for the JVM |
+| [JNA](https://github.com/java-native-access/jna) | Apache-2.0 | Native bindings used by unidbg |
+
+How Unicorn's and Keystone's GPL-2.0 terms apply to apps that embed this runtime is still an open question (see the [runtime extraction plan](runtime-extraction-plan.md)).
+
+## JavaScript engine
+
+[QuickJS-ng](https://github.com/quickjs-ng/quickjs) v0.17.0 (MIT) runs the bundled lightweight source ports on every platform and JavaScript sources on iPhone, iPad and Apple TV. Its engine sources are vendored unmodified in `Vendor/QuickJS/`, with the license and an upstream record (`UPSTREAM.md`).
 
 ## Reference implementation
 
@@ -38,11 +57,11 @@ for this source.
 
 [FongMi/TV](https://github.com/FongMi/TV) is a GPL-3.0 reference implementation. The local reference checkout, when present, retains its own Git history and license. It is not included as an app build target. Its `quickjs/src/main/assets/js/lib/cheerio.min.js` and `crypto-js.js` assets (commit `c616c0aa3613e87529791587a9f71b78c278c991`) are copied unmodified into `Runtime/ScriptHost/assets/js/lib/` and bundled with the script host. Its `cat.js`, `gbk.js`, and `similarity.js` assets are copied unmodified from commit `4a11089cb6a1377cbf437ebccd24468296357132` into the same directory. The upstream license is retained as `Runtime/ScriptHost/LICENSE.assets` and `ScriptHost/LICENSE.assets` in the app. Embedded library copyright notices are preserved.
 
-## JavaScript runtime
+## Node.js (Mac)
 
 The bundled standalone Node.js binary retains its complete distributed license and third-party notices in `ScriptHost/LICENSE.node`. `Scripts/build-script-host.sh` copies that file from the selected Node distribution. The development validation used Node 25.0.0 on macOS arm64. Subscription scripts and remote modules are downloaded on demand and are not bundled.
 
-## Python runtime
+## Python runtime (Mac)
 
 `Scripts/build-python-host.sh` bundles a relocatable CPython from [python-build-standalone](https://github.com/astral-sh/python-build-standalone), installed by uv. CPython is distributed under the PSF License; its license and the notices for its bundled components remain at `PythonHost/python/lib/python3.12/LICENSE.txt`. The validation used CPython 3.12.11 on macOS arm64.
 

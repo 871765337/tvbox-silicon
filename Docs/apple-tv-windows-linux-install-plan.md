@@ -1,6 +1,6 @@
 # Plan: install Yingxia on Apple TV from Windows and Linux
 
-Status: proposed, not started · Updated: October 11, 2026
+Status: proposed, not started · Updated: October 15, 2026
 
 ## Objective
 
@@ -55,10 +55,13 @@ Research done October 11, 2026. Sources are listed at the end.
   | pymobiledevice3 v11.27.1 | yes (`remote pair`) | no | documented only | pairing verified on Linux (tvOS 17.5); no Apple TV install reported |
   | sideloadATV (Android app) | yes | yes | yes | its author reports it working on a real Apple TV |
 
-- **Yingxia's size makes upload strategy matter.** The tvOS bundle has 11,228 files. cider
-  uploads them one at a time and took 7½ minutes. `ideviceinstaller -n` sends the IPA as
-  one file and lets the device unpack it, which took about 20 seconds. sideloadATV had to
-  raise its TCP retransmit limit to survive "multi-second Apple TV stalls" on 100 MB+ IPAs.
+- **Yingxia's size makes upload strategy matter.** Until October 12 the tvOS bundle had
+  11,228 files; cider uploaded them one at a time and took 7½ minutes, while
+  `ideviceinstaller -n` sent the IPA as one file and let the device unpack it in about 20
+  seconds. Since `61d929e` the bundled JDK classes ship as one jimage, and the 1.6.4 tvOS
+  IPA holds 190 files in about 140 MB, so the file count no longer dominates; the IPA's size
+  still does. sideloadATV had to raise its TCP retransmit limit to survive "multi-second
+  Apple TV stalls" on 100 MB+ IPAs.
 
 ## Tracks
 
@@ -67,7 +70,7 @@ Ranked by how likely each is to become the shipped Windows method.
 | Track | What | Why it might win | Main unknowns |
 | --- | --- | --- | --- |
 | **A** | Build `plumesign` natively for Windows and Linux | Already has all three parts (RemotePairing, tvOS signing, RSD install) and is proven inside atvloadly; Rust and `idevice` run on Windows (PR #226 proves it) | Does it compile for `x86_64-pc-windows-msvc`; Windows discovery (it takes `--ip/--port`); per-file vs single-file upload |
-| **B** | Build the Impactor PR #226 branch | The only Windows success on record; has GUI and Windows mDNS discovery | Abandoned upstream; not tested on tvOS 27; speed with 11k files |
+| **B** | Build the Impactor PR #226 branch | The only Windows success on record; has GUI and Windows mDNS discovery | Abandoned upstream; not tested on tvOS 27; speed with a 140 MB IPA |
 | **C** | pymobiledevice3: pair, tunnel, install a pre-signed IPA | pip-installable, actively maintained, best docs; good diagnostic tool even if not shipped | No signer; `apps install --tunnel` unconfirmed for Apple TV; Windows mDNS and admin |
 | **D** | atvloadly: native on Linux; on Windows through WSL2 or a bridged Linux VM; or on an always-on Linux box (Raspberry Pi, NAS, OpenWrt router) | Maintained upstream, refreshes on its own, many Linux users | tvOS 27 issue #121; multicast into WSL2/VM; heavy setup for end users |
 | **E** | Our own small CLI (`yingxia-atv`) on `idevice` + the `plumesign` signing code | We control discovery, single-file upload, refresh and messages; one binary for Windows/Linux/macOS | Engineering and maintenance cost |
@@ -91,8 +94,8 @@ Ranked by how likely each is to become the shipped Windows method.
    - `Yingxia-<ver>-tvos.ipa`: the unsigned release.
    - `Yingxia-<ver>-tvos-signed.ipa`: team-signed for the test TV, for tracks without a
      signer (C).
-4. **Baselines on the Mac.** cider install time (7½ min) and `ideviceinstaller -n` time
-   (about 20 s) for the current build.
+4. **Baselines on the Mac.** cider install time and `ideviceinstaller -n` time for the
+   current build (7½ min and about 20 s were measured on the old 11,228-file bundle).
 5. **Results log.** Keep `Docs/apple-tv-install-results.md` with one row per run: track,
    tool version or commit, host OS, tvOS version, account type, step, pass or fail, time,
    exact error text.
@@ -203,10 +206,8 @@ be combined:
    `Install` with that path so tvOS unpacks it. Verify that the `*.shim.remote` services
    accept this on tvOS 27. Raise the userspace TCP retransmit limit so long Wi-Fi stalls
    don't abort the transfer (as sideloadATV did).
-2. **Ship fewer files.** Pack the bundled Java runtime's ~11,000 files into one archive
-   and read it at runtime. This speeds up every install path, including cider on the
-   Mac. It's a larger app change; scope it separately, and coordinate with
-   `runtime-extraction-plan.md`.
+2. **Ship fewer files.** Done in `61d929e` (October 12): the Java runtime's ~11,000 class
+   files became one jimage, and the tvOS IPA now holds 190 files.
 
 ## Phase 5 — Refresh and updates
 
@@ -262,7 +263,7 @@ A free-account signature lasts 7 days.
 | PIN lockout after wrong attempts | One person enters the PIN; stop after one failure and read the error |
 | Windows mDNS blocked | Phase 0 discovery gate; troubleshooting row; allow manual `--ip/--port` entry |
 | Upstream code is abandoned (PR #226) or changes (bitxeno fork) | Pin commits; prefer tracks we can maintain (A/E) |
-| Slow or failing transfer of 11k files over Wi-Fi | Phase 4 single-file upload; Ethernet on the TV |
+| Slow or failing transfer of a 140 MB IPA over Wi-Fi | Phase 4 single-file upload; Ethernet on the TV |
 | Second, empty copy of the app after switching tools | Match cider's bundle-ID suffix; document how to remove the old copy |
 
 ## Open questions

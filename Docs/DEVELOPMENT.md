@@ -2,7 +2,7 @@
 
 Build steps, runtime architecture, verification tools, and implementation notes for Yingxia. For an overview of the app, see the [README](../README.md).
 
-Yingxia bundles a JVM, an Android ELF/JNI compatibility layer, and a DEX converter so it can run JAR, JavaScript, and Python plugins locally on the Mac. iOS and tvOS run plugin JARs in-process through an embedded JVM; this is verified on arm64 simulators, while physical devices and all-source parity are not yet verified. See the [on-device runtime status](on-device-runtime-status.md) for measurements and limitations.
+Yingxia bundles a JVM, an Android ELF/JNI compatibility layer, and a DEX converter so it can run plugin sources locally. The Mac runs JAR sources in a bundled desktop JVM, and JavaScript and Python sources in bundled Node and CPython. iOS and tvOS run JAR sources in-process through an embedded interpreter-only JVM and JavaScript sources on QuickJS; they have no Python. The embedded runtime plays real subscriptions on a physical Apple TV; all-source parity with the Mac is not measured. See the [on-device runtime status](on-device-runtime-status.md) for the design, measurements and limitations.
 
 ## Build and run
 
@@ -52,16 +52,20 @@ open build/DerivedData-mac/Build/Products/Debug/TVBox-macOS.app
 
 ## Features
 
-- Import TVBox JSON subscriptions by URL, with a default URL prefilled.
+- Import TVBox JSON subscriptions by URL, with a default URL prefilled. Several subscriptions merge into one source list (`SubscriptionMerge`); each source keeps its origin, and failing sources cool down and search last (`SourceHealth`).
 - Save subscription snapshots, origin URLs, import dates, and favorite channels. A failed refresh preserves the last successfully imported configuration.
 - Preserve plugin-specific fields such as `ext`, `spider`, and rules. Resolve relative URLs against the final response URL.
-- Browse M3U and TVBox TXT live playlists, filter groups, search channels, and save favorites. Support configured User-Agent and Referer headers.
+- Browse M3U and TVBox TXT live playlists, filter groups, search channels, and save favorites. Support configured User-Agent and Referer headers. Built-in Bilibili, Douyu, Huya and Douyin live rooms sit beside them.
 - Browse standard type 1/type 4 JSON sources: home pages, categories, search, pagination, details, playback sources, episodes, and resolved media URLs.
-- Execute supported type 3 JAR sources locally on Mac, with a separate process, up to 180 seconds for initial conversion/startup, and a fresh 60-second deadline for each request.
+- Run type 3 plugin sources (JAR, JavaScript, and Python on Mac). Bundled lightweight ports of common sources (`Sources/TVCore/ScriptAssets/sites/`) run first on QuickJS, with the original plugin as the fallback.
+- Built-in Bilibili (video, live, QR sign-in, and casts from the Bilibili phone app on Apple TV and Mac) and Hongguo short dramas, appended to the displayed subscription.
 - Play media with AVPlayer, display playback errors, and retry failed requests. On Mac, a private loopback HLS adapter handles supported image-prefixed MPEG-TS segments.
+- Playback history, Continue Watching, intro/outro skipping, automatic next episode and automatic danmaku ([library and cache notes](LIBRARY_CACHE.md)).
+- Offline downloads, resumable, played back through a loopback server (`Downloads.swift`, `DownloadTransfer.swift`, `LocalMediaServer.swift`). tvOS keeps them in Caches, which the system may purge.
+- Music: search, albums, playlists, a queue, lyrics and lossless playback (see [Music](#music)).
 - Run the bundled DEX test JAR and inspect subscription plugins for DEX files and Android libraries. The inspection tool can check an inline MD5 fingerprint.
 
-Playback depends on the source, media format, device decoder, and network availability. Unsupported features include full CatVod/Android API compatibility, arbitrary desktop JVM applications, web video detection, magnet links, multiple-quality playback responses, XML collection APIs, EPG, cloud sync, downloads, and a complete offline library. Complex playlist extensions and header requirements still need source-by-source verification.
+Playback depends on the source, media format, device decoder, and network availability. Unsupported features include full CatVod/Android API compatibility, arbitrary desktop JVM applications, web video detection, magnet links, multiple-quality playback responses, XML collection APIs, EPG, and cloud sync. Complex playlist extensions and header requirements still need source-by-source verification.
 
 ## Built-in Hongguo source
 
@@ -137,13 +141,19 @@ Subscription-provided source names, channel names, categories, and video titles 
 | Path | Purpose |
 | --- | --- |
 | `App/` | Shared SwiftUI screens and platform-specific playback integration |
-| `Sources/TVCore/` | Subscription models, networking, catalogs, localization, and runtime boundaries |
-| `Sources/TVBoxProbe/` | Command-line plugin inspection and basic DEX execution probes |
-| `Runtime/JavaHost/` | Mac JVM host, Android API adapters, and native plugin bridge |
+| `Sources/TVCore/` | Subscription models, networking, catalogs, built-in sources, music, downloads, localization, and runtime boundaries |
+| `Sources/TVCore/ScriptAssets/` | Bundled QuickJS source ports and their shared helpers |
+| `Sources/TVBoxProbe/` | Command-line plugin inspection, source checks, and basic DEX execution probes |
+| `Runtime/JavaHost/` | The Java plugin host for all platforms: Android API adapters, DEX conversion, and the native plugin bridge |
+| `Runtime/AppleRuntime/` | The embedded JVM for iOS and tvOS: OpenJDK and Unicorn patches, native bootstrap, and the JVM spike app |
+| `Runtime/ScriptHost/`, `Runtime/PythonHost/` | The Mac's Node and CPython hosts for JavaScript and Python sources |
+| `Runtime/sandbox/` | The Seatbelt profile for the Mac's plugin processes ([plan](sandbox-hardening-plan.md)) |
 | `Vendor/DexRuntime/` | Vendored experimental DEX interpreter and its license |
+| `Vendor/QuickJS/` | Vendored QuickJS-ng engine and this project's bridge |
 | `Tests/` | Core tests and controlled Java/DEX fixtures |
 | `Scripts/` | Build, verification, and inspection tools |
-| `Docs/` | Runtime evidence, limitations, and dependency notes |
+| `Docs/` | Install guide, runtime status, plans, and dependency notes |
+| `website/` | The website at yingxia.getmegaportal.com, including `public/releases.json` |
 | `project.yml` | XcodeGen project definition |
 
 ## Verification
@@ -203,7 +213,7 @@ CatVod plugins may contain DEX, JVM classes, Android native libraries, or a guar
 
 Plugin JNI calls and native-library loads can run through the Android ARM64 guest rather than macOS `dlopen`. This does not supply a complete Android device: Android UI, unsupported native operations, private guards, login requirements, and unavailable servers can still prevent a source from loading. A successful subscription import or empty home response does not establish successful search or playback.
 
-Each Mac source keeps a reusable process and persistent preferences. Idle processes stop after five minutes; requests have a 60-second deadline. Each type 3 source is routed like TVBox: a `.js` api runs in bundled Node, a `.py` api (or a legacy `py_` key whose `ext` is the script) runs in bundled CPython, and any other api is a JAR class. JavaScript spiders get HTTP, HTML parsing, module loading, and preference adapters. Python spiders get the CatVod `base.spider` API, `requests`, `lxml`, `bs4`, `pyquery`, `pycryptodome`, and `cryptography`, and their `localProxy` responses are served from a loopback port. Sources follow one strategy (`SourceStrategy`): only sources this platform can run are listed, in runtime order JSON API, Python, JavaScript, then JAR. Sources whose names normalize to the same site (for example `低端影视`, `影视 | 低端影视[js]`, and `🛣┃低端┃影视`) form one channel. Channels are ordered by their best runtime, and a channel's sources by runtime and then subscription order (JSON a, JSON b, Python a, Python b, and so on). The Sources list, the Watch Now source picker and default, and Global Search all use this order; search also runs each runtime in its own lane so slow JVM searches never delay the others. Web video detection remains unsupported. The Mac host supports CatVod stream proxy responses and the FTY cloud-drive proxy contract; other plugin-specific proxy implementations may still require adapters.
+Each type 3 source is routed like TVBox: a `.js` api is a JavaScript spider, a `.py` api (or a legacy `py_` key whose `ext` is the script) is a Python spider, and any other api is a JAR class. On Mac, JavaScript runs in bundled Node and Python in bundled CPython, one reusable child process per source (at most three; idle ones stop after five minutes; requests have a 60-second deadline), and JAR sources share one long-lived desktop JVM (`PluginProcess`) that serves the same requests as the embedded JVM on iOS and tvOS. All of these children run under the spider sandbox. On iOS and tvOS, JavaScript runs on QuickJS and JAR sources in the embedded JVM. JavaScript spiders get HTTP, HTML parsing, module loading, and preference adapters. Python spiders get the CatVod `base.spider` API, `requests`, `lxml`, `bs4`, `pyquery`, `pycryptodome`, and `cryptography`, and their `localProxy` responses are served from a loopback port. Sources follow one strategy (`SourceStrategy`): only sources this platform can run are listed, in runtime order JSON API, Python, JavaScript, then JAR. Sources whose names normalize to the same site (for example `低端影视`, `影视 | 低端影视[js]`, and `🛣┃低端┃影视`) form one channel. Channels are ordered by their best runtime, and a channel's sources by runtime and then subscription order (JSON a, JSON b, Python a, Python b, and so on). The Sources list, the Watch Now source picker and default, and Global Search all use this order; search also runs each runtime in its own lane so slow JVM searches never delay the others. Web video detection remains unsupported. The Mac host supports CatVod stream proxy responses and the FTY cloud-drive proxy contract; other plugin-specific proxy implementations may still require adapters.
 
 The basic DexLoom interpreter remains available for controlled tests on all platforms. It does not provide complete Android plugin compatibility.
 
@@ -248,7 +258,7 @@ Playback failures use a flat full-screen layout with a prominent heading, channe
 
 Watch Now displays the selected source's home recommendations and remembers the source choice. JAR home responses merge `homeContent(true)` with a nonempty `homeVideoContent()` list; JavaScript sources may supply `homeVod()`. Index sources (`indexs: 1`) and name-only ranking entries are displayed as recommendations and open Global Search by title; entries with real video IDs from ordinary sources open their own details. An empty recommendation list stays empty instead of substituting a category. The latest four source recommendation lists are cached in memory for ten minutes, with explicit refresh and subscription invalidation. TVBox artwork header suffixes are parsed into actual HTTP headers; posters are downsampled and held in a bounded decoded-image cache.
 
-Global Search queries supported sources with `searchable` omitted or set to `1`, with at most four concurrent requests. Results append to a stable poster grid and retain their source for details/playback. Source chips filter the grid; select a source and use its “More” link to browse subsequent search pages. Failed sources appear in a separate sheet and can be retried independently. Search state survives opening details and switching app sections. Search history stores the latest 20 keywords locally and can be cleared. The latest six completed searches are cached in memory for five minutes; subscription changes invalidate them. Already-started sources are searched first. Stopping or replacing a search prevents stale results from being displayed; an already running plugin call may still finish in its host process. iOS/tvOS search only their supported standard APIs.
+Global Search queries supported sources with `searchable` omitted or set to `1`, with at most four concurrent requests. Results append to a stable poster grid and retain their source for details/playback. Source chips filter the grid; select a source and use its “More” link to browse subsequent search pages. Failed sources appear in a separate sheet and can be retried independently. Search state survives opening details and switching app sections. Search history stores the latest 20 keywords locally and can be cleared. The latest six completed searches are cached in memory for five minutes; subscription changes invalidate them. Already-started sources are searched first. Stopping or replacing a search prevents stale results from being displayed; an already running plugin call may still finish in its host process. iOS and tvOS search every source they can run.
 
 On tvOS, Global Search uses SwiftUI’s native `.searchable` and `.searchSuggestions` interface: the keyboard, recent-search suggestions, and results share the screen and native focus navigation. Searches start after a 650 ms typing pause; suggestions complete the query through the same search field. Explicit submissions and opened results add the query to history, avoiding partial queries in history during typing. Source filters, progress, stop/resume, and failure retry remain in the results area. Details and source pagination preserve search state on return. macOS and iOS keep their existing search controls.
 
@@ -297,6 +307,19 @@ Android plugins wait for a QR sign-in by showing a dialog and polling until some
 - A request still running 15 s after its stop time (`OpeningGate.STUCK_GRACE_MILLIS`; it waits somewhere the host can't reach) gets its spider retired: the next request opens a fresh one, and the old runtime closes when that request returns.
 - Host commands (`directMedia`, `recoverProxy`) bypass the plugin request slots (`SerializedPluginWorker.immediate`), so starting a working video never waits behind a stuck line.
 - `embedded-jvm.log` logs `PLUGIN_REQUEST <time> <kind> [flag=…]`, `PLUGIN_STOPPED`, `PLUGIN_RUNTIME_RETIRED`; past 2 MB at launch it moves to `embedded-jvm.previous.log`.
+
+### Music
+
+Music searches four catalogs (QQ Music, NetEase Cloud Music, Migu and Kuwo) and plays each song from a temporary audio address that a resolver service returns. It needs no account and no server of ours. Code: `Sources/TVCore/Music*.swift` and `App/Music*.swift`.
+
+- **Channels.** A catalog plus a resolver is a channel. `MusicResolver.order` tries the primaries first (Migu through Migu's own servers, Kuwo through Nianxin, QQ through VKeys, NetEase through GD Studio), then the fallbacks (Kuwo through Xinghai, NetEase through Nianxin, QQ through HYW, NetEase through Xinghai). At most two resolve at once, within 15 seconds per song. When every channel fails, the song is looked up in the catalogs it was not found in. Addresses are reused only within one playback.
+- **Service limits.** GD Studio allows 50 requests per 5 minutes, is for personal non-commercial use, and asks to be credited; Xinghai is held to 30 per 5 minutes. The player credits both. `MusicSourceHealth` keeps these budgets and cools a failing service down (1 minute, doubling up to 30; 10 minutes after upstream risk control). HYW stays off until the user enters its key in Music settings; the key is never committed or logged.
+- **Matching.** Results merge across catalogs by title, artists and duration. Version tags (live, instrumental, remix, cover, re-recorded, acoustic, demo, and other versions such as a Cantonese one) keep different recordings apart. A query that names one song, with or without its artist, plays it directly only when the original is unambiguous.
+- **Quality is measured, not trusted.** `MusicProber` reads at most 256 KiB by Range, parses the header (FLAC STREAMINFO, MP3/ADTS, MP4) and asks the platform decoder when the header leaves something open. Extensions, Content-Type and providers' quality labels are never evidence: CDNs sent FLAC as `audio/x-ogg` or `audio/mpeg`, a request for high quality returned 48 kbps AAC, and an old VKeys endpoint returned 60-second previews. A stream clearly shorter than the recording (beyond max(3 s, 2%)) is a preview and is rejected; with either length unknown it stays unknown. "Lossless first" (the default) plays the first complete, playable lossless stream, else the best lossy one, marked; "Lossless only" fails with a clear message instead.
+- **Player.** Albums and playlists, a queue with shuffle, repeat, Play Next and Add to Up Next, synced lyrics with translation, Recently Played and Continue Playing. Unplayable songs are skipped while a queue plays. iPhone and iPad publish Now Playing for the Lock Screen and Control Center (`MusicRemoteControl`). The Mac has a floating bar on every page and a full-window Now Playing; Apple TV has a full-screen player and a now-playing card atop the sidebar (tvOS 27; a sidebar item before that).
+- **QQ keyword search** uses the mobile method (`DoSearchForQQMusicMobile`), which still returns code 2001 at times; the other catalogs then carry the results.
+
+Tests: `MusicTests`, `MusicLibraryTests` and `MusicMiguKuwoTests` run offline. `TVBOX_MUSIC_LIVE=1 swift test --filter MusicLiveTests` resolves real sample songs and prints what each one got; run it by hand, not in CI. Debug launch arguments: `-qaSection music -qaQuery <text>`, plus `-qaMusicKind albums`, `-qaMusicOpen 1`, `-qaMusicPlay 1`, `-qaMusicLyrics 1`, `-qaNowPlaying artwork|lyrics|queue`, and `-musicVolume 0` to keep test runs silent.
 
 ### Software update and What's New
 

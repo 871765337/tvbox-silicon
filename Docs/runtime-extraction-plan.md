@@ -1,6 +1,6 @@
 # Plan: extract the Android runtime as a reusable library
 
-Status: future work, not started · Updated: October 6, 2026
+Status: future work, not started · Updated: October 15, 2026
 
 ## Summary
 
@@ -18,10 +18,12 @@ produce an API shaped by a single consumer.
 - **The boundary is not clean.** `tvbox.runtime` mixes the general runtime with CatVod,
   cloud-drive and FTY/FishGuard behavior. Thirteen Java files under `Runtime/` reference
   CatVod concepts (`Spider`, `vod_`).
-- **The runtime is still changing.** iOS/tvOS playback is verified on simulators for one
-  source only. A cold start takes about 30 seconds, mostly runtime initialization and guard
-  emulation (see [on-device runtime status](on-device-runtime-status.md)). Performance work
-  is likely to change the API.
+- **The runtime is still changing.** It ships in every iOS and tvOS release and
+  plays real subscriptions on a physical Apple TV, but first use of a large plugin still
+  takes minutes and a cold start tens of seconds, mostly conversion, runtime
+  initialization and guard emulation (see [on-device runtime status](on-device-runtime-status.md)).
+  Recent work (per-archive runtimes, request stop times, the QR sign-in handoff) changed the
+  host's surface every few days, and performance work is likely to change it again.
 - **There is one consumer.** A general API designed against one app is usually wrong.
 
 ## Proposed component split

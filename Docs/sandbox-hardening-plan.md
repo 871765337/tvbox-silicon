@@ -1,6 +1,6 @@
 # Plan: sandbox hardening against malicious subscription spiders
 
-Status: core implemented and committed (`00bc735`); Phases 6-7 deferred · Updated: October 11, 2026
+Status: core implemented and shipped (`00bc735`, in releases since 1.6); Phases 6-7 deferred · Updated: October 15, 2026
 
 ## Progress
 
@@ -10,6 +10,13 @@ Status: core implemented and committed (`00bc735`); Phases 6-7 deferred · Updat
   `build-*-host.sh`). Verified on Node, Python, and Java under the live profile: DNS/HTTPS
   and cache writes work; reading/stat'ing/listing `$HOME` and executing any binary are
   denied. The macOS app builds with it all bundled and linked.
+- **Follow-up fixes:** `7518474` let JAR sources load again under the profile: it grants
+  `Application Support/com.tvbox.yingxia/EmbeddedPlugins` (where JAR sessions live) and lets
+  every spider read the saved cloud-drive sign-ins file, read only (Phase 7 would narrow
+  that); and `76b1911` fixed the profile when the
+  app runs from a `/private` path (App Translocation, `/private/tmp`): Foundation's
+  `resolvingSymlinksInPath()` strips a leading `/private`, so `SpiderSandbox` resolves paths
+  with `realpath(3)`. Test a release build from such a path before shipping.
 - **Partially covered by Phase 1:** Phases 3 and 4 — the sandbox already confines Python
   and Java and temp dirs are redirected into the session (`-Djava.io.tmpdir`, `TMPDIR`);
   the runtime-specific extras below (Python `sys.path`/`-S`, the Java `System.load` guard
@@ -119,7 +126,10 @@ if it does not break `requests`/`certifi`.
 - Native guards are unidbg-**emulated**, never `dlopen`'d. Add an explicit guard that
   `System.load`/`loadLibrary` can only reach an ARM64-validated library resolved by
   `NativeLibraries` through unidbg, and reject any real `dlopen` of a jar-dropped Mach-O.
-  Audit `BytecodeCompatibility` and `ReflectionDiagnostics` for bypasses.
+  Converted plugin classes already have their direct `System.load`/`loadLibrary` calls
+  rewritten to `AndroidNativeRuntime` (`BytecodeCompatibility`); still open is an audit of
+  reflective and `Runtime`-level calls that would bypass that rewrite
+  (`ReflectionDiagnostics`).
 
 ## Phase 6 — Integrity and consent (app-side, low risk) — NOT IMPLEMENTED (deferred)
 
