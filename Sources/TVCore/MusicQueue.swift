@@ -47,6 +47,14 @@ public struct MusicQueue: Codable, Equatable, Sendable {
         return current
     }
 
+    /// Puts `new` right after the current song.
+    public mutating func insertNext(_ new: [MusicTrack]) {
+        tracks.insert(contentsOf: new, at: tracks.isEmpty ? 0 : index + 1)
+    }
+
+    /// Puts `new` at the end.
+    public mutating func append(_ new: [MusicTrack]) { tracks.append(contentsOf: new) }
+
     /// After a song that would not play, move on, unless several in a row failed: then the
     /// channels are down, and skipping on would only spend requests.
     public static let failuresBeforeStopping = 3

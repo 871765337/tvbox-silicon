@@ -43,6 +43,17 @@ typealias MusicTrack = TVCore.MusicTrack
     /// tvOS shows playback full screen, where the remote reaches every control; set when a song
     /// starts, and by Now Playing.
     var presentsPlayer = false
+    /// What the Mac's Now Playing shows beside the cover.
+    var nowPlayingPanel: MusicNowPlayingPanel = .lyrics
+    /// Off, the whole queue again, or the one song again; remembered across launches.
+    private(set) var repeatMode = MusicRepeatMode(rawValue: UserDefaults.standard.string(forKey: "musicRepeat") ?? "") ?? .off
+    /// The songs after this one play in random order; turning it off puts the queue back as it came.
+    private(set) var shuffled = false
+    private var unshuffled: [MusicTrack]?
+    /// The player's own volume, under the system's; remembered across launches.
+    var volume: Double = UserDefaults.standard.object(forKey: "musicVolume") == nil ? 1 : UserDefaults.standard.double(forKey: "musicVolume") {
+        didSet { player.volume = Float(volume); UserDefaults.standard.set(volume, forKey: "musicVolume") }
+    }
     var preferences = MusicPreferences.load() {
         didSet { if preferences != oldValue { preferences.save() } }
     }
@@ -71,6 +82,7 @@ typealias MusicTrack = TVCore.MusicTrack
 
     init(library: MusicLibrary = .shared) {
         self.library = library
+        player.volume = Float(volume)
         timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.25, preferredTimescale: 600), queue: .main) { [weak self] time in
             MainActor.assumeIsolated { self?.tick(time) }
         }
@@ -132,6 +144,7 @@ typealias MusicTrack = TVCore.MusicTrack
     func play(_ queue: MusicQueue, at position: Double? = nil) {
         guard queue.current != nil else { return }
         self.queue = queue
+        shuffled = false; unshuffled = nil
         consecutiveFailures = 0
         loadCurrent(at: position)
         #if os(tvOS)
@@ -149,10 +162,53 @@ typealias MusicTrack = TVCore.MusicTrack
         play(point.queue, at: point.position)
     }
 
+    /// The next song, or the first again when the whole queue repeats.
     func next() {
-        guard var queue, queue.advance() != nil else { return }
+        guard var queue else { return }
+        if queue.advance() == nil {
+            guard repeatMode == .all, queue.tracks.count > 1, queue.jump(to: 0) != nil else { return }
+        }
         self.queue = queue
         loadCurrent(at: nil)
+    }
+
+    var canAdvance: Bool { queue?.hasNext == true || repeatMode == .all && (queue?.tracks.count ?? 0) > 1 }
+
+    func cycleRepeat() {
+        repeatMode = repeatMode.next
+        UserDefaults.standard.set(repeatMode.rawValue, forKey: "musicRepeat")
+    }
+
+    /// Shuffles the songs after this one, or puts them back in their order.
+    func toggleShuffle() {
+        guard let queue, let current = queue.current else { return }
+        if shuffled, let original = unshuffled {
+            self.queue = MusicQueue(tracks: original, start: original.firstIndex(of: current) ?? 0, source: queue.source, collection: queue.collection)
+            unshuffled = nil
+        } else {
+            unshuffled = queue.tracks
+            let upcoming = queue.tracks[(queue.index + 1)...].shuffled()
+            self.queue = MusicQueue(tracks: Array(queue.tracks[...queue.index]) + upcoming, start: queue.index, source: queue.source, collection: queue.collection)
+        }
+        shuffled.toggle()
+    }
+
+    /// Plays `tracks` after this song; with nothing playing, plays them now.
+    func playNext(_ tracks: [MusicTrack]) {
+        guard !tracks.isEmpty else { return }
+        guard var queue else { play(MusicQueue(tracks: tracks)); return }
+        queue.insertNext(tracks)
+        self.queue = queue
+        unshuffled?.append(contentsOf: tracks)
+    }
+
+    /// Plays `tracks` after everything already queued; with nothing playing, plays them now.
+    func addToUpNext(_ tracks: [MusicTrack]) {
+        guard !tracks.isEmpty else { return }
+        guard var queue else { play(MusicQueue(tracks: tracks)); return }
+        queue.append(tracks)
+        self.queue = queue
+        unshuffled?.append(contentsOf: tracks)
     }
 
     /// Back to the start of the song once a few seconds played, otherwise to the song before.
@@ -337,7 +393,11 @@ typealias MusicTrack = TVCore.MusicTrack
 
     private func songEnded(run: UUID) {
         guard generation == run else { return }
-        if queue?.hasNext == true { next(); return }
+        if repeatMode == .one || repeatMode == .all && queue?.tracks.count == 1 {
+            seek(to: 0); activateAudioSession(); player.play(); phase = .loading
+            return
+        }
+        if canAdvance { next(); return }
         phase = .paused
         seek(to: 0)
         saveResumePoint(force: true)
@@ -483,5 +543,26 @@ typealias MusicTrack = TVCore.MusicTrack
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
         #endif
+    }
+}
+
+enum MusicNowPlayingPanel: Hashable { case lyrics, queue }
+
+enum MusicRepeatMode: String {
+    case off, all, one
+    var next: MusicRepeatMode {
+        switch self {
+        case .off: .all
+        case .all: .one
+        case .one: .off
+        }
+    }
+    var symbol: String { self == .one ? "repeat.1" : "repeat" }
+    var label: String {
+        switch self {
+        case .off: L10n.text("Repeat Off")
+        case .all: L10n.text("Repeat All")
+        case .one: L10n.text("Repeat One")
+        }
     }
 }

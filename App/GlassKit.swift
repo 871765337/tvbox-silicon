@@ -391,7 +391,9 @@ struct ChipRow<Content: View>: View {
         // Unclipped so a focused chip's lift and glow aren't cut at the row's ends.
         ScrollView(.horizontal, showsIndicators: false) { content.padding(.vertical, 8) }.scrollClipDisabled()
         #else
-        ScrollStrip { content }
+        // Room inside the strip's clip for the glass chips' edges and hover growth, given back
+        // outside so the first chip still lines up with the page.
+        ScrollStrip { content.padding(.horizontal, 6) }.padding(.horizontal, -6)
         #endif
     }
 }
@@ -447,9 +449,11 @@ struct EmptyPage<Footer: View>: View {
                 .accessibilityHidden(true)
             VStack(spacing: spacing * 0.4) {
                 Text(title).font(.system(size: titleSize, weight: .bold))
+                // No vertical fixedSize: on the Mac it made the page's minimum height that of the
+                // message wrapped at zero width, which stretched the split view past the window.
                 Text(message)
                     .font(.system(size: text)).foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
             }
             .frame(maxWidth: width)
             Button(action: perform) { Label(action, systemImage: actionSymbol).padding(.horizontal, 8) }

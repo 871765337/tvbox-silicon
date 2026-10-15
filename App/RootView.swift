@@ -37,6 +37,8 @@ struct RootView: View {
     /// Pushed pages in the detail column. Cleared on section change: inside NavigationSplitView the
     /// column keeps its pushed views even when the root stack's identity changes.
     @State private var detailPath = NavigationPath()
+    @State private var nowPlayingShown = false
+    @State private var hidesToolbar = false
     #endif
     private var tabs: [AppSection] {
         #if os(iOS)
@@ -52,9 +54,27 @@ struct RootView: View {
                 MacSidebar()
                     .navigationSplitViewColumnWidth(min: 190, ideal: 216, max: 260)
             } detail: {
-                NavigationStack(path: $detailPath) { content(store.section).routeDestinations() }.id(store.section)
+                // The music bar floats over every page while a song is loaded, as in Music.
+                NavigationStack(path: $detailPath) { content(store.section).musicBar().routeDestinations() }.id(store.section)
             }
             .onChange(of: store.section) { detailPath = NavigationPath() }
+            .overlay {
+                if nowPlayingShown { MusicMacNowPlaying().ignoresSafeArea().transition(.move(edge: .bottom)) }
+            }
+            .background { NowPlayingWindowChrome(active: hidesToolbar, store: store) }
+            .onChange(of: store.music.presentsPlayer && store.music.track != nil) { _, show in
+                // Hiding the toolbar moves the page under it. The player slides up over the window
+                // first and the toolbar goes once it is covered; closing brings the toolbar back
+                // before the player slides away.
+                if show {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.92)) { nowPlayingShown = true } completion: {
+                        if nowPlayingShown { hidesToolbar = true }
+                    }
+                } else {
+                    hidesToolbar = false
+                    withAnimation(.spring(response: 0.4, dampingFraction: 1)) { nowPlayingShown = false }
+                }
+            }
             #else
             // The system tab bar on every size class: iOS 26 floats it over content and
             // collapses extra sections into More, which a hand-built bar imitated poorly.
@@ -306,6 +326,10 @@ struct RouteLink<Label: View>: View {
 extension View {
     /// Registers `Route` pages; apply once at the root of every NavigationStack.
     func routeDestinations() -> some View {
+        #if os(macOS)
+        navigationDestination(for: Route.self) { $0.build().musicBar() }
+        #else
         navigationDestination(for: Route.self) { $0.build() }
+        #endif
     }
 }

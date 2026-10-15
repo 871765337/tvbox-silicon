@@ -1,4 +1,4 @@
-#if os(iOS)
+#if !os(tvOS)
 import SwiftUI
 import TVCore
 
@@ -8,18 +8,25 @@ import TVCore
 struct MusicNowPlayingLyrics: View {
     @Environment(Store.self) private var store
     @State private var scrolled: Int?
+    var showsTranslation = true
+    #if os(macOS)
+    // A window's worth of room: larger lines.
+    private let size: CGFloat = 32, translationSize: CGFloat = 18, spacing: CGFloat = 30
+    #else
+    private let size: CGFloat = 28, translationSize: CGFloat = 17, spacing: CGFloat = 24
+    #endif
 
     var body: some View {
         let music = store.music
         if let lyrics = music.lyrics {
             ScrollView(showsIndicators: false) {
-                LazyVStack(alignment: .leading, spacing: 24) {
+                LazyVStack(alignment: .leading, spacing: spacing) {
                     ForEach(Array(lyrics.lines.enumerated()), id: \.offset) { index, line in
                         let faded = lyrics.synced && index != music.currentLyric
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(line.text.isEmpty ? "♪" : line.text).font(.system(size: 28, weight: .bold))
-                            if let translation = line.translation {
-                                Text(translation).font(.system(size: 17, weight: .semibold))
+                            Text(line.text.isEmpty ? "♪" : line.text).font(.system(size: size, weight: .bold))
+                            if showsTranslation, let translation = line.translation {
+                                Text(translation).font(.system(size: translationSize, weight: .semibold))
                             }
                         }
                         .foregroundStyle(.white.opacity(faded ? 0.32 : 1))

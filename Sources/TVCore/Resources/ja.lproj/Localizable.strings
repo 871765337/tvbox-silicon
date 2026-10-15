@@ -789,3 +789,16 @@
 "Play a song from search results, an album or a playlist, and the songs after it play next." = "検索結果、アルバム、プレイリストから曲を再生すると、その後の曲が続けて再生されます。";
 "Playback Position" = "再生位置";
 "Volume" = "音量";
+// Music on the Mac
+"Top Results" = "トップヒット";
+"Repeat Off" = "リピートオフ";
+"Repeat All" = "すべてをリピート";
+"Repeat One" = "1曲をリピート";
+"AirPlay" = "AirPlay";
+"Hide Translation" = "翻訳を非表示";
+"Show Translation" = "翻訳を表示";
+"Play Next" = "次に再生";
+"Add to Up Next" = "最後に再生";
+"Song" = "曲";
+"Artist" = "アーティスト";
+"Time" = "時間";

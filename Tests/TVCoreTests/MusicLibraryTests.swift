@@ -154,3 +154,26 @@ private struct FakeCollections: MusicCatalogSource, MusicCollectionSource {
     #expect(model.collections == [list] && !model.empty)
     #expect(model.source(for: .qq) != nil)
 }
+
+@MainActor @Test func topResultsFindSongsAlbumsAndPlaylistsTogether() async throws {
+    let album = MusicCollection(kind: .album, platform: .qq, collectionID: "1", title: "叶惠美", subtitle: "周杰伦")
+    let list = MusicCollection(kind: .playlist, platform: .netease, collectionID: "2", title: "叶惠美专辑重温")
+    let model = MusicSearchModel(catalogs: [FakeCollections(platform: .qq, found: [album, list])], health: MusicHealth(file: nil))
+    model.search("叶惠美", kind: .top, immediately: true)
+    try await settle(model)
+    // Each kind's answer keeps the other's: both are on the page at once.
+    #expect(Set(model.collections) == [album, list])
+    model.search("叶惠美", kind: .albums, immediately: true)
+    try await settle(model)
+    #expect(model.collections == [album])
+    #expect(!MusicSearchKind.filters.contains(.top))
+}
+
+@Test func queueTakesSongsNextAndLast() {
+    let a = song("A", "a"), b = song("B", "b"), c = song("C", "c"), d = song("D", "d")
+    var queue = MusicQueue(tracks: [a, b], start: 0)
+    queue.insertNext([c])
+    #expect(queue.tracks == [a, c, b] && queue.current == a)
+    queue.append([d])
+    #expect(queue.tracks == [a, c, b, d] && queue.index == 0)
+}

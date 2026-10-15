@@ -29,7 +29,9 @@ struct MusicView: View {
                     MusicNowPlayingButton()
                 }
                 #endif
+                #if !os(macOS)
                 if !search.query.isEmpty { kinds(search) }
+                #endif
                 content(search)
             }
             .glassRowInsets()
@@ -44,12 +46,12 @@ struct MusicView: View {
             // submitted. Results replaced under the keyboard took focus away from the letters.
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { search.clear() }
             #else
-            search.search(text)
+            search.search(text, kind: Self.searchKind)
             #endif
         }
         .onSubmit(of: .search) {
-            autoPlayQuery = search.kind == .songs ? query.trimmingCharacters(in: .whitespacesAndNewlines) : nil
-            search.search(query, immediately: true); playDirectHitIfReady()
+            autoPlayQuery = search.kind == .songs || search.kind == .top ? query.trimmingCharacters(in: .whitespacesAndNewlines) : nil
+            search.search(query, kind: Self.searchKind, immediately: true); playDirectHitIfReady()
         }
         .onChange(of: search.busy) {
             playDirectHitIfReady()
@@ -58,7 +60,13 @@ struct MusicView: View {
             #endif
         }
         #if DEBUG
-        .navigationDestination(item: $qaOpened) { MusicCollectionView(collection: $0) }
+        .navigationDestination(item: $qaOpened) {
+            #if os(macOS)
+            MusicCollectionView(collection: $0).musicBar()
+            #else
+            MusicCollectionView(collection: $0)
+            #endif
+        }
         #endif
         .musicPlayerInset()
         #if os(tvOS)
@@ -74,6 +82,7 @@ struct MusicView: View {
         .sheet(isPresented: $showsSettings) { MusicSettingsView() }
         .task {
             if query.isEmpty, !search.query.isEmpty { query = search.query }
+            if let kind = Self.searchKind, search.kind != kind { search.search(search.query, kind: kind) }
             #if DEBUG
             // `-qaSection music -qaQuery <text> [-qaMusicKind albums] [-qaMusicPlay 1]` searches, and plays the direct hit.
             if query.isEmpty, let text = UserDefaults.standard.string(forKey: "qaQuery") {
@@ -83,6 +92,15 @@ struct MusicView: View {
             }
             #endif
         }
+    }
+
+    /// The Mac shows every kind at once, in sections; elsewhere the chips choose one.
+    private static var searchKind: MusicSearchKind? {
+        #if os(macOS)
+        .top
+        #else
+        nil
+        #endif
     }
 
     private func playDirectHitIfReady() {
@@ -101,7 +119,7 @@ struct MusicView: View {
         ChipRow {
             GlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
-                    ForEach(MusicSearchKind.allCases, id: \.self) { kind in
+                    ForEach(MusicSearchKind.filters, id: \.self) { kind in
                         Chip(title: kind.name, selected: search.kind == kind) { search.search(query, kind: kind, immediately: true) }
                     }
                 }
@@ -129,7 +147,11 @@ struct MusicView: View {
                 StatusNotice(text: L10n.text("%@ didn't answer, so these results are from the other catalog.", platform.name))
                     .padding(.bottom, 10)
             }
-            if search.kind == .songs {
+            if search.kind == .top {
+                #if os(macOS)
+                MusicTopResults(search: search) { playResults(from: $0) }
+                #endif
+            } else if search.kind == .songs {
                 ForEach(search.results) { track in MusicTrackRow(track: track) { playResults(from: track) } }
             } else {
                 ForEach(search.collections) { collection in MusicCollectionRow(collection: collection) }
@@ -299,24 +321,38 @@ struct MusicCollectionView: View {
                 #if os(tvOS)
                 MusicNowPlayingButton()
                 #endif
+                #if os(macOS)
+                MusicCollectionHeader(collection: collection, tracks: tracks).padding(.bottom, 28)
+                #else
                 header.padding(.bottom, 24)
+                #endif
                 if loading && tracks.isEmpty { ProgressView().frame(maxWidth: .infinity).padding(.vertical, 60) }
                 if let error {
                     ErrorStateCard(title: L10n.text("Unable to Load Songs"), message: L10n.text("Check your network connection and try again."),
                                    details: error, retry: { Task { await load() } }, busy: loading)
                         .padding(.vertical, 24).tvFocusSection()
                 }
+                #if os(macOS)
+                MusicSongTable(tracks: tracks, numbered: collection.kind == .album) {
+                    store.music.play(MusicQueue(tracks: tracks, start: $0, collection: collection))
+                }
+                #else
                 ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                     MusicTrackRow(track: track, number: index + 1) {
                         store.music.play(MusicQueue(tracks: tracks, start: index, collection: collection))
                     }
                 }
+                #endif
             }
             .glassRowInsets()
             .pageContainer()
         }
         .screenBackdrop()
         .screenTitle(collection.title)
+        #if os(macOS)
+        // The header already names it in large type.
+        .toolbar(removing: .title)
+        #endif
         .musicPlayerInset()
         #if os(tvOS)
         .onPlayPauseCommand { store.music.toggle() }

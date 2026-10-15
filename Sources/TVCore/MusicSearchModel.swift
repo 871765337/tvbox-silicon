@@ -70,12 +70,18 @@ import Observation
         query = trimmed; self.kind = kind; directHit = nil; failures = [:]
         guard !trimmed.isEmpty else { results = []; collections = []; busy = false; return }
         let key = kind.rawValue + "|" + MusicMatching.normalize(trimmed) + "|" + MusicMatching.tags(inQuery: trimmed).map(\.rawValue).sorted().joined()
+        let findsSongs = kind == .songs || kind == .top
         if let cached = cache[key], Date().timeIntervalSince(cached.created) < Self.cacheLifetime {
             results = cached.results; collections = cached.collections; busy = false
-            directHit = kind == .songs ? MusicMatching.directHit(cached.results, query: trimmed) : nil
+            directHit = findsSongs ? MusicMatching.directHit(cached.results, query: trimmed) : nil
             return
         }
-        if kind == .songs { collections = [] } else { results = [] }
+        // What the new search won't replace goes now; the rest stays until its answers arrive.
+        switch kind {
+        case .songs: collections = []
+        case .albums, .playlists: results = []; collections = collections.filter { $0.kind == kind.collectionKind }
+        case .top: break
+        }
         busy = true
         task = Task {
             if !immediately {
@@ -84,13 +90,18 @@ import Observation
             }
             if let collectionKind = kind.collectionKind {
                 await self.searchCollections(trimmed, kind: collectionKind, run: run)
+            } else if kind == .top {
+                async let songs: Void = self.searchSongs(trimmed, run: run)
+                async let albums: Void = self.searchCollections(trimmed, kind: .album, run: run)
+                async let playlists: Void = self.searchCollections(trimmed, kind: .playlist, run: run)
+                _ = await (songs, albums, playlists)
             } else {
                 await self.searchSongs(trimmed, run: run)
             }
             guard self.generation == run, !Task.isCancelled else { return }
             self.busy = false
             // With a catalog missing, the clearest result may only look clear: the viewer chooses.
-            self.directHit = kind == .songs && self.failures.isEmpty ? MusicMatching.directHit(self.results, query: trimmed) : nil
+            self.directHit = findsSongs && self.failures.isEmpty ? MusicMatching.directHit(self.results, query: trimmed) : nil
             if self.failures.isEmpty { self.cache[key] = Cached(results: self.results, collections: self.collections, created: Date()) }
         }
     }
@@ -132,7 +143,9 @@ import Observation
                 guard let found = await record(platform, result) else { continue }
                 lists[platform] = found
                 guard generation == run else { group.cancelAll(); return }
-                collections = MusicCollections.rank(MusicPlatform.allCases.flatMap { lists[$0] ?? [] }, query: query)
+                // Top results search albums and playlists side by side: each replaces only its own kind.
+                collections = collections.filter { $0.kind != kind }
+                    + MusicCollections.rank(MusicPlatform.allCases.flatMap { lists[$0] ?? [] }, query: query)
             }
         }
     }

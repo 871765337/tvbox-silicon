@@ -183,52 +183,6 @@ struct MusicNowPlayingScreen: View {
     }
 }
 
-/// A thin bar that thickens while dragged, with elapsed and remaining time under it, as in Music.
-/// The position follows the finger and holds at the target until the seek lands.
-struct MusicScrubber: View {
-    @Environment(Store.self) private var store
-    @State private var dragging: Double?
-
-    var body: some View {
-        let music = store.music
-        let total = music.duration ?? 0
-        let position = dragging.map { $0 * total } ?? min(music.seekingTo ?? music.position, total)
-        let fraction = total > 0 ? min(1, max(0, position / total)) : 0
-        VStack(spacing: 6) {
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.22))
-                    Capsule().fill(.white.opacity(dragging == nil ? 0.78 : 1)).frame(width: max(0, proxy.size.width * fraction))
-                }
-                .frame(height: dragging == nil ? 7 : 12)
-                .frame(maxHeight: .infinity)
-                .contentShape(.rect)
-                .gesture(DragGesture(minimumDistance: 0)
-                    .onChanged { value in if total > 0 { dragging = min(1, max(0, value.location.x / proxy.size.width)) } }
-                    .onEnded { _ in
-                        if let dragging { music.seek(to: dragging * total) }
-                        dragging = nil
-                    })
-                .animation(.easeOut(duration: 0.15), value: dragging == nil)
-            }
-            .frame(height: 22)
-            HStack {
-                Text(MusicTime.text(position))
-                Spacer()
-                Text(total > 0 ? "-" + MusicTime.text(total - position) : "--:--")
-            }
-            .font(.caption2.weight(.semibold)).monospacedDigit().foregroundStyle(.secondary)
-        }
-        .disabled(music.selection == nil || total == 0)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L10n.text("Playback Position"))
-        .accessibilityValue(MusicTime.text(position) + " / " + MusicTime.text(total))
-        .accessibilityAdjustableAction { direction in
-            music.skip(by: direction == .increment ? 10 : -10)
-        }
-    }
-}
-
 /// The device volume, drawn like the scrubber: a thin bar between a quiet and a loud speaker that
 /// thickens while dragged and follows the volume buttons. The system's own slider draws nothing in
 /// the Simulator and looks unlike the rest; a hidden copy of it carries the changes, as players

@@ -789,3 +789,16 @@
 "Play a song from search results, an album or a playlist, and the songs after it play next." = "从搜索结果、专辑或歌单中播放一首歌，之后的歌曲会接着播放。";
 "Playback Position" = "播放位置";
 "Volume" = "音量";
+// Music on the Mac
+"Top Results" = "最佳结果";
+"Repeat Off" = "不重复";
+"Repeat All" = "全部重复";
+"Repeat One" = "单曲重复";
+"AirPlay" = "隔空播放";
+"Hide Translation" = "隐藏翻译";
+"Show Translation" = "显示翻译";
+"Play Next" = "下一首播放";
+"Add to Up Next" = "添加到待播清单";
+"Song" = "歌曲";
+"Artist" = "艺人";
+"Time" = "时长";
