@@ -3,6 +3,8 @@ import TVCore
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case home = "Watch Now", live = "Live TV", music = "Music", search = "Global Search", sites = "Sources", favorites = "Favorites", history = "Playback History", downloads = "Downloads", settings = "Settings", more = "More"
+    /// Apple TV's sidebar item for the song playing, first while one is loaded.
+    case nowPlaying = "Now Playing"
     var id: String { rawValue }
     var title: String { L10n.text(rawValue) }
     /// Where Software Update lives: Settings, or More when Settings is folded into it.
@@ -19,6 +21,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .history: "clock.arrow.circlepath"
         case .settings: "slider.horizontal.3"
         case .more: "ellipsis"
+        case .nowPlaying: "waveform"
         }
     }
 }
@@ -44,7 +47,12 @@ struct RootView: View {
         #if os(iOS)
         if sizeClass == .compact { return PhoneTabs(stored: storedTabs).bar + [.more] }
         #endif
-        return [.home, .live, .music, .search, .sites, .history, .favorites, .downloads, .settings]
+        let sections: [AppSection] = [.home, .live, .music, .search, .sites, .history, .favorites, .downloads, .settings]
+        #if os(tvOS)
+        // Where the remote already goes to change section, so the song is one move away from anywhere.
+        if store.music.track != nil { return [.nowPlaying] + sections }
+        #endif
+        return sections
     }
     var body: some View {
         @Bindable var store = store
@@ -109,7 +117,7 @@ struct RootView: View {
         @Bindable var store = store
         return TabView(selection: $store.section) {
                 ForEach(tabs) { item in
-                    Tab(item.title, systemImage: item.icon, value: item) {
+                    Tab(tabTitle(item), systemImage: item.icon, value: item) {
                         if item == .more {
                             NavigationStack(path: $morePath) {
                                 content(.more).routeDestinations()
@@ -125,6 +133,9 @@ struct RootView: View {
                 }
             }
             .tabViewStyle(.sidebarAdaptable)
+            #if os(tvOS)
+            .onChange(of: store.music.track == nil) { _, gone in if gone && store.section == .nowPlaying { store.section = .music } }
+            #endif
             #if os(iOS)
             .minimizesTabBarOnScroll()
             .musicAccessory(enabled: store.music.track != nil && sizeClass == .compact)
@@ -143,6 +154,11 @@ struct RootView: View {
                 }
             }
             #endif
+    }
+
+    /// Now Playing is named after the song.
+    private func tabTitle(_ item: AppSection) -> String {
+        item == .nowPlaying ? store.music.track?.title ?? item.title : item.title
     }
 
     #if os(iOS)
@@ -173,6 +189,12 @@ struct RootView: View {
         case .downloads: DownloadsView()
         case .history: PlaybackHistoryView()
         case .settings: SettingsView()
+        case .nowPlaying:
+            #if os(tvOS)
+            MusicTVNowPlayingPage()
+            #else
+            EmptyView()
+            #endif
         case .more:
             // Only the phone's compact tab bar has a More tab.
             #if os(iOS)

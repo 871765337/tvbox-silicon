@@ -5,7 +5,12 @@ import TVCore
     static let defaultURL = "https://raw.githubusercontent.com/qist/tvbox/master/fty.json"
     let searchModel = SearchModel()
     /// Song search and the music player; both outlive the Music page, so a song keeps playing elsewhere in the app.
+    /// The Mac and Apple TV list every kind at once, in rows; a phone or iPad starts on songs.
+    #if os(macOS) || os(tvOS)
+    let musicSearch = MusicSearchModel(kind: .top)
+    #else
     let musicSearch = MusicSearchModel()
+    #endif
     let music = MusicPlaybackSession()
     let recommendationModel = RecommendationModel()
     let playbackHistory: PlaybackHistory

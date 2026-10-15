@@ -1,9 +1,10 @@
-#if os(macOS)
+#if os(macOS) || os(tvOS)
 import SwiftUI
 import TVCore
 
-/// Search results in sections, as Music on the Mac lays them out: albums and playlists as rows of
-/// covers, songs as a grid of three rows, each scrolling sideways. A section's title opens all of it.
+/// Search results in rows, as Music on the Mac and Spotify on Apple TV lay them out: albums and
+/// playlists as rows of covers, songs as columns of a few rows, each scrolling sideways. On the
+/// Mac a row's title opens all of it; on Apple TV the filter chips above do.
 struct MusicTopResults: View {
     let search: MusicSearchModel
     /// Plays the results from this song.
@@ -12,39 +13,57 @@ struct MusicTopResults: View {
     var body: some View {
         let albums = search.collections.filter { $0.kind == .album }
         let playlists = search.collections.filter { $0.kind == .playlist }
-        VStack(alignment: .leading, spacing: 34) {
+        VStack(alignment: .leading, spacing: MusicBrowseMetrics.sectionSpacing) {
             if !albums.isEmpty { collections(L10n.text("Albums"), albums) }
             if !search.results.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: MusicBrowseMetrics.headerSpacing) {
+                    #if os(macOS)
                     MusicSectionLink(title: L10n.text("Songs")) { MusicSongsPage(title: L10n.text("Songs"), tracks: search.results) }
+                    #else
+                    SectionHeader(title: L10n.text("Songs"))
+                    #endif
                     MusicSongGrid(tracks: Array(search.results.prefix(36)), play: play)
                 }
             }
             if !playlists.isEmpty { collections(L10n.text("Playlists"), playlists) }
-            if search.busy { ProgressView().controlSize(.small).frame(maxWidth: .infinity) }
+            if search.busy { ProgressView().frame(maxWidth: .infinity) }
         }
         .padding(.top, 4)
     }
 
     private func collections(_ title: String, _ items: [MusicCollection]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: MusicBrowseMetrics.headerSpacing) {
+            #if os(macOS)
             MusicSectionLink(title: title) { MusicCollectionsPage(title: title, collections: items) }
-            ScrollStrip(overlayArrows: true, arrowCenter: MusicMacMetrics.cover / 2) {
-                HStack(alignment: .top, spacing: 18) {
-                    ForEach(items.prefix(24)) { MusicCollectionTile(collection: $0, size: MusicMacMetrics.cover) }
-                }
-            }
-            // The strip keeps its place by item: results ranked again as catalogs answer left it
-            // scrolled to where the old first item went. A new first item starts it over.
-            .id(items.first?.id)
+            ScrollStrip(overlayArrows: true, arrowCenter: MusicBrowseMetrics.cover / 2) { tiles(items) }
+                // The strip keeps its place by item: results ranked again as catalogs answer left it
+                // scrolled to where the old first item went. A new first item starts it over.
+                .id(items.first?.id)
+            #else
+            SectionHeader(title: title)
+            ChipRow { tiles(items) }.tvFocusSection()
+            #endif
+        }
+    }
+
+    private func tiles(_ items: [MusicCollection]) -> some View {
+        HStack(alignment: .top, spacing: MusicBrowseMetrics.tileSpacing) {
+            ForEach(items.prefix(24)) { MusicCollectionTile(collection: $0, size: MusicBrowseMetrics.cover) }
         }
     }
 }
 
-enum MusicMacMetrics {
-    static let cover: CGFloat = 164
+enum MusicBrowseMetrics {
+    #if os(tvOS)
+    static let cover: CGFloat = 230, tileSpacing: CGFloat = 40, sectionSpacing: CGFloat = 50, headerSpacing: CGFloat = 18
+    static let songArt: CGFloat = 72, songColumn: CGFloat = 560, songRows = 3
+    #else
+    static let cover: CGFloat = 164, tileSpacing: CGFloat = 18, sectionSpacing: CGFloat = 34, headerSpacing: CGFloat = 10
+    static let songArt: CGFloat = 40, songRows = 3
+    #endif
 }
 
+#if os(macOS)
 /// A section's title with a chevron; it opens the whole section.
 private struct MusicSectionLink<Destination: View>: View {
     let title: String
@@ -61,6 +80,7 @@ private struct MusicSectionLink<Destination: View>: View {
         .accessibilityAddTraits(.isHeader)
     }
 }
+#endif
 
 /// An album or playlist as a cover with its title and artist under it; it opens the list.
 struct MusicCollectionTile: View {
@@ -69,48 +89,73 @@ struct MusicCollectionTile: View {
     @State private var hovering = false
 
     var body: some View {
-        RouteLink { MusicCollectionView(collection: collection) } label: {
+        let link = RouteLink { MusicCollectionView(collection: collection) } label: {
             VStack(alignment: .leading, spacing: 7) {
                 MusicArtwork(url: collection.artwork, size: size, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
                     .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.black.opacity(hovering ? 0.12 : 0)) }
                     .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(collection.title).font(.system(size: 12, weight: .medium)).foregroundStyle(.primary).lineLimit(1)
-                    Text(collection.subtitle ?? collection.platform.name).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                    Text(collection.title).font(Self.titleFont).foregroundStyle(.primary).lineLimit(1)
+                    Text(collection.subtitle ?? collection.platform.name).font(Self.subtitleFont).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             .frame(width: size, alignment: .leading)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.15), value: hovering)
+        #if os(tvOS)
+        link.cardButton()
+        #else
+        link.buttonStyle(.plain)
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.15), value: hovering)
+        #endif
     }
+
+    #if os(tvOS)
+    private static let titleFont = Font.system(size: 24, weight: .semibold), subtitleFont = Font.system(size: 20)
+    #else
+    private static let titleFont = Font.system(size: 12, weight: .medium), subtitleFont = Font.system(size: 11)
+    #endif
 }
 
-/// Songs three to a column, three columns to the width, scrolling sideways.
+/// Songs a few to a column, scrolling sideways: three columns to the width on the Mac.
 private struct MusicSongGrid: View {
     let tracks: [MusicTrack]
     let play: (MusicTrack) -> Void
 
     var body: some View {
-        let columns = stride(from: 0, to: tracks.count, by: 3).map { Array(tracks[$0..<min($0 + 3, tracks.count)]) }
+        let rows = MusicBrowseMetrics.songRows
+        let columns = stride(from: 0, to: tracks.count, by: rows).map { Array(tracks[$0..<min($0 + rows, tracks.count)]) }
+        #if os(macOS)
         ScrollStrip(overlayArrows: true) {
             HStack(alignment: .top, spacing: 26) {
                 ForEach(columns.indices, id: \.self) { column in
-                    VStack(spacing: 0) {
-                        ForEach(Array(columns[column].enumerated()), id: \.offset) { row, track in
-                            MusicSongCell(track: track, divider: row < columns[column].count - 1) { play(track) }
-                        }
-                    }
-                    .containerRelativeFrame(.horizontal, count: 3, spacing: 26)
+                    self.column(columns[column]).containerRelativeFrame(.horizontal, count: 3, spacing: 26)
                 }
+            }
+        }
+        #else
+        ChipRow {
+            HStack(alignment: .top, spacing: 40) {
+                ForEach(columns.indices, id: \.self) { column in
+                    self.column(columns[column]).frame(width: MusicBrowseMetrics.songColumn)
+                }
+            }
+        }
+        .tvFocusSection()
+        #endif
+    }
+
+    private func column(_ tracks: [MusicTrack]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(tracks.enumerated()), id: \.offset) { row, track in
+                MusicSongCell(track: track, divider: row < tracks.count - 1) { play(track) }
             }
         }
     }
 }
 
-/// A song in the grid: cover, title and artist, and its menu.
+/// A song in the grid: cover, title and artist; on the Mac its menu too, on Apple TV a long press.
 private struct MusicSongCell: View {
     @Environment(Store.self) private var store
     let track: MusicTrack
@@ -120,15 +165,25 @@ private struct MusicSongCell: View {
 
     var body: some View {
         let current = store.music.track?.id == track.id
-        HStack(spacing: 10) {
-            MusicArtwork(url: track.artwork, size: 40)
-                .overlay { if current || hovering { MusicPlayingBadge(current: current) } }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(track.title).font(.system(size: 12.5, weight: .medium)).lineLimit(1)
-                    .foregroundStyle(current ? AnyShapeStyle(Brand.accent) : AnyShapeStyle(.primary))
-                Text(track.artistLine).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
+        #if os(tvOS)
+        Button(action: action) {
+            HStack(spacing: 18) {
+                MusicArtwork(url: track.artwork, size: MusicBrowseMetrics.songArt)
+                    .overlay { if current { MusicPlayingBadge(current: true) } }
+                labels(current: current, title: 26, artist: 21)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
+        }
+        .glassRow()
+        .contextMenu {
+            Button { store.music.playNext([track]) } label: { Label(L10n.text("Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") }
+            Button { store.music.addToUpNext([track]) } label: { Label(L10n.text("Add to Up Next"), systemImage: "text.line.last.and.arrowtriangle.forward") }
+        }
+        #else
+        HStack(spacing: 10) {
+            MusicArtwork(url: track.artwork, size: MusicBrowseMetrics.songArt)
+                .overlay { if current || hovering { MusicPlayingBadge(current: current) } }
+            labels(current: current, title: 12.5, artist: 11.5)
             MusicTrackMenu(tracks: [track])
         }
         .padding(.vertical, 7)
@@ -139,6 +194,16 @@ private struct MusicSongCell: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default, action)
+        #endif
+    }
+
+    private func labels(current: Bool, title: CGFloat, artist: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(track.title).font(.system(size: title, weight: .medium)).lineLimit(1)
+                .foregroundStyle(current ? AnyShapeStyle(Brand.accent) : AnyShapeStyle(.primary))
+            Text(track.artistLine).font(.system(size: artist)).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -156,6 +221,7 @@ private struct MusicPlayingBadge: View {
     }
 }
 
+#if os(macOS)
 /// A song's "…": play it next, or after everything queued.
 struct MusicTrackMenu: View {
     @Environment(Store.self) private var store
@@ -284,7 +350,7 @@ struct MusicCollectionsPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text(title).font(.largeTitle.weight(.bold))
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: MusicMacMetrics.cover, maximum: MusicMacMetrics.cover * 1.35), spacing: 20, alignment: .top)],
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: MusicBrowseMetrics.cover, maximum: MusicBrowseMetrics.cover * 1.35), spacing: 20, alignment: .top)],
                           alignment: .leading, spacing: 24) {
                     ForEach(collections) { MusicCollectionTile(collection: $0) }
                 }
@@ -355,4 +421,5 @@ private struct MusicHeaderButtonStyle: ButtonStyle {
             .opacity(enabled ? 1 : 0.45)
     }
 }
+#endif
 #endif

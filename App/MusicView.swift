@@ -59,6 +59,13 @@ struct MusicView: View {
             if !search.busy, UserDefaults.standard.bool(forKey: "qaMusicOpen"), qaOpened == nil { qaOpened = search.collections.first }
             #endif
         }
+        #if DEBUG && os(tvOS)
+        // `-qaNowPlayingTab 1` (with `-qaMusicPlay 1 -qaMusicStayOnPage 1`) moves to the sidebar's
+        // Now Playing once the song is loaded, for screenshots.
+        .onChange(of: store.music.track != nil) { _, loaded in
+            if loaded, UserDefaults.standard.bool(forKey: "qaNowPlayingTab") { store.section = .nowPlaying }
+        }
+        #endif
         #if DEBUG
         .navigationDestination(item: $qaOpened) {
             #if os(macOS)
@@ -94,7 +101,16 @@ struct MusicView: View {
         }
     }
 
-    /// The Mac shows every kind at once, in sections; elsewhere the chips choose one.
+    /// Apple TV leads with All, its results in rows; a phone or iPad has only the kinds.
+    private static var chips: [MusicSearchKind] {
+        #if os(tvOS)
+        [.top] + MusicSearchKind.filters
+        #else
+        MusicSearchKind.filters
+        #endif
+    }
+
+    /// The Mac shows every kind at once, in rows, with no chips; elsewhere the chips choose one.
     private static var searchKind: MusicSearchKind? {
         #if os(macOS)
         .top
@@ -119,7 +135,7 @@ struct MusicView: View {
         ChipRow {
             GlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
-                    ForEach(MusicSearchKind.filters, id: \.self) { kind in
+                    ForEach(Self.chips, id: \.self) { kind in
                         Chip(title: kind.name, selected: search.kind == kind) { search.search(query, kind: kind, immediately: true) }
                     }
                 }
@@ -148,7 +164,7 @@ struct MusicView: View {
                     .padding(.bottom, 10)
             }
             if search.kind == .top {
-                #if os(macOS)
+                #if os(macOS) || os(tvOS)
                 MusicTopResults(search: search) { playResults(from: $0) }
                 #endif
             } else if search.kind == .songs {

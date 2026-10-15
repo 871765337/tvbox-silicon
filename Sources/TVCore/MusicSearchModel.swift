@@ -29,9 +29,10 @@ import Observation
     static let debounce: Duration = .milliseconds(350)
     static let cacheLifetime: TimeInterval = 10 * 60
 
-    public init(catalogs: [any MusicCatalogSource]? = nil, health: MusicHealth = .shared) {
+    public init(catalogs: [any MusicCatalogSource]? = nil, health: MusicHealth = .shared, kind: MusicSearchKind = .songs) {
         self.catalogs = catalogs ?? Self.defaultCatalogs(health: health)
         self.health = health
+        self.kind = kind
     }
 
     /// Catalogs searched mainly so their channels can play what the others list.

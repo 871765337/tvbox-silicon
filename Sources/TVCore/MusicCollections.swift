@@ -2,13 +2,14 @@ import Foundation
 
 /// What a music search looks for.
 public enum MusicSearchKind: String, Codable, Sendable, CaseIterable, Hashable {
-    /// `top` is songs, albums and playlists at once, for a results page in sections, as Music on the Mac has.
+    /// `top` is songs, albums and playlists at once, for results in rows, as Music on the Mac and
+    /// Spotify on Apple TV show them.
     case songs, albums, playlists, top
-    /// The kinds offered as filters; `top` is a page of its own.
+    /// One kind each; `top` is all of them.
     public static let filters: [MusicSearchKind] = [.songs, .albums, .playlists]
     public var name: String {
         switch self {
-        case .top: L10n.text("Top Results")
+        case .top: L10n.text("All")
         case .songs: L10n.text("Songs")
         case .albums: L10n.text("Albums")
         case .playlists: L10n.text("Playlists")

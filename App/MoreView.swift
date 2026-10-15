@@ -36,7 +36,7 @@ extension AppSection {
         switch self {
         case .home: Brand.cyan
         case .live: Color(red: 1.0, green: 0.45, blue: 0.32)
-        case .music: Color(red: 1.0, green: 0.34, blue: 0.56)
+        case .music, .nowPlaying: Color(red: 1.0, green: 0.34, blue: 0.56)
         case .search: Color(red: 0.36, green: 0.60, blue: 1.0)
         case .sites: Color(red: 0.60, green: 0.46, blue: 1.0)
         case .history: Brand.amber
