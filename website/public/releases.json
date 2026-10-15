@@ -1,6 +1,92 @@
 {
   "releases": [
     {
+      "version": "1.6.4",
+      "date": "2026-10-15",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.6.4/Yingxia-1.6.4-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "play.circle.fill",
+          "title": {
+            "en": "A new music player on Mac",
+            "zh-Hans": "Mac 上全新的音乐播放器",
+            "zh-Hant": "Mac 上全新的音樂播放器",
+            "ja": "Mac の新しいミュージックプレーヤー"
+          },
+          "detail": {
+            "en": "While a song plays, a player bar floats at the bottom of every page, with shuffle, repeat, lyrics, Up Next, AirPlay and volume. Click the song for Now Playing over the whole window: a large cover, the controls and the lyrics or Up Next beside it.",
+            "zh-Hans": "播放歌曲时，每个页面底部都会悬浮一条播放栏，提供随机播放、重复播放、歌词、待播清单、AirPlay 和音量。点按歌曲即可打开占满整个窗口的“正在播放”：大幅封面和控制按钮，旁边是歌词或待播清单。",
+            "zh-Hant": "播放歌曲時，每個頁面底部都會懸浮一條播放列，提供隨機播放、重複播放、歌詞、待播清單、AirPlay 和音量。按一下歌曲即可開啟佔滿整個視窗的「正在播放」：大幅封面和控制按鈕，旁邊是歌詞或待播清單。",
+            "ja": "曲の再生中は、すべてのページの下部にプレーヤーバーが浮かび、シャッフル、リピート、歌詞、次に再生、AirPlay、音量を操作できます。曲をクリックすると、ウインドウ全体に「再生中」が開き、大きなジャケットと操作ボタンの横に歌詞または次に再生が表示されます。"
+          }
+        },
+        {
+          "symbol": "music.note.list",
+          "title": {
+            "en": "Music search in rows",
+            "zh-Hans": "音乐搜索结果按行展示",
+            "zh-Hant": "音樂搜尋結果按列展示",
+            "ja": "ミュージックの検索結果を列で表示"
+          },
+          "detail": {
+            "en": "On Mac and Apple TV, a search shows albums, songs and playlists at once, each in a row you scroll sideways. On Mac, a row’s title opens all of it, with songs in a table; on Apple TV the Songs, Albums and Playlists chips do. Album and playlist pages have a large cover, Shuffle, Play and Add to Up Next.",
+            "zh-Hans": "在 Mac 和 Apple TV 上，搜索会同时显示专辑、歌曲和歌单，每类各占一行，可横向滚动。在 Mac 上点按行标题即可查看全部，歌曲以表格列出；在 Apple TV 上则使用“歌曲”“专辑”“歌单”标签。专辑和歌单页面带有大幅封面，以及“随机播放”“播放”和“添加到待播清单”。",
+            "zh-Hant": "在 Mac 和 Apple TV 上，搜尋會同時顯示專輯、歌曲和歌單，每類各佔一列，可橫向捲動。在 Mac 上按一下列標題即可檢視全部，歌曲以表格列出；在 Apple TV 上則使用「歌曲」「專輯」「歌單」標籤。專輯和歌單頁面帶有大幅封面，以及「隨機播放」「播放」和「加入待播清單」。",
+            "ja": "Mac と Apple TV では、検索するとアルバム、曲、プレイリストが同時に表示され、それぞれ横にスクロールできる列に並びます。Mac では列のタイトルからすべてを表示でき、曲は表形式で並びます。Apple TV では「曲」「アルバム」「プレイリスト」のチップを使います。アルバムとプレイリストのページには大きなジャケットと「シャッフル」「再生」「次に再生に追加」があります。"
+          }
+        },
+        {
+          "symbol": "appletv.fill",
+          "title": {
+            "en": "Now Playing in the Apple TV sidebar",
+            "zh-Hans": "Apple TV 侧边栏显示正在播放",
+            "zh-Hant": "Apple TV 側邊欄顯示正在播放",
+            "ja": "Apple TV のサイドバーに再生中の曲"
+          },
+          "detail": {
+            "en": "While a song plays, the sidebar opens with it: the cover, with bars moving while it plays, the title and the artist. Click it from any section for the full-screen player.",
+            "zh-Hans": "播放歌曲时，侧边栏顶部会显示这首歌：封面（播放时有跳动的音柱）、歌名和歌手。在任何栏目中点按它，即可打开全屏播放器。",
+            "zh-Hant": "播放歌曲時，側邊欄頂端會顯示這首歌：封面（播放時有跳動的音柱）、歌名和歌手。在任何欄目中按一下它，即可開啟全螢幕播放器。",
+            "ja": "曲の再生中は、サイドバーの先頭にその曲が表示されます。ジャケット（再生中はバーが動きます）、曲名、アーティストです。どのセクションからでも選ぶと、全画面のプレーヤーが開きます。"
+          }
+        },
+        {
+          "symbol": "shuffle",
+          "title": {
+            "en": "Shuffle, repeat and Play Next",
+            "zh-Hans": "随机播放、重复播放和下一首播放",
+            "zh-Hant": "隨機播放、重複播放和下一首播放",
+            "ja": "シャッフル、リピート、次に再生"
+          },
+          "detail": {
+            "en": "On Mac, shuffle what comes next, repeat the queue or one song, and set the player’s volume. Any song can play next or go to the end of Up Next: from its … menu on Mac, or by holding the remote’s Select on Apple TV.",
+            "zh-Hans": "在 Mac 上可以随机播放接下来的歌曲、重复播放整个列表或单曲，并调节播放器音量。任何歌曲都可以设为下一首播放或添加到待播清单末尾：在 Mac 上用歌曲的“…”菜单，在 Apple TV 上长按遥控器的确认键。",
+            "zh-Hant": "在 Mac 上可以隨機播放接下來的歌曲、重複播放整個清單或單曲，並調整播放器音量。任何歌曲都可以設為下一首播放或加入待播清單末尾：在 Mac 上用歌曲的「…」選單，在 Apple TV 上長按遙控器的確認鍵。",
+            "ja": "Mac では、次に流れる曲のシャッフル、キュー全体または 1 曲のリピート、プレーヤーの音量調整ができます。どの曲も「次に再生」にしたり、次に再生の最後に追加したりできます。Mac では曲の「…」メニューから、Apple TV ではリモコンの選択ボタンを長押しします。"
+          }
+        },
+        {
+          "symbol": "wrench.and.screwdriver.fill",
+          "title": {
+            "en": "Fixes",
+            "zh-Hans": "问题修复",
+            "zh-Hant": "問題修正",
+            "ja": "修正"
+          },
+          "detail": {
+            "en": "On Mac, empty Favorites and Downloads pages no longer push the sidebar under the window’s buttons, and the first filter chip in a row is no longer cut off. Lyrics now show the line being sung as soon as the player opens again.",
+            "zh-Hans": "在 Mac 上，空白的“收藏”和“下载”页面不再把侧边栏推到窗口按钮下面，每行的第一个筛选标签也不再被截断。再次打开播放器时，歌词会立即显示正在演唱的那一句。",
+            "zh-Hant": "在 Mac 上，空白的「收藏」和「下載」頁面不再把側邊欄推到視窗按鈕下面，每列的第一個篩選標籤也不再被截斷。再次開啟播放器時，歌詞會立即顯示正在演唱的那一句。",
+            "ja": "Mac で、空の「お気に入り」と「ダウンロード」ページでサイドバーがウインドウのボタンの下に押し上げられなくなり、各列の最初のフィルタチップが切れなくなりました。プレーヤーを再び開くと、歌詞がすぐに歌われている行を表示します。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.6.3",
       "date": "2026-10-15",
       "links": {
