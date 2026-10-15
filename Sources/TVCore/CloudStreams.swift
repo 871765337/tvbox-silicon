@@ -335,9 +335,8 @@ private final class CloudResourceLoader: NSObject, AVAssetResourceLoaderDelegate
                 }
                 self.finish(id, error: nil)
             } catch {
-                if !(error is CancellationError) {
-                    Diagnostics.shared.record(.error, "cloud.stream", "request failed offset=\(offset ?? -1) \(error as NSError)")
-                }
+                // A seek or a closed player cancels the request (URLError -999 too): not a failure.
+                Diagnostics.shared.failure("cloud.stream", "request failed offset=\(offset ?? -1)", error)
                 self?.finish(id, error: error)
             }
         }

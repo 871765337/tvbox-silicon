@@ -329,9 +329,8 @@ private final class HongguoResourceLoader: NSObject, AVAssetResourceLoaderDelega
                 }
                 self.finish(id, error: nil)
             } catch {
-                if !(error is CancellationError) {
-                    Diagnostics.shared.record(.error, "hongguo.stream", "request failed offset=\(offset ?? -1) \(error as NSError)")
-                }
+                // A seek or a closed player cancels the request (URLError -999 too): not a failure.
+                Diagnostics.shared.failure("hongguo.stream", "request failed offset=\(offset ?? -1)", error)
                 self?.finish(id, error: error is CancellationError ? error : TVError.unsupported(L10n.text("This Hongguo video could not be prepared for playback. Please try again.")))
             }
         }
