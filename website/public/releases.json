@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "1.6.5",
+      "date": "2026-10-16",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.6.5/Yingxia-1.6.5-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "ladybug.fill",
+          "title": {
+            "en": "Error reports",
+            "zh-Hans": "错误报告",
+            "zh-Hant": "錯誤報告",
+            "ja": "エラーレポート"
+          },
+          "detail": {
+            "en": "When something goes wrong, like a video that won’t play, a page that won’t load or the app quitting, Yingxia now tells the developer, so it gets fixed even if nobody reports it. It sends the error, the app and system versions, the device model and a random ID, a few times a day at most. Never your accounts, passwords, searches or what you watch. Turn it off in Settings → Advanced → Send Error Reports.",
+            "zh-Hans": "出现问题时，例如视频无法播放、页面无法加载或 App 意外退出，映匣现在会告诉开发者，即使没人反馈也能得到修复。发送的内容只有错误信息、App 和系统版本、设备型号以及一个随机 ID，每天最多几次。绝不包括你的账户、密码、搜索内容或观看内容。可在“设置”→“高级”→“发送错误报告”中关闭。",
+            "zh-Hant": "發生問題時，例如影片無法播放、頁面無法載入或 App 意外結束，映匣現在會告訴開發者，即使沒人回報也能得到修正。傳送的內容只有錯誤訊息、App 和系統版本、裝置型號以及一個隨機 ID，每天最多幾次。絕不包括你的帳號、密碼、搜尋內容或觀看內容。可在「設定」→「進階」→「傳送錯誤報告」中關閉。",
+            "ja": "ビデオが再生できない、ページが読み込めない、App が終了してしまうなどの問題が起きると、映匣が開発者に知らせるようになりました。誰も報告しなくても修正されます。送信されるのはエラーの内容、App とシステムのバージョン、デバイスのモデル、ランダムな ID だけで、多くても 1 日に数回です。アカウント、パスワード、検索内容、視聴内容は送信されません。「設定」→「詳細」→「エラーレポートを送信」でオフにできます。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.6.4",
       "date": "2026-10-15",
       "links": {
