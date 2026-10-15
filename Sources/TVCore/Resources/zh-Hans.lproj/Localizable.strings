@@ -801,3 +801,5 @@
 "Song" = "歌曲";
 "Artist" = "艺人";
 "Time" = "时长";
+"Send Error Reports" = "发送错误报告";
+"Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history." = "每天数次将错误发送给开发者以便修复：错误内容（网址只保留服务器名称）、App 与系统版本，以及一个随机 ID。绝不包含你的账号、密码或观看记录。";

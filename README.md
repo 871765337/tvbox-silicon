@@ -45,7 +45,7 @@ Yingxia (映匣) plays your TVBox subscriptions the way an Apple app should: liv
 | 🧩 **Plugins on device** | Runs JSON, JavaScript and JAR sources, plus Python on Mac. Lightweight ports go first, with the original plugin as a fallback. |
 | 🛟 **Your subscription, kept safe** | Import any TVBox JSON subscription by URL. A failed refresh never wipes the last working copy. |
 | 🎬 **Native playback** | AVPlayer with HLS, clear error screens with Retry, and a separate Picture in Picture player window on Mac. |
-| 🔒 **Private by design** | No account and no analytics. Everything stays on your device, and logs redact credentials. |
+| 🔒 **Private by design** | No account and no tracking. Subscriptions and history stay on your device; only anonymous error reports are sent, and you can turn them off. |
 | 🌏 **Speaks your language** | English, Japanese, and Traditional and Simplified Chinese, following your system setting. |
 
 <p align="center">

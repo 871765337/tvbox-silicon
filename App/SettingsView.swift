@@ -277,6 +277,7 @@ struct FormSettingsView: View {
     @State private var bilibiliSummary = ""
     @State private var douyinSummary = ""
     @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
+    @AppStorage(ErrorReports.key) private var sendsErrorReports = true
     #if os(iOS)
     @State private var addingSubscription = false
     #endif
@@ -375,10 +376,25 @@ struct FormSettingsView: View {
             }
             #endif
 
-            Section(L10n.text("Advanced")) {
+            Section {
                 FormLink(symbol: "internaldrive", tint: .blue, title: L10n.text("Local Cache")) { CacheSettingsView() }
                 FormLink(symbol: "cpu.fill", tint: .orange, title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
                 FormLink(symbol: "doc.text.magnifyingglass", tint: .gray, title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
+                Toggle(isOn: $sendsErrorReports) {
+                    #if os(iOS)
+                    FormLabel(symbol: "ladybug.fill", tint: .red, title: L10n.text("Send Error Reports"))
+                    #else
+                    FormLabel(symbol: "ladybug.fill", tint: .red, title: L10n.text("Send Error Reports"), subtitle: errorReportsNote)
+                    #endif
+                }
+                .settingsSwitch()
+                .onChange(of: sendsErrorReports) { _, on in if !on { ErrorReports.shared.discard() } }
+            } header: {
+                Text(L10n.text("Advanced"))
+            } footer: {
+                #if os(iOS)
+                Text(errorReportsNote)
+                #endif
             }
 
             #if os(iOS)
@@ -527,6 +543,7 @@ struct FormSettingsView: View {
 
     private var canAdd: Bool { !store.importing && !store.subscriptionAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var danmakuNote: String { L10n.text("Bilibili's bullet comments, drawn over the video. You can also switch them in the player.") }
+    private var errorReportsNote: String { L10n.text("Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history.") }
     private func add() { if canAdd { Task { await store.importSubscription() } } }
 
     #if os(macOS)
@@ -1082,6 +1099,7 @@ struct TVSettingsView: View {
     @State private var douyinSummary = ""
     @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
+    @AppStorage(ErrorReports.key) private var sendsErrorReports = true
 
     var body: some View {
         TVSettingsLayout {
@@ -1103,10 +1121,13 @@ struct TVSettingsView: View {
                     }
                 TVSettingsLink(title: L10n.text("Play a URL")) { TVPlayURLPage() }
             }
-            TVSettingsSection(title: L10n.text("Advanced")) {
+            TVSettingsSection(title: L10n.text("Advanced"),
+                              footer: L10n.text("Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history.")) {
                 TVSettingsLink(title: L10n.text("Local Cache")) { CacheSettingsView() }
                 TVSettingsLink(title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
                 TVSettingsLink(title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
+                TVSettingsToggle(title: L10n.text("Send Error Reports"), isOn: $sendsErrorReports)
+                    .onChange(of: sendsErrorReports) { _, on in if !on { ErrorReports.shared.discard() } }
             }
             if updates.available.isEmpty { updateSection }
             TVSettingsSection(title: L10n.text("About"),

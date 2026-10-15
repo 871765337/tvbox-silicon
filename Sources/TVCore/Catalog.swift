@@ -114,6 +114,8 @@ public struct CatalogClient: Sendable {
     public init(site: Site, origin: URL, http: HTTPClient = HTTPClient(), jarURL: URL? = nil) {
         self.site = site; self.origin = site.origin(or: origin); self.http = http; self.jarURL = site.spider(or: jarURL)
     }
+    /// Names the source in an error report: its key, its spider or API, and its type.
+    public var reportContext: String { "source=\(site.key) api=\(site.api) type=\(site.type)" }
     public func with(parses: [ParseService]) -> CatalogClient {
         var client = self; client.parses = parses; return client
     }

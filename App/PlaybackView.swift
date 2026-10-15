@@ -253,6 +253,7 @@ import TVCore
                 do { (channel, liveQualities, liveQuality) = try await LiveCatalog.resolve(channel) }
                 catch {
                     guard self.generation == activeGeneration, !Task.isCancelled else { return }
+                    Diagnostics.shared.failure("player", "live room=\(channel.url.absoluteString)", error)
                     self.error = error.localizedDescription; self.loading = false; return
                 }
             }
@@ -260,6 +261,7 @@ import TVCore
             do { address = try await EmbeddedJarHost.shared.recoverProxy(address) }
             catch {
                 guard self.generation == activeGeneration, !Task.isCancelled else { return }
+                Diagnostics.shared.failure("player", "plugin proxy source=\(channel.historyContext?.sourceKey ?? "-")", error)
                 self.error = error.localizedDescription; self.loading = false; return
             }
             // A cloud-drive file streams straight from its CDN: the plugin's proxy only reveals the
@@ -290,6 +292,7 @@ import TVCore
                 do { address = try await DownloadLibrary.shared.playbackAddress(for: address) }
                 catch {
                     guard self.generation == activeGeneration, !Task.isCancelled else { return }
+                    Diagnostics.shared.failure("player", "saved download", error)
                     self.error = error.localizedDescription; self.loading = false; return
                 }
             }
@@ -319,7 +322,7 @@ import TVCore
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
             try AVAudioSession.sharedInstance().setActive(true)
-        } catch { self.error = error.localizedDescription }
+        } catch { Diagnostics.shared.failure("player", "audio session", error); self.error = error.localizedDescription }
         #endif
         // Some providers require request headers. AVURLAsset's HTTP-header option is
         // best-effort and is not a guarantee for every redirected HLS segment.
@@ -340,18 +343,18 @@ import TVCore
                     Diagnostics.shared.record(.info, "player", "ready host=\(self.transfer.host ?? channel.url.host() ?? "-")")
                 }
                 if status == .failed {
-                    Diagnostics.shared.record(.error, "player", "failed host=\(self.transfer.host ?? channel.url.host() ?? "-") \(self.transfer.failure.map { "upstream=\($0) " } ?? "")\(detail)")
+                    Diagnostics.shared.record(.error, "player", "failed host=\(self.transfer.host ?? channel.url.host() ?? "-") \(self.transfer.failure.map { "upstream=\($0) " } ?? "")\(detail) \(self.failureContext(channel, url: url, item: item))")
                     if self.retryLive(after: failure) { return }
                     self.loading = false; self.error = message ?? L10n.text("This media cannot be played. Try another channel or source.")
                 }
             }
         }
-        failureObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main) { [weak self] notification in
+        failureObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main) { [weak self, weak item] notification in
             let failure = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
             let message = failure?.localizedDescription
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
-                Diagnostics.shared.record(.error, "player", "interrupted host=\(self.transfer.host ?? channel.url.host() ?? "-") at=\(Int(self.player.currentTime().seconds.isFinite ? self.player.currentTime().seconds : -1))s \(failure.map(Self.describe) ?? "-")")
+                Diagnostics.shared.record(.error, "player", "interrupted host=\(self.transfer.host ?? channel.url.host() ?? "-") at=\(Int(self.player.currentTime().seconds.isFinite ? self.player.currentTime().seconds : -1))s \(failure.map(Self.describe) ?? "-") \(self.failureContext(channel, url: url, item: item))")
                 if self.retryLive(after: failure) { return }
                 self.error = message ?? L10n.text("Playback was interrupted."); self.loading = false
             }
@@ -462,11 +465,16 @@ import TVCore
     }
     /// Domain and code of the error and its underlying cause: AVFoundation's messages alone
     /// ("The operation could not be completed") don't tell an HTTP 403 from a decoder failure.
-    nonisolated static func describe(_ error: Error) -> String {
-        let error = error as NSError
-        var text = "error=\(error.domain) \(error.code): \(error.localizedDescription)"
-        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
-            text += " underlying=\(underlying.domain) \(underlying.code): \(underlying.localizedDescription)"
+    nonisolated static func describe(_ error: Error) -> String { Diagnostics.describe(error) }
+    /// What a failure report needs besides the error: the source, the way the stream reaches AVPlayer,
+    /// its format, and AVPlayer's own last network error (often the HTTP status of one segment).
+    private func failureContext(_ channel: Channel, url: URL, item: AVPlayerItem?) -> String {
+        let scheme = url.scheme ?? "-"
+        let via = ["http", "https"].contains(scheme) ? (["127.0.0.1", "localhost"].contains(url.host() ?? "") ? "local-proxy" : "direct") : scheme
+        let format = channel.url.pathExtension.isEmpty ? "-" : String(channel.url.pathExtension.lowercased().prefix(5))
+        var text = "source=\(channel.historyContext?.sourceKey ?? "-") live=\(isLive) via=\(via) format=\(format)"
+        if let event = item?.errorLog()?.events.last {
+            text += " log=\(event.errorStatusCode) \(event.errorDomain) \(event.errorComment ?? "-")"
         }
         return text
     }

@@ -195,7 +195,11 @@ struct ChannelListView: View {
         defer { loading = false; if !Task.isCancelled { loaded = true } }
         do { channels = try await HTTPClient().channels(source); if let group, !groups.contains(group) { self.group = nil } }
         catch is CancellationError { }
-        catch { if !Task.isCancelled { self.error = error.localizedDescription } }
+        catch {
+            guard !Task.isCancelled else { return }
+            Diagnostics.shared.failure("live", "playlist host=\(source.url.host() ?? "-")", error)
+            self.error = error.localizedDescription
+        }
     }
 }
 

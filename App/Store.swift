@@ -170,7 +170,10 @@ import TVCore
             if address == nil { subscriptionAddress = "" }
             saveSubscriptionList()
             rebuildSubscription()
-        } catch { self.error = L10n.text("Import failed: %@", error.localizedDescription) }
+        } catch {
+            Diagnostics.shared.failure("subscription", "import host=\((try? WebAddress.resolve(typed))?.host() ?? "-")", error)
+            self.error = L10n.text("Import failed: %@", error.localizedDescription)
+        }
     }
     /// Fetches every enabled subscription again; one that fails keeps its last good copy.
     func refreshSubscriptions() async {
@@ -225,7 +228,9 @@ import TVCore
                 guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { continue }
                 let known = Set(subscriptions.map(\.address))
                 subscriptions.replaceSubrange(index...index, with: listed.filter { !known.contains($0.address) })
-            case .failure(let error): subscriptionErrors[entry.address] = error.localizedDescription
+            case .failure(let error):
+                Diagnostics.shared.failure("subscription", "refresh host=\(URL(string: entry.address)?.host() ?? "-")", error)
+                subscriptionErrors[entry.address] = error.localizedDescription
             }
         }
         saveSubscriptionList()
@@ -324,6 +329,7 @@ import TVCore
                 self.playing = self.catalogChannel(resolved, video: catalog.video, episode: episode, client: catalog.client)
             } catch {
                 guard !Task.isCancelled, self.episodeRequest == request, self.playing == channel else { return }
+                Diagnostics.shared.failure("catalog", "episode \(catalog.client.reportContext) flag=\(episode.flag)", error)
                 self.episodeError = error.localizedDescription
                 failed?(error.localizedDescription)
             }
@@ -380,6 +386,7 @@ import TVCore
             playing = catalogChannel(channel, video: video, episode: episode, client: client, resumePosition: entry.resumePosition)
         } catch {
             guard !(error is CancellationError), !Task.isCancelled else { return }
+            Diagnostics.shared.failure("catalog", "resume source=\(entry.context.sourceKey)", error)
             self.error = L10n.text("Unable to resume playback: %@", error.localizedDescription)
         }
     }

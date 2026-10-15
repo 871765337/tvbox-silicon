@@ -101,7 +101,9 @@ public struct Recommendation: Identifiable, Hashable, Sendable {
         } catch {
             guard generation == token else { return }
             busy = false
-            if !Task.isCancelled { self.error = error.localizedDescription }
+            guard !Task.isCancelled else { return }
+            Diagnostics.shared.failure("catalog", "recommendations \(client.reportContext)", error)
+            self.error = error.localizedDescription
         }
     }
 }

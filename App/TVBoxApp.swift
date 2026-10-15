@@ -32,6 +32,7 @@ import TVCore
                 .tint(Brand.accent)
                 #endif
                 .task { Diagnostics.shared.record(.info, "app", "Application scene opened") }
+                .task { await ErrorReports.shared.start() }
                 .task {
                     #if DEBUG
                     if QALaunch.section != nil || QALaunch.page != nil { await QALaunch.start(store); return }
@@ -52,10 +53,13 @@ import TVCore
                 .onOpenURL { url in if let link = DouyinHandoff.Link(url) { douyinHandoff = link } }
                 .sheet(item: $douyinHandoff) { DouyinHandoffView(link: $0) }
                 #endif
+                // A launch that ends while active, without passing through here, crashed or was ended.
+                .onChange(of: scenePhase, initial: true) { _, phase in ErrorReports.shared.onScreen(phase == .active) }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
-                        Task { _ = await Diagnostics.shared.snapshot() }
+                        Task { _ = await Diagnostics.shared.snapshot(); ErrorReports.shared.save() }
                     }
+                    if phase == .active { Task { await ErrorReports.shared.sendIfDue() } }
                     #if os(tvOS) || os(macOS)
                     // Phones only see the TV while the app is open.
                     if phase == .background { BilibiliCastController.shared.stop() }

@@ -240,7 +240,7 @@ public struct DownloadItem: Codable, Identifiable, Hashable, Sendable {
                 self?.finish(id, run: run) { $0.status = .completed; $0.media = media; $0.size = size; $0.finished = Date(); $0.received = size }
             } catch {
                 if Task.isCancelled || error is CancellationError { return }
-                Diagnostics.shared.record(.warning, "download", "failed id=\(id): \(error.localizedDescription) \(error as NSError)")
+                Diagnostics.shared.failure("download", "failed id=\(id)", error)
                 self?.finish(id, run: run) { $0.status = .failed; $0.failure = error.localizedDescription }
             }
         }

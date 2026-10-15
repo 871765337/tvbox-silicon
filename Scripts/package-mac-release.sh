@@ -37,6 +37,8 @@ VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP_BU
 OUT="build/release-mac/$VERSION"
 STAGE="$OUT/stage"
 rm -rf "$OUT"; mkdir -p "$STAGE"
+# Kept (not uploaded) to turn crash reports' binary offsets into code lines: Scripts/error-reports.py.
+mkdir -p "$OUT/dSYMs"; ditto "$APP_BUILT.dSYM" "$OUT/dSYMs/$(basename "$APP_BUILT").dSYM"
 APP="$STAGE/Yingxia.app"
 ditto "$APP_BUILT" "$APP"
 rm -rf "$APP/Contents/Resources/PythonHost/__pycache__"

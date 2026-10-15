@@ -83,6 +83,7 @@ struct LivePlatformView: View {
                 more()
             } catch {
                 guard !Task.isCancelled else { return }
+                Diagnostics.shared.failure("live", "\(platform.rawValue) areas", error)
                 self.error = error.localizedDescription; loader = nil
             }
         }
@@ -110,6 +111,7 @@ struct LivePlatformView: View {
                 if fresh.isEmpty { exhausted = true }
             } catch {
                 guard !Task.isCancelled else { return }
+                Diagnostics.shared.failure("live", "\(platform.rawValue) rooms page=\(next)", error)
                 if rooms.isEmpty { self.error = error.localizedDescription } else { exhausted = true }
             }
             loader = nil
@@ -144,7 +146,11 @@ private struct LiveRoomSearch: View {
             guard !Task.isCancelled else { return }
             do { rooms = try await LiveCatalog.search(platform, keyword: query) }
             catch is CancellationError { return }
-            catch { if !Task.isCancelled { self.error = error.localizedDescription; rooms = [] } }
+            catch {
+                guard !Task.isCancelled else { return }
+                Diagnostics.shared.failure("live", "\(platform.rawValue) search", error)
+                self.error = error.localizedDescription; rooms = []
+            }
             if !Task.isCancelled { searching = false }
         }
     }

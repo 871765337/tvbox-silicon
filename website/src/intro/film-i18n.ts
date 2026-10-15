@@ -79,10 +79,10 @@ const T: Record<string, Row> = {
   // Every screen
   "Every screen": ["すべての画面で", "모든 화면", "所有螢幕"],
   "No account": ["アカウント不要", "계정 없음", "免帳號"],
-  "No analytics": ["解析なし", "분석 없음", "無分析追蹤"],
+  "No tracking": ["トラッキングなし", "추적 없음", "不追蹤"],
   "Stays on device": ["データはデバイス内", "기기에만 저장", "資料留在裝置上"],
   "Logs redact secrets": ["ログの秘密情報は伏せ字", "로그의 비밀 정보 가림", "日誌遮蔽機密"],
-  "One app for Apple TV, iPhone, iPad and Mac. No account, no analytics.": ["Apple TV、iPhone、iPad、Mac にひとつのアプリ。アカウントも解析もなし。", "Apple TV, iPhone, iPad, Mac을 위한 하나의 앱. 계정도, 분석도 없습니다.", "一個 App 支援 Apple TV、iPhone、iPad 與 Mac。免帳號、無分析追蹤。"],
+  "One app for Apple TV, iPhone, iPad and Mac. No account, no tracking.": ["Apple TV、iPhone、iPad、Mac にひとつのアプリ。アカウントもトラッキングもなし。", "Apple TV, iPhone, iPad, Mac을 위한 하나의 앱. 계정도, 추적도 없습니다.", "一個 App 支援 Apple TV、iPhone、iPad 與 Mac。免帳號、不追蹤。"],
 
   // Controls and page chrome
   "Play": ["再生", "재생", "播放"],

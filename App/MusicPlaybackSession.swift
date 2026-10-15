@@ -470,7 +470,10 @@ typealias MusicTrack = TVCore.MusicTrack
         startWatch?.cancel()
         failureDetail = failureDetail ?? error.detail
         phase = .failed(message ?? error.localizedDescription)
-        Diagnostics.shared.record(.warning, "music", "failed: \(error.detail)")
+        // Another version of the song waiting for the listener's choice is not a failure.
+        let expected: Bool
+        switch error { case .differentRecording, .cancelled: expected = true; default: expected = false }
+        Diagnostics.shared.record(expected ? .warning : .error, "music", "failed provider=\(selection?.candidate.provider.rawValue ?? "-"): \(error.detail)")
     }
 
     private func record(_ new: [MusicAttempt]) {

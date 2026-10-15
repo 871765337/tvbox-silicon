@@ -32,7 +32,7 @@ import Observation
     }
 
     public func load(_ request: Request, client: CatalogClient) async {
-        await load(request) { request in
+        await load(request, context: client.reportContext) { request in
             switch request {
             case .home: return try await client.home()
             case let .list(category, query, page): return try await client.list(category: category, query: query, page: page)
@@ -53,7 +53,7 @@ import Observation
         categories = home.categories
     }
 
-    public func load(_ request: Request, fetch: @escaping @Sendable (Request) async throws -> CatalogPage) async {
+    public func load(_ request: Request, context: String = "-", fetch: @escaping @Sendable (Request) async throws -> CatalogPage) async {
         guard !Task.isCancelled else { return }
         pending?.cancel()
         pendingCategories?.cancel(); pendingCategories = nil
@@ -89,6 +89,7 @@ import Observation
             pageCount = result.pageCount
         } catch {
             guard generation == current, !Task.isCancelled else { return }
+            Diagnostics.shared.failure("catalog", "\(request == .home ? "home" : "list") \(context)", error)
             self.error = error.localizedDescription
         }
     }

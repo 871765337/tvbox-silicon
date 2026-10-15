@@ -72,6 +72,22 @@ public final class Diagnostics: @unchecked Sendable {
         if start { queue.asyncAfter(deadline: .now() + .milliseconds(250)) { self.drain() } }
     }
 
+    /// A failure the viewer saw, as an error (so it is reported) with the error's domain and code: they
+    /// tell a site that is down (NSURLErrorDomain -1001) from a bug. A cancellation is not a failure.
+    public func failure(_ category: String, _ context: String, _ error: Error) {
+        if error is CancellationError || (error as NSError).domain == NSURLErrorDomain && (error as NSError).code == NSURLErrorCancelled { return }
+        record(.error, category, context + " " + Self.describe(error))
+    }
+
+    public static func describe(_ error: Error) -> String {
+        let error = error as NSError
+        var text = "error=\(error.domain) \(error.code): \(error.localizedDescription)"
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            text += " underlying=\(underlying.domain) \(underlying.code): \(underlying.localizedDescription)"
+        }
+        return text
+    }
+
     public func snapshot() async -> LogSnapshot {
         await withCheckedContinuation { continuation in
             queue.async {
@@ -116,6 +132,7 @@ public final class Diagnostics: @unchecked Sendable {
         guard !batch.isEmpty else { return }
         let safe = batch.map { LogEntry(id: $0.id, date: $0.date, level: $0.level, category: Self.redact($0.category), message: Self.redact($0.message)) }
         recent.append(contentsOf: safe)
+        if self === Diagnostics.shared { ErrorReports.shared.collect(safe) }
         if recent.count > 1000 { recent.removeFirst(recent.count - 1000) }
         guard Date() >= retryAfter else { return }
         do {

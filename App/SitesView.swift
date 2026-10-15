@@ -605,7 +605,11 @@ struct VideoDetailView: View {
             #if os(tvOS)
             Task { try? await Task.sleep(for: .milliseconds(100)); playFocused = true }
             #endif
-        } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
+        } catch {
+            guard !Task.isCancelled else { return }
+            Diagnostics.shared.failure("catalog", "detail \(client.reportContext)", error)
+            self.error = error.localizedDescription
+        }
     }
     private var headerLayout: AnyLayout {
         #if os(iOS)
@@ -880,6 +884,10 @@ struct VideoDetailView: View {
     }
     private func fail(_ episode: Episode, _ error: Error) {
         guard !Task.isCancelled, !(error is CancellationError) else { return }
+        // A drive that needs signing in is expected, not a failure to report.
+        if !(error is CloudDriveLoginRequired) {
+            Diagnostics.shared.failure("catalog", "play \(client.reportContext) flag=\(episode.flag)", error)
+        }
         withAnimation(.smooth(duration: 0.25)) {
             // Plugins report a missing or expired drive login in their own words ("夸克授权失败，请扫码登录");
             // say what happened and offer the sign-in instead of echoing them.
