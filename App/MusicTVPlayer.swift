@@ -26,80 +26,134 @@ struct MusicNowPlayingButton: View {
     }
 }
 
-/// The sidebar's Now Playing page: the cover large, the song, where it is, the transport, and the
-/// full-screen player with its lyrics a click away. Play/Pause on the remote works here too.
-struct MusicTVNowPlayingPage: View {
+/// The sidebar's Now Playing item: the song's title, and bars that move while it plays. The sidebar
+/// draws every icon in one colour (a cover came out as a black disc), so the bars are the motion.
+struct MusicTabLabel: View {
     @Environment(Store.self) private var store
+    @State private var bars = MusicTabBars()
+    var body: some View {
+        let music = store.music
+        Label { Text(music.track?.title ?? L10n.text("Now Playing")) } icon: { Image(uiImage: bars.image) }
+            .onChange(of: music.phase == .playing, initial: true) { _, playing in bars.animates = playing }
+    }
+}
+
+/// Three bars drawn at a few heights, cycled while the song plays; low and still while it is paused.
+@MainActor @Observable final class MusicTabBars {
+    private(set) var image = MusicTabBars.frames[0]
+    var animates = false { didSet { if animates != oldValue { restart() } } }
+    @ObservationIgnored private var frame = 0
+    @ObservationIgnored private var timer: Timer?
+    private static let still = render([0.35, 0.35, 0.35])
+    private static let frames = [[0.45, 0.9, 0.6], [0.8, 0.5, 1.0], [0.6, 1.0, 0.4], [1.0, 0.65, 0.8]].map { render($0) }
+
+    private func restart() {
+        timer?.invalidate(); timer = nil
+        guard animates else { image = Self.still; return }
+        timer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.frame += 1
+                self.image = Self.frames[self.frame % Self.frames.count]
+            }
+        }
+    }
+
+    /// A template, so the sidebar tints it like its other icons, dark on the focused plate.
+    private nonisolated static func render(_ heights: [CGFloat]) -> UIImage {
+        let size = CGSize(width: 30, height: 30), width: CGFloat = 5, gap: CGFloat = 3.5, tallest: CGFloat = 24
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            UIColor.black.setFill()
+            let start = (size.width - width * 3 - gap * 2) / 2
+            for (index, height) in heights.enumerated() {
+                let barHeight = tallest * height
+                let bar = CGRect(x: start + CGFloat(index) * (width + gap), y: (size.height + tallest) / 2 - barHeight, width: width, height: barHeight)
+                UIBezierPath(roundedRect: bar, cornerRadius: width / 2).fill()
+            }
+        }.withRenderingMode(.alwaysTemplate)
+    }
+}
+
+/// The top of the sidebar while a song is loaded, where Music keeps the profile card: the cover,
+/// with bars over it while it plays, the title and the artist. Clicking it opens the player.
+/// tvOS 27 and later; before that the sidebar leads with a plain Now Playing item instead.
+struct MusicSidebarNowPlaying: View {
+    @Environment(Store.self) private var store
+
+    static var inSidebarHeader: Bool {
+        if #available(tvOS 27, *) { true } else { false }
+    }
 
     var body: some View {
         let music = store.music
         if let track = music.track {
-            HStack(alignment: .center, spacing: 90) {
-                MusicArtwork(url: track.artwork, size: 560)
-                    .shadow(color: .black.opacity(0.45), radius: 40, y: 20)
-                VStack(alignment: .leading, spacing: 0) {
-                    Label(L10n.text("Now Playing"), systemImage: "waveform")
-                        .symbolEffect(.variableColor.iterative, isActive: music.phase == .playing)
-                        .font(.system(size: 26, weight: .semibold)).foregroundStyle(.secondary)
-                    Text(track.title).font(.system(size: 58, weight: .bold)).lineLimit(2).padding(.top, 14)
-                    Text([track.artistLine, track.album].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " — "))
-                        .font(.system(size: 30)).foregroundStyle(.secondary).lineLimit(1).padding(.top, 6)
-                    progress(music).padding(.top, 40)
-                    HStack(spacing: 24) {
-                        Button { music.previous() } label: { Image(systemName: "backward.fill") }
-                            .controlButton().accessibilityLabel(L10n.text("Previous"))
-                        Button { music.toggle() } label: { Image(systemName: music.isPlaying ? "pause.fill" : "play.fill").frame(width: 34) }
-                            .controlButton().accessibilityLabel(L10n.text(music.isPlaying ? "Pause" : "Play"))
-                        Button { music.next() } label: { Image(systemName: "forward.fill") }
-                            .controlButton().disabled(!music.canAdvance).accessibilityLabel(L10n.text("Next"))
-                        Button { music.presentsPlayer = true } label: { Label(L10n.text("Open Player"), systemImage: "arrow.up.left.and.arrow.down.right") }
-                            .controlButton(prominent: true)
-                    }
-                    .padding(.top, 36)
-                    .focusSection()
+            Button { music.presentsPlayer = true } label: { MusicSidebarCard(track: track) }
+                .buttonStyle(MusicSidebarCardStyle())
+                .accessibilityLabel(Text(L10n.text("Now Playing") + ", " + track.title))
+                // Close to the sections under it, as the profile card sits in Music.
+                .padding(.bottom, -36)
+        }
+    }
+}
+
+/// The card itself. In focus only the cover is outlined and lifts, like a poster; the words stay put.
+private struct MusicSidebarCard: View {
+    @Environment(Store.self) private var store
+    @Environment(\.isFocused) private var focused
+    let track: MusicTrack
+    private let art: CGFloat = 60
+
+    var body: some View {
+        HStack(spacing: 16) {
+            MusicArtwork(url: track.artwork, size: art)
+                .overlay { activity(store.music) }
+                .overlay {
+                    RoundedRectangle(cornerRadius: art * 0.12 + 5, style: .continuous)
+                        .strokeBorder(.white, lineWidth: 3).padding(-5)
+                        .opacity(focused ? 1 : 0)
                 }
-                .frame(maxWidth: 820, alignment: .leading)
+                .scaleEffect(focused ? 1.08 : 1)
+                .shadow(color: .black.opacity(focused ? 0.45 : 0), radius: 12, y: 6)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(track.title).font(.system(size: 25, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
+                Text(track.artistLine).font(.system(size: 20)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
             }
-            .padding(80)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background { backdrop(track.artwork) }
-            .onPlayPauseCommand { music.toggle() }
+            Spacer(minLength: 0)
         }
+        // The cover lines up with the section icons, with room above for its outline.
+        .padding(.leading, 22).padding(.trailing, 12).padding(.top, 14).padding(.bottom, 6)
+        .animation(.easeOut(duration: 0.15), value: focused)
     }
 
-    private func progress(_ music: MusicPlaybackSession) -> some View {
-        let total = max(music.duration ?? 0, 1), position = min(music.seekingTo ?? music.position, total)
-        return VStack(spacing: 10) {
-            ProgressView(value: position, total: total).tint(.white)
-            HStack {
-                Text(MusicTime.text(position))
-                Spacer()
-                Text(music.duration.map { "-" + MusicTime.text($0 - position) } ?? "--:--")
-            }
-            .font(.system(size: 22, weight: .medium)).monospacedDigit().foregroundStyle(.secondary)
-        }
-    }
-
-    /// The cover blurred small and drawn once, then scaled to the screen.
-    private func backdrop(_ artwork: URL?) -> some View {
-        GeometryReader { proxy in
+    /// Bars while sound plays, a spinner while a channel is found; the cover alone while paused.
+    @ViewBuilder private func activity(_ music: MusicPlaybackSession) -> some View {
+        if music.phase == .playing || music.busy {
             ZStack {
-                TVStyle.background
-                if let artwork {
-                    PosterImage(url: artwork, symbol: "music.note")
-                        .frame(width: 48, height: 48)
-                        .blur(radius: 7, opaque: true)
-                        .drawingGroup()
-                        .scaleEffect(max(proxy.size.width, proxy.size.height) / 48 * 1.25)
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .opacity(0.55)
+                RoundedRectangle(cornerRadius: art * 0.12, style: .continuous).fill(.black.opacity(0.4))
+                if music.busy && !music.isPlaying {
+                    ProgressView().tint(.white).scaleEffect(0.7)
+                } else {
+                    Image(systemName: "waveform").font(.system(size: 24, weight: .bold)).foregroundStyle(.white)
+                        .symbolEffect(.variableColor.iterative, isActive: true)
                 }
-                Color.black.opacity(0.35)
             }
         }
-        .clipped()
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+    }
+}
+
+/// No plate: the card draws its own focus on the cover.
+private struct MusicSidebarCardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.opacity(configuration.isPressed ? 0.8 : 1)
+    }
+}
+
+extension View {
+    /// The Now Playing card at the top of the sidebar, where tvOS has a place for one.
+    @ViewBuilder func musicSidebarHeader() -> some View {
+        if #available(tvOS 27, *) { tabViewSidebarHeader { MusicSidebarNowPlaying() } } else { self }
     }
 }
 #endif

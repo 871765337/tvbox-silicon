@@ -3,7 +3,7 @@ import TVCore
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case home = "Watch Now", live = "Live TV", music = "Music", search = "Global Search", sites = "Sources", favorites = "Favorites", history = "Playback History", downloads = "Downloads", settings = "Settings", more = "More"
-    /// Apple TV's sidebar item for the song playing, first while one is loaded.
+    /// Apple TV's sidebar item for the song playing, first while one is loaded; it opens the player.
     case nowPlaying = "Now Playing"
     var id: String { rawValue }
     var title: String { L10n.text(rawValue) }
@@ -50,7 +50,8 @@ struct RootView: View {
         let sections: [AppSection] = [.home, .live, .music, .search, .sites, .history, .favorites, .downloads, .settings]
         #if os(tvOS)
         // Where the remote already goes to change section, so the song is one move away from anywhere.
-        if store.music.track != nil { return [.nowPlaying] + sections }
+        // Before tvOS 27 the sidebar has no header for the Now Playing card.
+        if store.music.track != nil, !MusicSidebarNowPlaying.inSidebarHeader { return [.nowPlaying] + sections }
         #endif
         return sections
     }
@@ -117,7 +118,7 @@ struct RootView: View {
         @Bindable var store = store
         return TabView(selection: $store.section) {
                 ForEach(tabs) { item in
-                    Tab(tabTitle(item), systemImage: item.icon, value: item) {
+                    Tab(value: item) {
                         if item == .more {
                             NavigationStack(path: $morePath) {
                                 content(.more).routeDestinations()
@@ -125,6 +126,12 @@ struct RootView: View {
                                     .navigationDestination(for: AppSection.self) { content($0) }
                             }
                         } else { NavigationStack { content(item).tvDefaultControls().routeDestinations() } }
+                    } label: {
+                        #if os(tvOS)
+                        if item == .nowPlaying { MusicTabLabel() } else { Label(item.title, systemImage: item.icon) }
+                        #else
+                        Label(item.title, systemImage: item.icon)
+                        #endif
                     }
                     #if os(iOS)
                     // tvOS tab bars have no badges; there the launch sheet and Settings carry the news.
@@ -134,7 +141,14 @@ struct RootView: View {
             }
             .tabViewStyle(.sidebarAdaptable)
             #if os(tvOS)
-            .onChange(of: store.music.track == nil) { _, gone in if gone && store.section == .nowPlaying { store.section = .music } }
+            .musicSidebarHeader()
+            // Now Playing is not a page: choosing it opens the full-screen player over the section
+            // the viewer was in. The sidebar selects on a click, not on focus, so passing it opens nothing.
+            .onChange(of: store.section) { previous, section in
+                guard section == .nowPlaying else { return }
+                store.section = previous == .nowPlaying ? .music : previous
+                store.music.presentsPlayer = true
+            }
             #endif
             #if os(iOS)
             .minimizesTabBarOnScroll()
@@ -154,11 +168,6 @@ struct RootView: View {
                 }
             }
             #endif
-    }
-
-    /// Now Playing is named after the song.
-    private func tabTitle(_ item: AppSection) -> String {
-        item == .nowPlaying ? store.music.track?.title ?? item.title : item.title
     }
 
     #if os(iOS)
@@ -189,12 +198,7 @@ struct RootView: View {
         case .downloads: DownloadsView()
         case .history: PlaybackHistoryView()
         case .settings: SettingsView()
-        case .nowPlaying:
-            #if os(tvOS)
-            MusicTVNowPlayingPage()
-            #else
-            EmptyView()
-            #endif
+        case .nowPlaying: EmptyView()
         case .more:
             // Only the phone's compact tab bar has a More tab.
             #if os(iOS)

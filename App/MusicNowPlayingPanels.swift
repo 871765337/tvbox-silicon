@@ -46,7 +46,9 @@ struct MusicNowPlayingLyrics: View {
             .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.07),
                                          .init(color: .black, location: 0.9), .init(color: .clear, location: 1)],
                                  startPoint: .top, endPoint: .bottom))
-            .onAppear { scrolled = music.currentLyric }
+            // Once the lines are laid out: set as the panel appeared, the position was dropped, and
+            // reopening the player left the lyrics at the top until the next line.
+            .task { try? await Task.sleep(for: .milliseconds(60)); scrolled = music.currentLyric }
             .onChange(of: music.currentLyric) { _, index in
                 guard let index else { return }
                 withAnimation(.smooth(duration: 0.5)) { scrolled = index }
