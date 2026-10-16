@@ -58,6 +58,28 @@ export default {
     #expect(checks["cheerio"]?.string == "function")
 }
 
+/// Spiders that parse a failed response throw a SyntaxError; the failed request is what the user should see.
+private let failingSpider = #"""
+export default {
+    async home() { return JSON.parse(req('http://127.0.0.1:1/api').content).class; },
+    async category() { return JSON.parse('<html>').list; }
+};
+"""#
+
+@Test func scriptParseErrorsAfterAFailedRequestReportTheRequest() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent("script-test-" + UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let session = try await ScriptSession.start(api: "https://scripts.example/failing.js", key: "test", ext: "", profile: folder.appendingPathComponent("profile"), label: "test", source: failingSpider)
+    defer { session.close() }
+    let failed = try await session.call([:])
+    #expect(failed["errorCode"]?.string == "source_network", "\(failed)")
+    #expect(failed["host"]?.string == "127.0.0.1")
+    let broken = try await session.call(["t": "1"])
+    #expect(broken["errorCode"]?.string == "script_error", "\(broken)")
+    #expect(broken["error"]?.string?.hasPrefix("SyntaxError") == true)
+}
+
 @Test func retiredDrpyLibrariesResolveToBundledCopies() {
     #expect(ScriptAssets.resolve("https://down.nigx.cn/qu.ax/XUKQ.js", from: "https://x.example/drpy2.min.js") == "assets://js/lib/模板.js")
     #expect(ScriptAssets.resolve("./gbk.js", from: "assets://js/lib/drpy2.min.js") == "assets://js/lib/gbk.js")
