@@ -152,7 +152,7 @@ enum ScriptCrypto {
     }
 }
 
-private extension Data {
+extension Data {
     init?(hex: String) {
         let digits = Array(hex.utf8)
         guard digits.count % 2 == 0 else { return nil }

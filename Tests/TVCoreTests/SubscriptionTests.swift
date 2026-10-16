@@ -74,6 +74,18 @@ import Testing
     #expect(commented.sites[0].raw["ext"]?.string == "abcdefgh**not-base64")
 }
 
+@Test func catVodEncryptedSubscriptionsDecrypt() throws {
+    // `$#YingXia#$` + AES-128-CBC of a commented config (key "yingxia000000000", IV "abcdefghijklm000",
+    // made with OpenSSL) + `AbcDefGhiJklM`. Uppercase hex and line breaks as some servers send it.
+    let hex = "242359696E675869612324376CAB87BB81CC55FB20B09E3AE8FD3D3D84BAA3CAB01DFD414C09643B359B29E1588CB05705F7194E4D82834C6D12140E6F402930F85A11E3E16F6B99565266750A06CB6FF390074801779D118454E34162634465664768694A6B6C4D"
+    let base = try WebAddress.resolve("https://example.com/config")
+    let sub = try Subscription.parse(Data((" \n" + hex.prefix(100) + "\n" + hex.dropFirst(100) + "\n").utf8), origin: base)
+    #expect(sub.sites.map(\.key) == ["a"])
+    #expect(sub.sites.first?.name == "甲")
+    // A wrong key (`XingXia`) must not yield a configuration.
+    #expect(throws: (any Error).self) { try Subscription.parse(Data(("242358" + hex.dropFirst(6)).utf8), origin: base) }
+}
+
 @Test func sourceSpecificPluginsOverrideGlobalPluginAndResolveRelativeURLs() throws {
     let origin = try WebAddress.resolve("https://肥猫.net/config/main.json")
     let sub = try Subscription.parse(Data(#"{"spider":"../global.jar","sites":[{"key":"custom","type":3,"api":"csp_Test","jar":"./插件.jar;md5;0123456789abcdef0123456789abcdef"},{"key":"fallback","type":3,"api":"csp_Test"},{"key":"bad","type":3,"api":"csp_Test","jar":"file:///tmp/plugin.jar"}]}"#.utf8), origin: origin)

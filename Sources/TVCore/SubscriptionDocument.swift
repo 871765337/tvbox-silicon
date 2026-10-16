@@ -21,13 +21,29 @@ enum SubscriptionDocument {
         if prefix.hasPrefix("<!doctype html") || prefix.hasPrefix("<html") {
             throw TVError.unsupported(L10n.text("The subscription server returned a web page instead of a configuration."))
         }
-        if prefix.hasPrefix("2423") {
-            throw TVError.unsupported(L10n.text("This subscription uses an encrypted configuration that is not supported yet."))
-        }
+        if prefix.hasPrefix("2423") { bytes = try decrypt(bytes) }
         return try JSONDecoder().decode([String: JSONValue].self, from: Data(normalize(bytes)))
     }
 
     private static func whitespace(_ byte: UInt8) -> Bool { [9, 10, 13, 32].contains(byte) }
+
+    /// CatVod encrypted configuration (FongMi `Decoder.cbc`): the hex of `$#key#$`, the AES-CBC ciphertext
+    /// and a 13-character IV. Key and IV are lowercased and padded with "0" to 16 bytes.
+    private static func decrypt(_ input: [UInt8]) throws -> [UInt8] {
+        let unsupported = TVError.unsupported(L10n.text("This subscription uses an encrypted configuration that is not supported yet."))
+        guard let data = Data(hex: String(decoding: input.filter { !whitespace($0) }, as: UTF8.self)) else { throw unsupported }
+        let bytes = [UInt8](data), ivStart = bytes.count - 13
+        guard ivStart > 2, let keyEnd = (2..<ivStart - 1).first(where: { bytes[$0] == 35 && bytes[$0 + 1] == 36 }) else { throw unsupported }
+        func padded(_ text: ArraySlice<UInt8>) -> Data? {
+            text.count <= 16 ? Data(text.map { (65...90).contains($0) ? $0 + 32 : $0 } + Array(repeating: 48, count: 16 - text.count)) : nil
+        }
+        guard let key = padded(bytes[2..<keyEnd]), let iv = padded(bytes[ivStart...]),
+              let plain = try? ScriptCrypto.aes(encrypt: false, ecb: false, padding: true, key: key, iv: iv, data: Data(bytes[(keyEnd + 2)..<ivStart]))
+        else { throw unsupported }
+        var result = [UInt8](plain)
+        if result.starts(with: [0xEF, 0xBB, 0xBF]) { result.removeFirst(3) }
+        return result
+    }
 
     private static func envelopeStart(_ bytes: [UInt8]) -> Int? {
         guard bytes.count >= 10 else { return nil }
