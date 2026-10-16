@@ -1,6 +1,77 @@
 {
   "releases": [
     {
+      "version": "1.7.0",
+      "date": "2026-10-16",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.0/Yingxia-1.7.0-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "sparkles.tv",
+          "title": {
+            "en": "Smoother, sharper video",
+            "zh-Hans": "更流畅、更清晰的画面",
+            "zh-Hant": "更流暢、更清晰的畫面",
+            "ja": "よりなめらかで鮮明な映像"
+          },
+          "detail": {
+            "en": "Turn on Smooth Motion and 24–30 fps video plays at 60 fps: Apple’s on-device machine learning adds the frames in between, and scene cuts stay clean. Sharper Picture upscales low-resolution video to fit your screen. Both are in the player’s picture menu and in Settings → Picture, on iPhone, iPad, Mac and Apple TV with version 26 or later.",
+            "zh-Hans": "打开“智能补帧”，24–30 帧的视频就会以 60 帧播放：设备上的 Apple 机器学习会补出中间的画面，镜头切换处依然干净利落。“画质增强”会把低分辨率的视频放大到适合你的屏幕。两者都在播放器的画面菜单和“设置”→“画面”中，适用于 26 及以上版本的 iPhone、iPad、Mac 和 Apple TV。",
+            "zh-Hant": "開啟「智慧補幀」，24–30 幀的影片就會以 60 幀播放：裝置上的 Apple 機器學習會補出中間的畫面，鏡頭切換處依然乾淨俐落。「畫質增強」會把低解析度的影片放大到適合你的螢幕。兩者都在播放器的畫面選單和「設定」→「畫面」中，適用於 26 及以上版本的 iPhone、iPad、Mac 和 Apple TV。",
+            "ja": "「なめらか補間」をオンにすると、24〜30fps のビデオが 60fps で再生されます。デバイス上の Apple の機械学習がフレームの間を補い、シーンの切り替わりもすっきり見えます。「高画質化」は低解像度のビデオを画面に合わせて拡大します。どちらもプレーヤーの画質メニューと「設定」→「画質」にあり、バージョン 26 以降の iPhone、iPad、Mac、Apple TV で使えます。"
+          }
+        },
+        {
+          "symbol": "text.bubble.fill",
+          "title": {
+            "en": "A new danmaku list",
+            "zh-Hans": "全新的弹幕列表",
+            "zh-Hant": "全新的彈幕列表",
+            "ja": "新しいコメント一覧"
+          },
+          "detail": {
+            "en": "See where the comments gather across the episode and tap to jump there. A line marks the current moment and follows playback, and each comment shows its own color. On iPhone, quality and picture share one button and danmaku another, and the player’s buttons now hide and show together with the playback controls.",
+            "zh-Hans": "一眼看出整集中弹幕最密集的地方，点按即可跳过去。一条线标出当前时刻并跟随播放，每条弹幕都显示自己的颜色。在 iPhone 上，画质和画面共用一个按钮，弹幕用另一个按钮；播放器的按钮现在会和播放控制一起隐藏和显示。",
+            "zh-Hant": "一眼看出整集中彈幕最密集的地方，點一下即可跳過去。一條線標出目前時刻並跟隨播放，每則彈幕都顯示自己的顏色。在 iPhone 上，畫質和畫面共用一個按鈕，彈幕用另一個按鈕；播放器的按鈕現在會和播放控制一起隱藏和顯示。",
+            "ja": "エピソードのどこにコメントが集まっているかがひと目でわかり、タップするとそこへ移動します。現在の位置を示す線が再生に合わせて動き、各コメントはそれぞれの色で表示されます。iPhone では、画質と映像の設定がひとつのボタンに、コメントがもうひとつのボタンにまとまり、プレーヤーのボタンは再生コントロールと一緒に表示・非表示されるようになりました。"
+          }
+        },
+        {
+          "symbol": "sun.horizon.fill",
+          "title": {
+            "en": "A calmer wait",
+            "zh-Hans": "更安心的等待",
+            "zh-Hant": "更安心的等待",
+            "ja": "落ち着いて待てる読み込み画面"
+          },
+          "detail": {
+            "en": "While a video loads, the player shows the episode’s poster with a soft light passing over it, and says plainly what it is doing and where it will pick up. If a line is slow, it suggests another one. When a link has expired or a line fails, it explains what to do next.",
+            "zh-Hans": "视频加载时，播放器会展示这一集的海报，柔和的光缓缓掠过，并用简单的话告诉你正在做什么、将从哪里继续播放。线路较慢时会建议你换一条；链接过期或线路出错时，会说明下一步该怎么做。",
+            "zh-Hant": "影片載入時，播放器會展示這一集的海報，柔和的光緩緩掠過，並用簡單的話告訴你正在做什麼、將從哪裡繼續播放。線路較慢時會建議你換一條；連結過期或線路出錯時，會說明下一步該怎麼做。",
+            "ja": "ビデオの読み込み中は、そのエピソードのポスターにやわらかな光が流れ、いま何をしているか、どこから再開するかを分かりやすく表示します。回線が遅いときは別の回線を勧め、リンクの期限切れや回線のエラーでは次にどうすればよいかを説明します。"
+          }
+        },
+        {
+          "symbol": "wrench.and.screwdriver.fill",
+          "title": {
+            "en": "Fixes",
+            "zh-Hans": "修复",
+            "zh-Hant": "修正",
+            "ja": "修正"
+          },
+          "detail": {
+            "en": "Encrypted CatVod subscriptions import. Titles show “&” and other characters correctly instead of codes like “&amp;”. On iPhone, resuming a video no longer freezes the app, and the player keeps its title and buttons on one row.",
+            "zh-Hans": "加密的 CatVod 订阅现在可以导入。标题中的“&”等字符会正确显示，不再出现“&amp;”这样的代码。在 iPhone 上，继续播放视频时 App 不再卡住，播放器的标题和按钮保持在同一行。",
+            "zh-Hant": "加密的 CatVod 訂閱現在可以匯入。標題中的「&」等字元會正確顯示，不再出現「&amp;」這樣的代碼。在 iPhone 上，繼續播放影片時 App 不再卡住，播放器的標題和按鈕保持在同一行。",
+            "ja": "暗号化された CatVod のサブスクリプションを読み込めるようになりました。タイトルの「&」などの文字が「&amp;」のようなコードではなく正しく表示されます。iPhone では、ビデオの再開時に App が固まらなくなり、プレーヤーのタイトルとボタンが 1 行に収まります。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.6.5",
       "date": "2026-10-16",
       "links": {
