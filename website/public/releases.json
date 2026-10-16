@@ -1,6 +1,47 @@
 {
   "releases": [
     {
+      "version": "1.6.6",
+      "date": "2026-10-16",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.6.6/Yingxia-1.6.6-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "sun.horizon.fill",
+          "title": {
+            "en": "A calmer wait",
+            "zh-Hans": "更安心的等待",
+            "zh-Hant": "更安心的等待",
+            "ja": "落ち着いて待てる読み込み画面"
+          },
+          "detail": {
+            "en": "While a video loads, the player shows the episode’s poster with a soft light passing over it, and says plainly what it is doing and where it will pick up. If a line is slow, it suggests another one. When a link has expired or a line fails, it explains what to do next.",
+            "zh-Hans": "视频加载时，播放器会展示这一集的海报，柔和的光缓缓掠过，并用简单的话告诉你正在做什么、将从哪里继续播放。线路较慢时会建议你换一条；链接过期或线路出错时，会说明下一步该怎么做。",
+            "zh-Hant": "影片載入時，播放器會展示這一集的海報，柔和的光緩緩掠過，並用簡單的話告訴你正在做什麼、將從哪裡繼續播放。線路較慢時會建議你換一條；連結過期或線路出錯時，會說明下一步該怎麼做。",
+            "ja": "ビデオの読み込み中は、そのエピソードのポスターにやわらかな光が流れ、いま何をしているか、どこから再開するかを分かりやすく表示します。回線が遅いときは別の回線を勧め、リンクの期限切れや回線のエラーでは次にどうすればよいかを説明します。"
+          }
+        },
+        {
+          "symbol": "wrench.and.screwdriver.fill",
+          "title": {
+            "en": "Fixes",
+            "zh-Hans": "修复",
+            "zh-Hant": "修正",
+            "ja": "修正"
+          },
+          "detail": {
+            "en": "Encrypted CatVod subscriptions import. Titles show “&” and other characters correctly instead of codes like “&amp;”. On iPhone, the player keeps its title and buttons on one row.",
+            "zh-Hans": "加密的 CatVod 订阅现在可以导入。标题中的“&”等字符会正确显示，不再出现“&amp;”这样的代码。在 iPhone 上，播放器的标题和按钮保持在同一行。",
+            "zh-Hant": "加密的 CatVod 訂閱現在可以匯入。標題中的「&」等字元會正確顯示，不再出現「&amp;」這樣的代碼。在 iPhone 上，播放器的標題和按鈕保持在同一行。",
+            "ja": "暗号化された CatVod のサブスクリプションを読み込めるようになりました。タイトルの「&」などの文字が「&amp;」のようなコードではなく正しく表示されます。iPhone では、プレーヤーのタイトルとボタンが 1 行に収まります。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.6.5",
       "date": "2026-10-16",
       "links": {
