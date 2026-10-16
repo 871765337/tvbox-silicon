@@ -803,3 +803,12 @@
 "Time" = "Time";
 "Send Error Reports" = "Send Error Reports";
 "Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history." = "Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history.";
+"Getting it ready" = "Getting it ready";
+"Getting it ready · from %@" = "Getting it ready · from %@";
+"The connection is a little slow. Still loading…" = "The connection is a little slow. Still loading…";
+"The server hasn't answered yet. Still trying…" = "The server hasn't answered yet. Still trying…";
+"This line isn't answering right now." = "This line isn't answering right now.";
+"Another line may be faster:" = "Another line may be faster:";
+"Can't play this right now" = "Can't play this right now";
+"Try Again" = "Try Again";
+"This episode's link may have expired. Open it again, or try another line." = "This episode's link may have expired. Open it again, or try another line.";

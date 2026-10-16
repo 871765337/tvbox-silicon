@@ -45,6 +45,7 @@
 		26A1C218652FCEEE9FC60E0F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B442C75C212445F3786397ED /* SettingsView.swift */; };
 		2750CF15FA8542E4C8196B3B /* MusicMacPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73C9A2A4F2D8A180EBDF8C8E /* MusicMacPlayer.swift */; };
 		277D741E2A86C06612A8034A /* CloudQRLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78573DE76BCF27CABBB20F3 /* CloudQRLoginView.swift */; };
+		29CEEA35351802EDF4606161 /* PlaybackWaitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57642E0B8E9377FD57BC9D7F /* PlaybackWaitView.swift */; };
 		2A79FAEF85C485687C54E766 /* OpenJDK-assembly-exception.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4EF42E1957EFE569C0D2CF7D /* OpenJDK-assembly-exception.txt */; };
 		2A9680486C1F040EA193F12E /* MusicTVScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DF697EACE4307031398E5A /* MusicTVScreen.swift */; };
 		2B263C305CDC1687A050CCBC /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45CB8261D922949ADBDBE15 /* DownloadsView.swift */; };
@@ -119,6 +120,7 @@
 		82933DAB592E786763C7D05B /* MusicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 235375CC2420B76124FCEBC2 /* MusicView.swift */; };
 		82E7112F0FCDD1CEB5A40E59 /* Unicorn-GPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = B61DBAA2E8637B976A160D47 /* Unicorn-GPL2.txt */; };
 		84C5345267FA2D8221B2F9FB /* Keystone-LLVM.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3A398E8AF0C7E4C94787F4B3 /* Keystone-LLVM.txt */; };
+		854245265CFB2D739FCBDAEB /* PlaybackWaitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57642E0B8E9377FD57BC9D7F /* PlaybackWaitView.swift */; };
 		85586B8E5EBB58EE523F9FCE /* PluginSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C5AB58ECA34E84E70A20906 /* PluginSignInView.swift */; };
 		858FA22A2D9276C2596DCED9 /* MusicNowPlayingPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D10D9BAFE11E31196C70422 /* MusicNowPlayingPanels.swift */; };
 		87B2F825565E0BAC988FC145 /* JNA-Apache2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8320284C7FB9590C44BA7102 /* JNA-Apache2.txt */; };
@@ -180,6 +182,7 @@
 		EA59E4954399A7E5BC6C2348 /* unidbg.txt in Resources */ = {isa = PBXBuildFile; fileRef = 995F5F0DB35FE66B4F90B4FF /* unidbg.txt */; };
 		ED3BFF07859A99C455624644 /* DanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5737402EC96F0FBF79243E /* DanmakuView.swift */; };
 		EE40CAB25587252D370219D3 /* PlaybackHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 334B106CCFB47B5E27376A16 /* PlaybackHistoryView.swift */; };
+		EF0B1C626478D79D1B6486D7 /* PlaybackWaitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57642E0B8E9377FD57BC9D7F /* PlaybackWaitView.swift */; };
 		F199C77516C38F5644997AEB /* TVCore in Frameworks */ = {isa = PBXBuildFile; productRef = A72103001ACB22093291D051 /* TVCore */; };
 		F2B94D8E8A07F399F14CF5EC /* MusicTVScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DF697EACE4307031398E5A /* MusicTVScreen.swift */; };
 		F2F68C26F3FB2279B102CF52 /* BilibiliAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B684AAD2C1CD8AC3699FB446 /* BilibiliAccountView.swift */; };
@@ -216,6 +219,7 @@
 		46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogPlaybackActions.swift; sourceTree = "<group>"; };
 		49F3577BBD5630331F34E84E /* OpenJDK-additional.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OpenJDK-additional.txt"; sourceTree = "<group>"; };
 		4EF42E1957EFE569C0D2CF7D /* OpenJDK-assembly-exception.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OpenJDK-assembly-exception.txt"; sourceTree = "<group>"; };
+		57642E0B8E9377FD57BC9D7F /* PlaybackWaitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackWaitView.swift; sourceTree = "<group>"; };
 		58E59EDBC7BE62078557E781 /* MusicRemoteControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicRemoteControl.swift; sourceTree = "<group>"; };
 		66DF697EACE4307031398E5A /* MusicTVScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicTVScreen.swift; sourceTree = "<group>"; };
 		675EA4CF000337C94DF5B1D3 /* LiveRoomsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRoomsView.swift; sourceTree = "<group>"; };
@@ -375,6 +379,7 @@
 				235375CC2420B76124FCEBC2 /* MusicView.swift */,
 				334B106CCFB47B5E27376A16 /* PlaybackHistoryView.swift */,
 				6876ACF1E9D9F80BBC4F22C4 /* PlaybackView.swift */,
+				57642E0B8E9377FD57BC9D7F /* PlaybackWaitView.swift */,
 				8CB1FA4BB4990588B428781E /* PlayerView.swift */,
 				8C5AB58ECA34E84E70A20906 /* PluginSignInView.swift */,
 				8B842401113B0BDFA7B532B4 /* QALaunch.swift */,
@@ -737,6 +742,7 @@
 				B85FBE9366F3D7487A517779 /* MusicView.swift in Sources */,
 				49FAE12E9DA2ED063E9C4754 /* PlaybackHistoryView.swift in Sources */,
 				6DBF1FDBD1FD2889D191197E /* PlaybackView.swift in Sources */,
+				29CEEA35351802EDF4606161 /* PlaybackWaitView.swift in Sources */,
 				FDA61F14FE9C263521D69DD7 /* PlayerView.swift in Sources */,
 				85586B8E5EBB58EE523F9FCE /* PluginSignInView.swift in Sources */,
 				DF010807CD40F2180FDE6793 /* QALaunch.swift in Sources */,
@@ -786,6 +792,7 @@
 				82933DAB592E786763C7D05B /* MusicView.swift in Sources */,
 				EE40CAB25587252D370219D3 /* PlaybackHistoryView.swift in Sources */,
 				089C2D01F3B95CB1738D9AD9 /* PlaybackView.swift in Sources */,
+				EF0B1C626478D79D1B6486D7 /* PlaybackWaitView.swift in Sources */,
 				97DFD3224F5E543A2BE6EDE0 /* PlayerView.swift in Sources */,
 				2158BE026F2A22702C9A2890 /* PluginSignInView.swift in Sources */,
 				0AF3C56A9798DD0C68EC63D8 /* QALaunch.swift in Sources */,
@@ -836,6 +843,7 @@
 				8DC762240D57D529EF917F2E /* MusicView.swift in Sources */,
 				024BC7DE6E06F79B6511FC89 /* PlaybackHistoryView.swift in Sources */,
 				F418F8B8793AF0B489F83AB9 /* PlaybackView.swift in Sources */,
+				854245265CFB2D739FCBDAEB /* PlaybackWaitView.swift in Sources */,
 				C5E9C8C7F693011882FC1F22 /* PlayerView.swift in Sources */,
 				9A75F15C645F052034EA6926 /* PluginSignInView.swift in Sources */,
 				C715A188F36F0CC004231464 /* QALaunch.swift in Sources */,

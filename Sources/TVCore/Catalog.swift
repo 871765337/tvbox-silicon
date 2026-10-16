@@ -25,7 +25,7 @@ public struct Video: Identifiable, Hashable, Sendable, Codable {
     public let episodes: [Episode]
     public init?(json: [String: JSONValue], origin: URL) {
         guard let id = json["vod_id"]?.string, !id.isEmpty else { return nil }
-        self.id = id; name = json["vod_name"]?.string ?? id
+        self.id = id; name = json["vod_name"]?.string.map(HTMLText.name).flatMap { $0.isEmpty ? nil : $0 } ?? id
         year = json["vod_year"]?.string.flatMap { $0.count == 4 && $0.allSatisfy(\.isNumber) ? $0 : nil }
         let artwork = json["vod_pic"]?.string.flatMap { PosterResource(address: $0, origin: origin) }
         poster = artwork?.url; posterHeaders = artwork?.headers ?? [:]
@@ -38,7 +38,7 @@ public struct Video: Identifiable, Hashable, Sendable, Codable {
             var episodes: [Episode] = []
             for (index, item) in group.components(separatedBy: "#").enumerated() where !item.isEmpty {
                 let parts = item.split(separator: "$", maxSplits: 1).map(String.init)
-                episodes.append(Episode(id: "\(groupIndex)-\(index)", name: parts.count == 2 ? parts[0] : L10n.text("Play"), address: parts.last ?? item, flag: flag, videoID: id))
+                episodes.append(Episode(id: "\(groupIndex)-\(index)", name: parts.count == 2 ? HTMLText.name(parts[0]) : L10n.text("Play"), address: parts.last ?? item, flag: flag, videoID: id))
             }
             groups.append(episodes)
         }
@@ -72,6 +72,19 @@ enum HTMLText {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// A title or name: entities decoded ("太阳&amp;月亮" is "太阳&月亮"), spaces tidied, and nothing else touched,
+    /// so a name that reads like markup after decoding ("&lt;3") keeps its text.
+    static func name(_ text: String) -> String {
+        var text = text
+        for _ in 0..<3 {
+            let decoded = decodeEntities(text)
+            if decoded == text { break }
+            text = decoded
+        }
+        return text.replacingOccurrences(of: "[\\s\u{00A0}\u{3000}]+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private static func decodeEntities(_ text: String) -> String {
         guard text.contains("&") else { return text }
         let source = text as NSString
@@ -96,7 +109,7 @@ public struct CatalogPage: Sendable {
     public init(json: [String: JSONValue], origin: URL) {
         categories = (json["class"]?.array ?? []).compactMap {
             guard let v = $0.object, let id = v["type_id"]?.string else { return nil }
-            return Category(id: id, name: v["type_name"]?.string ?? id)
+            return Category(id: id, name: v["type_name"]?.string.map(HTMLText.name) ?? id)
         }
         videos = (json["list"]?.array ?? []).compactMap { $0.object.flatMap { Video(json: $0, origin: origin) } }
         pageCount = max(1, json["pagecount"]?.int ?? 1)

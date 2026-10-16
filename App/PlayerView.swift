@@ -23,8 +23,11 @@ struct PlaybackView: View {
                 NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
                                  qualities: session.qualities, quality: session.quality, choose: { session.choose(quality: $0) },
                                  live: session.isLive, previous: episodeAction(store.previousEpisode(before: channel)),
-                                 next: episodeAction(store.nextEpisode(after: channel))).ignoresSafeArea()
+                                 next: episodeAction(store.nextEpisode(after: channel)), waiting: waitContent).ignoresSafeArea()
             }
+            #elseif os(iOS)
+            NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
+                             waiting: waitContent).ignoresSafeArea()
             #else
             NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision).ignoresSafeArea()
             #endif
@@ -73,14 +76,10 @@ struct PlaybackView: View {
     #if !os(tvOS)
     private var chrome: some View {
         VStack {
-            // On a phone the title and buttons rarely fit one line: the buttons then get a row of their own.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { chromeTitle; Spacer(minLength: 0); chromeButtons }
-                VStack(alignment: .leading, spacing: 10) {
-                    chromeTitle
-                    HStack { Spacer(minLength: 0); chromeButtons }
-                }
-            }
+            // One row: a long title truncates to leave the buttons room; only when the buttons alone leave no room
+            // for a title do they get a row of their own. (One copy of each view: ViewThatFits with a candidate per
+            // title width built every glass button many times over and stalled the main thread past the watchdog.)
+            ChromeRow { chromeTitle; chromeButtons }
             .padding(16)
             #if os(iOS)
             // Below VideoPlayer's own top row (Picture in Picture, volume), which would sit under the title.
@@ -173,8 +172,36 @@ struct PlaybackView: View {
     @ViewBuilder private var status: some View {
         if let error = session.error {
             #if os(tvOS)
-            TVPlaybackFailureView(channelName: channel.name, details: error,
+            TVPlaybackFailureView(channelName: channel.name, details: error, symbol: session.errorSymbol, backdrop: waitContent,
                                   retry: { startCatalogPlayback(session, channel: channel, store: store) }, goBack: { dismiss() })
+            #elseif os(iOS)
+            // A pause, not an alarm: the artwork stays behind (see waitContent), the words are kind, and the next step is clear.
+            VStack(spacing: 0) {
+                Image(systemName: session.errorSymbol)
+                    .font(.system(size: 58, weight: .regular))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.white)
+                    .symbolEffect(.breathe, options: .repeat(.periodic(delay: 2.5)))
+                    .shadow(color: .white.opacity(0.22), radius: 26)
+                    .frame(height: 70)
+                    .accessibilityHidden(true)
+                Text(L10n.text("Can't play this right now")).font(.title2.weight(.semibold)).padding(.top, 24)
+                Text(error).font(.callout).foregroundStyle(.white.opacity(0.7)).lineSpacing(2)
+                    .multilineTextAlignment(.center).frame(maxWidth: 330).padding(.top, 10)
+                GlassGroup(spacing: 12) {
+                    HStack(spacing: 12) {
+                        Button { startCatalogPlayback(session, channel: channel, store: store) } label: {
+                            Label(L10n.text("Try Again"), systemImage: "arrow.clockwise")
+                        }
+                        .controlButton(prominent: true).tint(Brand.accent)
+                        Button { dismiss() } label: { Label(L10n.text("Close"), systemImage: "xmark") }.controlButton()
+                    }
+                }
+                .controlSize(.large).padding(.top, 30)
+            }
+            .foregroundStyle(.white)
+            .padding(32)
+            .environment(\.colorScheme, .dark)
             #else
             VStack(spacing: 18) {
                 Image(systemName: "exclamationmark.triangle.fill").font(.largeTitle).foregroundStyle(Brand.amber)
@@ -189,19 +216,91 @@ struct PlaybackView: View {
             .padding(30).glassPanel(cornerRadius: 30).padding(30)
             #endif
         } else if session.loading || session.buffering {
+            #if os(macOS)
             // Top of the frame, clear of the transport bar. Seeks stall briefly; only longer waits show.
             LoadingCard(appearAfter: session.loading ? 0 : 1.5) { session.loadingProgress }
                 .padding(.horizontal, 24).padding(.top, 48)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .allowsHitTesting(false)
+            #endif
+        }
+    }
+
+    private var waitContent: PlaybackWaitContent? {
+        #if os(tvOS)
+        .make(session, channel: channel, store: store, linesHint: false)
+        #else
+        .make(session, channel: channel, store: store, linesHint: true)
+        #endif
+    }
+}
+
+
+extension PlaybackWaitContent {
+    /// The wait drawn under a player's controls: the artwork while the episode first loads (and behind
+    /// an error), the words alone when playback stalls. `linesHint` where the player has the ⋯ menu.
+    static func make(_ session: PlaybackSession, channel: Channel, store: Store, linesHint: Bool) -> PlaybackWaitContent? {
+        let starting = session.loading || session.error != nil || !session.showsPicture
+        guard starting || session.buffering else { return nil }
+        let catalog = store.catalog(for: channel)
+        let artwork = PlaybackArtwork(poster: catalog?.video.poster ?? channel.historyContext?.poster,
+                                      headers: catalog?.video.posterHeaders ?? channel.historyContext?.posterHeaders ?? [:])
+        let resume = channel.resumePosition, hint = linesHint && catalog != nil
+        return PlaybackWaitContent(artwork: artwork, starting: starting, showsWords: session.error == nil, appearAfter: starting ? 0.6 : 1.5) { [session] elapsed in
+            session.wait(elapsed: elapsed, resume: resume, linesHint: hint)
         }
     }
 }
+
+#if !os(tvOS)
+/// The player's title bar: the title and the buttons share one row, the title truncating to leave the buttons their
+/// width; when that would leave the title less than `minimumTitle`, the buttons take a row of their own, right-aligned.
+private struct ChromeRow: SwiftUI.Layout {
+    var spacing: CGFloat = 12
+    var rowSpacing: CGFloat = 10
+    var minimumTitle: CGFloat = 110
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
+        guard subviews.count == 2 else { return .zero }
+        let buttons = subviews[1].sizeThatFits(.unspecified)
+        let width = proposal.width ?? subviews[0].sizeThatFits(.unspecified).width + spacing + buttons.width
+        if let room = titleRoom(width, buttons: buttons) {
+            let title = subviews[0].sizeThatFits(ProposedViewSize(width: room, height: nil))
+            return CGSize(width: width, height: max(title.height, buttons.height))
+        }
+        let title = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
+        return CGSize(width: width, height: title.height + rowSpacing + buttons.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        let buttons = subviews[1].sizeThatFits(.unspecified)
+        if let room = titleRoom(bounds.width, buttons: buttons) {
+            let title = subviews[0].sizeThatFits(ProposedViewSize(width: room, height: nil))
+            let row = max(title.height, buttons.height)
+            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY + (row - title.height) / 2), proposal: ProposedViewSize(width: room, height: title.height))
+            subviews[1].place(at: CGPoint(x: bounds.maxX - buttons.width, y: bounds.minY + (row - buttons.height) / 2), proposal: .unspecified)
+        } else {
+            let title = subviews[0].sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
+            subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: title.height))
+            subviews[1].place(at: CGPoint(x: bounds.maxX - buttons.width, y: bounds.minY + title.height + rowSpacing), proposal: .unspecified)
+        }
+    }
+
+    private func titleRoom(_ width: CGFloat, buttons: CGSize) -> CGFloat? {
+        let room = width - buttons.width - spacing
+        return room >= minimumTitle ? room : nil
+    }
+}
+#endif
 
 #if os(tvOS)
 private struct TVPlaybackFailureView: View {
     let channelName: String
     let details: String
+    var symbol = "play.slash.fill"
+    /// The episode's colours behind the message, as on iPhone; the plain background when there is no artwork.
+    var backdrop: PlaybackWaitContent? = nil
     let retry: () -> Void
     let goBack: () -> Void
     @State private var showsDetails = false
@@ -209,14 +308,18 @@ private struct TVPlaybackFailureView: View {
 
     var body: some View {
         ZStack {
-            TVStyle.background.ignoresSafeArea()
+            if let backdrop { backdrop.view } else { TVStyle.background.ignoresSafeArea() }
             VStack(spacing: 0) {
-                Image(systemName: "video.slash")
-                    .font(.system(size: 64, weight: .light))
-                    .foregroundStyle(Color(white: 0.65))
+                Image(systemName: symbol)
+                    .font(.system(size: 96, weight: .regular))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.white)
+                    .symbolEffect(.breathe, options: .repeat(.periodic(delay: 2.5)))
+                    .shadow(color: .white.opacity(0.2), radius: 40)
+                    .frame(height: 120)
                     .accessibilityHidden(true)
-                    .padding(.bottom, 32)
-                Text(L10n.text("Playback error"))
+                    .padding(.bottom, 40)
+                Text(L10n.text("Can't play this right now"))
                     .font(.system(size: 56, weight: .bold))
                     .accessibilityAddTraits(.isHeader)
                     .padding(.bottom, 18)
@@ -228,9 +331,9 @@ private struct TVPlaybackFailureView: View {
                     .font(.system(size: 27)).foregroundStyle(Color(white: 0.65))
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 20) {
-                    Button(L10n.text("Retry"), action: retry).focused($retryFocused)
-                    Button(L10n.text("Go back"), action: goBack)
-                    Button(L10n.text(showsDetails ? "Hide details" : "Show details")) { showsDetails.toggle() }
+                    Button(action: retry) { Label(L10n.text("Try Again"), systemImage: "arrow.clockwise") }.focused($retryFocused)
+                    Button(action: goBack) { Label(L10n.text("Go back"), systemImage: "chevron.backward") }
+                    Button { showsDetails.toggle() } label: { Label(L10n.text(showsDetails ? "Hide details" : "Show details"), systemImage: "info.circle") }
                 }
                 .buttonStyle(TVPlaybackRecoveryStyle())
                 .padding(.top, 48)
@@ -306,10 +409,17 @@ private struct NativePlayerView: View {
     @Binding var showsDanmaku: Bool
     var opacity = 0.9
     var revision = ""
+    var waiting: PlaybackWaitContent? = nil
     var body: some View {
         // The overlay sits between the video and the playback controls.
         VideoPlayer(player: player) {
-            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) }
+            ZStack {
+                if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) }
+                // The artwork dissolves into the first frame.
+                if let waiting { waiting.view.transition(.opacity) }
+            }
+            .animation(.easeInOut(duration: 0.7), value: waiting == nil)
+            .animation(.easeInOut(duration: 0.4), value: waiting?.starting)
         }
     }
 }
@@ -349,6 +459,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     /// The neighbouring episodes of a catalog video, as transport-bar buttons beside the menus.
     var previous: EpisodeAction? = nil
     var next: EpisodeAction? = nil
+    var waiting: PlaybackWaitContent? = nil
     final class Coordinator { var host: UIHostingController<AnyView>?; var listed = "" }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIViewController(context: Context) -> AVPlayerViewController {
@@ -412,7 +523,11 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         controller.transportBarCustomMenuItems = items
     }
     private var overlay: AnyView {
-        AnyView(Group { if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) } })
+        AnyView(ZStack {
+            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) }
+            if let waiting { waiting.view.transition(.opacity) }
+        }
+        .animation(.easeInOut(duration: 0.7), value: waiting == nil))
     }
 }
 #endif
@@ -544,12 +659,13 @@ private struct DesktopPlaybackView: View {
     @State private var showsDanmakuList = false
 
     private var showsChrome: Bool { idle.visible || session.error != nil }
+    private var waitContent: PlaybackWaitContent? { .make(session, channel: channel, store: store, linesHint: true) }
 
     var body: some View {
         ZStack(alignment: .top) {
             ZStack {
                 Color.black
-                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: session.isLive)
+                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: session.isLive, waiting: waitContent)
                 if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision) }
                 if let error = session.error {
                     VStack(spacing: 16) {
@@ -559,11 +675,6 @@ private struct DesktopPlaybackView: View {
                     }
                     .padding(24).frame(maxWidth: 440)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18)).padding()
-                } else if session.loading || session.buffering {
-                    LoadingCard(appearAfter: session.loading ? 0 : 1.5) { session.loadingProgress }
-                        .padding(.horizontal, 24).padding(.top, 56)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .allowsHitTesting(false)
                 }
             }
             topBar
@@ -667,8 +778,20 @@ private struct DesktopNativePlayer: NSViewRepresentable {
     let player: AVPlayer
     let fillsFrame: Bool
     var live = false
+    var waiting: PlaybackWaitContent? = nil
+    final class Coordinator { var host: PassthroughHostingView<AnyView>? }
+    func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
+        // The wait lives in the content overlay, under the floating controls, and lets the mouse through to them.
+        if let container = view.contentOverlayView {
+            let host = PassthroughHostingView(rootView: overlay)
+            host.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(host)
+            NSLayoutConstraint.activate([host.leadingAnchor.constraint(equalTo: container.leadingAnchor), host.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                                         host.topAnchor.constraint(equalTo: container.topAnchor), host.bottomAnchor.constraint(equalTo: container.bottomAnchor)])
+            context.coordinator.host = host
+        }
         view.controlsStyle = live ? .none : .floating
         view.player = player
         view.showsFullScreenToggleButton = true
@@ -682,8 +805,17 @@ private struct DesktopNativePlayer: NSViewRepresentable {
         if view.controlsStyle != style { view.controlsStyle = style }
         view.player = player
         view.videoGravity = fillsFrame ? .resizeAspectFill : .resizeAspect
+        context.coordinator.host?.rootView = overlay
     }
-    static func dismantleNSView(_ view: AVPlayerView, coordinator: ()) { view.player = nil }
+    static func dismantleNSView(_ view: AVPlayerView, coordinator: Coordinator) { view.player = nil }
+    private var overlay: AnyView {
+        AnyView(ZStack { if let waiting { waiting.view.transition(.opacity) } }.animation(.easeInOut(duration: 0.7), value: waiting == nil))
+    }
+}
+
+/// A hosting view that draws but never takes the mouse, so AVPlayerView's controls above it keep working.
+private final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 #endif
 

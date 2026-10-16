@@ -803,3 +803,12 @@
 "Time" = "時間";
 "Send Error Reports" = "エラーレポートを送信";
 "Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history." = "不具合を直すため、エラーを1日に数回開発者に送信します。送るのはエラー内容（URL はサーバー名のみ）、アプリと OS のバージョン、ランダムな ID です。アカウント、パスワード、視聴履歴は送信しません。";
+"Getting it ready" = "準備しています";
+"Getting it ready · from %@" = "準備しています · %@ から再開";
+"The connection is a little slow. Still loading…" = "回線が少し遅いようです。読み込みを続けています…";
+"The server hasn't answered yet. Still trying…" = "サーバーの応答を待っています…";
+"This line isn't answering right now." = "この回線は今応答していません";
+"Another line may be faster:" = "別の回線の方が速いかもしれません：";
+"Can't play this right now" = "今は再生できません";
+"Try Again" = "もう一度試す";
+"This episode's link may have expired. Open it again, or try another line." = "このエピソードのリンクは期限切れかもしれません。開き直すか、別の回線を試してください。";

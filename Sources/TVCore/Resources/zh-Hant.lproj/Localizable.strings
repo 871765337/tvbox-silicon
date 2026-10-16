@@ -803,3 +803,12 @@
 "Time" = "時長";
 "Send Error Reports" = "傳送錯誤報告";
 "Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history." = "每天數次將錯誤傳送給開發者以便修正：錯誤內容（網址只保留伺服器名稱）、App 與系統版本，以及一組隨機 ID。絕不包含你的帳號、密碼或觀看紀錄。";
+"Getting it ready" = "正在為你準備";
+"Getting it ready · from %@" = "正在為你準備 · 從 %@ 繼續";
+"The connection is a little slow. Still loading…" = "網路有點慢，還在努力載入…";
+"The server hasn't answered yet. Still trying…" = "伺服器還沒有回應，還在努力連線…";
+"This line isn't answering right now." = "這條線路暫時沒有回應";
+"Another line may be faster:" = "換條線路可能會更快：";
+"Can't play this right now" = "暫時無法播放";
+"Try Again" = "再試一次";
+"This episode's link may have expired. Open it again, or try another line." = "這一集的連結可能已經過期了。重新打開這一集，或者換條線路試試。";

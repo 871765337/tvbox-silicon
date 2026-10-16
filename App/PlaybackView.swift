@@ -69,6 +69,10 @@ import TVCore
     var loading = true
     var looping = false
     var buffering = false
+    /// Whether the picture has started moving: the waiting screen stays until then, so no black frame shows between.
+    private(set) var showsPicture = false
+    /// The SF Symbol that names the latest failure for the error screen.
+    private(set) var errorSymbol = "play.slash.fill"
     /// Bullet comments for the media, when its source has them.
     private var sourceDanmaku: [Danmaku] = []
     var danmaku: [Danmaku] { sourceDanmaku.isEmpty ? catalogDanmaku.renderedComments : sourceDanmaku }
@@ -230,7 +234,7 @@ import TVCore
     static weak var current: PlaybackSession?
     func start(_ channel: Channel) {
         Self.current = self
-        stop(); error = nil; loading = true; sourceDanmaku = []; qualities = []; quality = nil; switchNotice = nil
+        stop(); error = nil; errorSymbol = "play.slash.fill"; loading = true; showsPicture = false; sourceDanmaku = []; qualities = []; quality = nil; switchNotice = nil
         historyContext = channel.historyContext
         requestedResumePosition = channel.resumePosition
         pendingResume = channel.resumePosition.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
@@ -335,6 +339,8 @@ import TVCore
             let failure = item.error
             let message = failure?.localizedDescription
             let detail = failure.map(Self.describe) ?? "-"
+            let refused = Self.refusedLink(failure, log: item.errorLog())
+            let network = Self.networkFailure(failure)
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
                 if status == .readyToPlay {
@@ -345,7 +351,12 @@ import TVCore
                 if status == .failed {
                     Diagnostics.shared.record(.error, "player", "failed host=\(self.transfer.host ?? channel.url.host() ?? "-") \(self.transfer.failure.map { "upstream=\($0) " } ?? "")\(detail) \(self.failureContext(channel, url: url, item: item))")
                     if self.retryLive(after: failure) { return }
-                    self.loading = false; self.error = message ?? L10n.text("This media cannot be played. Try another channel or source.")
+                    // A refused link is usually an expired one: say so in plain words rather than the system's.
+                    let expired = refused || [401, 403, 404, 410].contains(self.transfer.httpStatus ?? 0)
+                    self.loading = false
+                    self.errorSymbol = expired ? "clock.badge.exclamationmark" : network ? "wifi.exclamationmark" : "play.slash.fill"
+                    self.error = expired ? L10n.text("This episode's link may have expired. Open it again, or try another line.")
+                        : message ?? L10n.text("This media cannot be played. Try another channel or source.")
                 }
             }
         }
@@ -372,10 +383,19 @@ import TVCore
         timeObservation = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
             let waiting = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
             let paused = player.timeControlStatus == .paused
+            let playing = player.timeControlStatus == .playing
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
                 self.buffering = waiting
                 self.paused = paused
+                // The first frame lands a beat after playback starts; keep the artwork until then, so no black flashes between.
+                if playing, !self.showsPicture {
+                    Task { @MainActor [weak self] in
+                        try? await Task.sleep(for: .milliseconds(350))
+                        guard let self, self.generation == activeGeneration, self.player.timeControlStatus == .playing else { return }
+                        self.showsPicture = true
+                    }
+                }
             }
         }
         muteObservation = player.observe(\.isMuted, options: [.initial, .new]) { [weak self] player, _ in
@@ -577,5 +597,61 @@ extension PlaybackSession {
         formatter.countStyle = .file
         formatter.allowsNonnumericFormatting = false // "0 KB", not "Zero KB"
         return L10n.text("%@/s", formatter.string(fromByteCount: Int64(max(0, bytesPerSecond))))
+    }
+}
+
+extension PlaybackSession {
+    /// Whether the server refused the link (HTTP 401, 403, 404 or 410), which for a catalog episode usually means it expired.
+    /// AVFoundation reports these as URL or Core Media errors more often than as a status in the error log.
+    nonisolated static func refusedLink(_ error: Error?, log: AVPlayerItemErrorLog?) -> Bool {
+        if [401, 403, 404, 410].contains(log?.events.last?.errorStatusCode ?? 0) { return true }
+        var current = error as NSError?
+        while let error = current {
+            if error.domain == NSURLErrorDomain,
+               [NSURLErrorNoPermissionsToReadFile, NSURLErrorFileDoesNotExist, NSURLErrorUserAuthenticationRequired].contains(error.code) { return true }
+            // Core Media's codes for HTTP 403 and 404.
+            if error.domain == "CoreMediaErrorDomain", [-12660, -12938].contains(error.code) { return true }
+            current = error.userInfo[NSUnderlyingErrorKey] as? NSError
+        }
+        return false
+    }
+
+    /// A failure to reach the server at all: offline, timed out, or the host could not be found.
+    nonisolated static func networkFailure(_ error: Error?) -> Bool {
+        var current = error as NSError?
+        while let error = current {
+            if error.domain == NSURLErrorDomain, [NSURLErrorNotConnectedToInternet, NSURLErrorTimedOut, NSURLErrorCannotFindHost,
+                                                   NSURLErrorCannotConnectToHost, NSURLErrorNetworkConnectionLost].contains(error.code) { return true }
+            current = error.userInfo[NSUnderlyingErrorKey] as? NSError
+        }
+        return false
+    }
+}
+
+extension PlaybackSession {
+    /// The waiting screen's words: the facts `loadingProgress` reports, said calmly. Speeds and server
+    /// names stay out; a second line suggests another line only once the wait has run long.
+    func wait(elapsed: TimeInterval, resume: Double?, linesHint: Bool) -> PlaybackWait {
+        if let switchNotice { return PlaybackWait(message: Self.preparing(resume), caption: switchNotice) }
+        // AVFoundation retries a failed request by itself; give it a moment before saying so.
+        if elapsed >= 4, transfer.httpStatus != nil || transfer.failure != nil {
+            return PlaybackWait(message: L10n.text("This line isn't answering right now."), suggestsLines: linesHint)
+        }
+        if elapsed >= LoadingCard.patience {
+            if transfer.received == 0 {
+                return PlaybackWait(message: L10n.text("The server hasn't answered yet. Still trying…"), suggestsLines: linesHint)
+            }
+            if let bytes = transfer.bytesPerSecond, let required = transfer.required, bytes < required {
+                return PlaybackWait(message: L10n.text("The connection is a little slow. Still loading…"), suggestsLines: linesHint)
+            }
+        }
+        return PlaybackWait(message: loading ? Self.preparing(resume) : L10n.text("Buffering…"))
+    }
+
+    /// "Getting it ready", with the place playback picks up from when there is one.
+    static func preparing(_ resume: Double?) -> String {
+        guard let resume, resume.isFinite, resume >= 5 else { return L10n.text("Getting it ready") }
+        let pattern: Duration.TimeFormatStyle.Pattern = resume >= 3600 ? .hourMinuteSecond : .minuteSecond
+        return L10n.text("Getting it ready · from %@", Duration.seconds(Int(resume)).formatted(.time(pattern: pattern)))
     }
 }

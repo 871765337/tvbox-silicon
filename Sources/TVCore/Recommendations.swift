@@ -44,7 +44,7 @@ public struct Recommendation: Identifiable, Hashable, Sendable {
     public let destination: Destination
 
     public init?(json: [String: JSONValue], origin: URL, isIndex: Bool) {
-        let title = (json["vod_name"]?.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = HTMLText.name(json["vod_name"]?.string ?? "")
         guard !title.isEmpty else { return nil }
         let video = Video(json: json, origin: origin)
         // Index actions are provider controls, not title recommendations.

@@ -95,6 +95,15 @@ private func fixture(_ name: String, _ ext: String) throws -> Data {
     #expect(HTMLText.plain("<p>Tom &amp;amp; Jerry&#39;s &ldquo;day&rdquo;</p><br/>Part&#x20;2") == "Tom & Jerry's “day”\nPart 2")
     #expect(HTMLText.plain("R&D &unknown; a&b") == "R&D &unknown; a&b")
 }
+@Test func namesDecodeEntitiesWithoutStrippingText() {
+    #expect(HTMLText.name("宝可梦 太阳&amp;月亮 第三季") == "宝可梦 太阳&月亮 第三季")
+    #expect(HTMLText.name("I &lt;3 &amp;amp; you") == "I <3 & you")
+    #expect(HTMLText.name("  A\u{3000}\u{3000}B ") == "A B")
+    let video = Video(json: ["vod_id": .string("1"), "vod_name": .string("Tom &amp; Jerry"), "vod_play_url": .string("第1集 &amp; 序$https://e.com/1.m3u8")],
+                      origin: URL(string: "https://e.com")!)
+    #expect(video?.name == "Tom & Jerry")
+    #expect(video?.episodes.first?.name == "第1集 & 序")
+}
 @Test func dexJarActuallyExecutesBytecode() async throws {
     let runtime = JarRuntime()
     let jar = try fixture("runtime-probe", "jar")
