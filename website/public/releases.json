@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "1.7.1",
+      "date": "2026-10-17",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.1/Yingxia-1.7.1-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "captions.bubble.fill",
+          "title": {
+            "en": "Sharper subtitles with Smooth Motion",
+            "zh-Hans": "智能补帧时字幕更清晰",
+            "zh-Hant": "智慧補幀時字幕更清晰",
+            "ja": "なめらか補間中も字幕がくっきり"
+          },
+          "detail": {
+            "en": "With Smooth Motion on, subtitles, logos and anything that isn’t moving now stay as sharp as the video itself, instead of turning soft between frames. Pausing shows the video’s own frame, and 1080p video keeps up better on older Macs.",
+            "zh-Hans": "打开“智能补帧”时，字幕、台标以及画面中静止的部分现在会和视频本身一样清晰，不再在补出的帧中变模糊。暂停时显示的是视频的原始画面，1080p 视频在较旧的 Mac 上也更流畅。",
+            "zh-Hant": "開啟「智慧補幀」時，字幕、台標以及畫面中靜止的部分現在會和影片本身一樣清晰，不再在補出的幀中變模糊。暫停時顯示的是影片的原始畫面，1080p 影片在較舊的 Mac 上也更流暢。",
+            "ja": "「なめらか補間」がオンのときも、字幕やロゴ、動いていない部分はビデオそのものと同じ鮮明さを保ち、補間されたフレームでぼやけなくなりました。一時停止中はビデオ本来のフレームを表示し、1080p のビデオは古い Mac でもなめらかに再生されます。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.7.0",
       "date": "2026-10-16",
       "links": {
