@@ -3,6 +3,7 @@ import AVKit
 import CoreMedia
 import CoreVideo
 import VideoToolbox
+import Metal
 import TVCore
 
 /// Sharper and smoother video with Apple's own machine-learning frame processors (VideoToolbox, OS 26):
@@ -370,6 +371,8 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
         let time: CMTime
         /// A smaller copy for the interpolator, when the picture is bigger than it can keep up with.
         var work: CVPixelBuffer? = nil
+        /// A frame of the video itself, not one made in between.
+        var real = true
     }
 
     private let queue = DispatchQueue(label: "com.tvbox.video-enhancement", qos: .userInteractive)
@@ -416,38 +419,57 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
     /// once: given them ahead of time with their timestamps, the layer showed only about 25 of 60 a second.
     private let presenter = DispatchQueue(label: "com.tvbox.video-enhancement.present", qos: .userInteractive)
     private let pendingLock = NSLock()
-    private var pending: [CMSampleBuffer] = []
+    private var pending: [(sample: CMSampleBuffer, real: Bool)] = []
+    /// Paused on an in-between frame, the picture would stay on it; the latest real frame replaces it.
+    private var latestReal: CMSampleBuffer?
+    private var showingReal = true
     private var presentTimer: DispatchSourceTimer?
     /// The marker is read on a queue of its own: `queue` is busy for most of each frame while processing.
     private let probeQueue = DispatchQueue(label: "com.tvbox.video-enhancement.probe", qos: .userInteractive)
     private var probeTimer: DispatchSourceTimer?
 
+    /// Keeps still parts of in-between frames (subtitles, logos, background) at the video's own sharpness.
+    private var stillRegions: StillRegions?
+    /// Seconds spent per step since the item started (QA).
+    private var timing = (shrink: 0.0, interpolate: 0.0, compose: 0.0, scale: 0.0)
+
     init(renderer: AVSampleBufferVideoRenderer, report: @escaping @Sendable (VideoEnhancementStatus, String, String?, VideoFormatBox?) -> Void) {
         self.renderer = renderer
         self.report = report
+        // Compiling the shader takes a moment: off the frame queue.
+        setup.async { [weak self] in
+            let regions = StillRegions()
+            self?.queue.async { [weak self] in self?.stillRegions = regions }
+        }
     }
 
     deinit { timer?.cancel(); probeTimer?.cancel(); presentTimer?.cancel() }
 
     private func flush(removingImage: Bool = false) {
-        pendingLock.lock(); pending.removeAll(); pendingLock.unlock()
+        pendingLock.lock(); pending.removeAll(); latestReal = nil; showingReal = true; pendingLock.unlock()
         if removingImage { renderer.flush(removingDisplayedImage: true, completionHandler: nil) } else { renderer.flush() }
     }
 
     /// Every 2 ms: the newest frame whose time has come (a few ms early, for the next refresh) goes to the layer.
     private func present() {
         let due = CMTimebaseGetTime(renderer.timebase).seconds + 0.004
+        let paused = CMTimebaseGetRate(renderer.timebase) == 0
         pendingLock.lock()
-        var ready: CMSampleBuffer?
+        var ready: (sample: CMSampleBuffer, real: Bool)?
         var skipped = 0
-        while let first = pending.first, CMSampleBufferGetPresentationTimeStamp(first).seconds <= due {
+        while let first = pending.first, CMSampleBufferGetPresentationTimeStamp(first.sample).seconds <= due {
             if ready != nil { skipped += 1 }
             ready = pending.removeFirst()
+            if ready?.real == true { latestReal = ready?.sample }
         }
+        if let ready { showingReal = ready.real }
+        // Paused on an in-between frame: show the real one it came from instead (sharper, and what AVKit would show).
+        var still: CMSampleBuffer?
+        if ready == nil, paused, !showingReal, let latestReal { still = latestReal; showingReal = true }
         pendingLock.unlock()
-        guard let ready else { return }
         if skipped > 0 { queue.async { [self] in counts.late += skipped } }
-        renderer.enqueue(ready)
+        if let ready { renderer.enqueue(ready.sample) }
+        if let still { renderer.enqueue(still) }
     }
 
     func setOutput(_ output: AVPlayerItemVideoOutput?) {
@@ -456,7 +478,7 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
             timebaseReady = false
             previous = nil; interval = nil; hdr = false; slow = 0; workBudget = 1280 * 720
             scaler = nil; interpolator = nil; refused = []
-            counts = (0, 0, 0, 0, 0, 0, 0)
+            counts = (0, 0, 0, 0, 0, 0, 0); timing = (0, 0, 0, 0)
             flush(removingImage: true)
             update(VideoEnhancementStatus())
             if output == nil { presentTimer?.cancel(); presentTimer = nil }
@@ -546,7 +568,9 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
         var current = frame
         // A big picture is interpolated from a smaller copy: only the in-between frames are drawn at that size.
         let shrinks = work != (width, height)
+        let shrinking = CACurrentMediaTime()
         if shrinks, let interpolator { current.work = shrink(frame.buffer, with: interpolator) }
+        timing.shrink += CACurrentMediaTime() - shrinking
         var frames = [current]
         let smoothing = interpolator != nil && smoothable
         if smoothing, let interpolator, let last = previous, !shrinks || (last.work != nil && current.work != nil) {
@@ -603,7 +627,7 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
                 if let attachments = CMSampleBufferGetSampleAttachmentsArray(sample, createIfNecessary: true) as? [NSMutableDictionary] {
                     attachments.first?[kCMSampleAttachmentKey_DisplayImmediately] = true
                 }
-                pendingLock.lock(); pending.append(sample); pendingLock.unlock()
+                pendingLock.lock(); pending.append((sample, frame.real)); pendingLock.unlock()
                 lastFormat = format
                 counts.shown += 1
                 counts.lead += frame.time.seconds - now
@@ -754,8 +778,18 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
                 buffers.append(buffer); destinations.append(destination)
             }
             guard let parameters = VTLowLatencyFrameInterpolationParameters(sourceFrame: source, previousFrame: prior, interpolationPhase: phases, destinationFrames: destinations),
-                  stage.run(parameters) else { return nil }
-            for (phase, buffer) in zip(phases, buffers) {
+                  timed(&timing.interpolate, { stage.run(parameters) }) else { return nil }
+            // Made from a smaller copy, an in-between frame blurs subtitles and still detail (24 against 35 dB on
+            // burned-in subtitles): where the two real frames agree, their own pixels are used instead.
+            let composing = CACurrentMediaTime()
+            #if DEBUG
+            let still = UserDefaults.standard.bool(forKey: "qaNoStill") ? nil : stillRegions
+            #else
+            let still = stillRegions
+            #endif
+            let kept = still?.compose(previous: last.buffer, next: frame.buffer, made: buffers, phases: phases) ?? buffers
+            timing.compose += CACurrentMediaTime() - composing
+            for (phase, buffer) in zip(phases, kept) {
                 CVBufferPropagateAttachments(frame.buffer, buffer)
                 made[phase] = buffer
             }
@@ -764,7 +798,8 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
             }
         }
         return slots.map { slot in
-            Frame(buffer: slot.phase <= 0 ? last.buffer : slot.phase >= 1 ? frame.buffer : made[slot.phase] ?? frame.buffer, time: slot.time)
+            let made = slot.phase <= 0 || slot.phase >= 1 ? nil : made[slot.phase]
+            return Frame(buffer: made ?? (slot.phase < 0.5 ? last.buffer : frame.buffer), time: slot.time, real: made == nil)
         }
     }
 
@@ -776,6 +811,12 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
         distance.between += Self.difference(before, after); distance.count += 1
         brightness = (Self.meanLuma(before), Self.meanLuma(middle), Self.meanLuma(after),
                       "\(Self.fourCC(before))/\(Self.fourCC(middle)) \((CVBufferCopyAttachments(middle, .shouldPropagate) as? [String: Any])?[kCVImageBufferYCbCrMatrixKey as String] as? String ?? "no-matrix")")
+    }
+
+    private func timed(_ total: inout Double, _ work: () -> Bool) -> Bool {
+        let began = CACurrentMediaTime()
+        defer { total += CACurrentMediaTime() - began }
+        return work()
     }
 
     private func shrink(_ buffer: CVPixelBuffer, with stage: Stage) -> CVPixelBuffer? {
@@ -795,7 +836,7 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
               let destination = VTFrameProcessorFrame(buffer: buffer, presentationTimeStamp: frame.time),
               stage.run(VTLowLatencySuperResolutionScalerParameters(sourceFrame: source, destinationFrame: destination)) else { return nil }
         CVBufferPropagateAttachments(frame.buffer, buffer)
-        return Frame(buffer: buffer, time: frame.time)
+        return Frame(buffer: buffer, time: frame.time, real: frame.real)
     }
 
     // MARK: Processors
@@ -820,7 +861,8 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
         }
         if let smoothKey, interpolator == nil {
             start(smoothKey) {
-                guard let configuration = VTLowLatencyFrameInterpolationConfiguration(frameWidth: work.width, frameHeight: work.height, numberOfInterpolatedFrames: 3)
+                // Two: exact phases come back at about an eighth of a frame either way, and three cost ~5 ms more a frame (M1 Pro).
+                guard let configuration = VTLowLatencyFrameInterpolationConfiguration(frameWidth: work.width, frameHeight: work.height, numberOfInterpolatedFrames: 2)
                 else { throw StageError.unsupported }
                 guard configuration.supportedPixelFormats.contains(format) else { throw StageError.format }
                 return try Stage(key: smoothKey, configuration: configuration, destination: configuration.destinationPixelBufferAttributes, source: work,
@@ -866,7 +908,7 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
 
     /// When the work takes most of a frame's time, the device can't keep up: give up upscaling first, then smoothing.
     private func budget(_ spent: Double) {
-        let allowance = (interval ?? 1 / 30.0) * 0.8
+        let allowance = (interval ?? 1 / 30.0) * 0.92
         slow = spent > allowance ? slow + 1 : max(0, slow - 1)
         guard slow > 45 else { return }
         slow = 0
@@ -961,12 +1003,143 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
                                      distance.previous / Double(max(1, distance.count)), distance.current / Double(max(1, distance.count)),
                                      distance.between / Double(max(1, distance.count)))
                            + String(format: " · luma prev %.1f mid %.1f next %.1f ", brightness.previous, brightness.middle, brightness.current) + brightness.range : "")
+            + String(format: " · shrink %.1f interp %.1f compose %.1f ms", timing.shrink / Double(max(1, counts.frames)) * 1000,
+                            timing.interpolate / Double(max(1, counts.frames)) * 1000, timing.compose / Double(max(1, counts.frames)) * 1000)
             + String(format: " · in %d shown %d late %d failed %d cuts %d (max %.2f/%.0f) · %.1f ms, lead %.0f ms", counts.frames, counts.shown, counts.late,
                             counts.failed, counts.cuts, changeMax.histogram, changeMax.difference, average, counts.shown > 0 ? counts.lead / Double(counts.shown) * 1000 : 0)
     }
 }
 
 private enum StageError: Error { case unsupported, format, pool }
+
+/// Where the two real frames around an in-between one agree (subtitles, logos, a still background), the nearer real
+/// frame's own full-resolution pixels; where they differ, the in-between frame (made from a smaller copy for big
+/// pictures). Two Metal passes: a half-resolution map of what moves, once per interval, then a blend per frame.
+@available(macOS 26, iOS 26, tvOS 26, *)
+private final class StillRegions: @unchecked Sendable {
+    private static let shader = """
+    #include <metal_stdlib>
+    using namespace metal;
+    // 1 where the two real frames differ (anything moving, with a margin), 0 where they agree.
+    kernel void motion(texture2d<float, access::read> prev [[texture(0)]], texture2d<float, access::read> next [[texture(1)]],
+                       texture2d<float, access::write> out [[texture(2)]], constant float &threshold [[buffer(0)]],
+                       uint2 gid [[thread_position_in_grid]]) {
+        if (gid.x >= out.get_width() || gid.y >= out.get_height()) return;
+        int2 last = int2(prev.get_width(), prev.get_height()) - 1;
+        float d = 0;
+        for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) {
+            uint2 p = uint2(clamp(int2(gid) * 2 + int2(dx, dy) * 2, int2(0), last));
+            d = max(d, abs(prev.read(p).r - next.read(p).r));
+        }
+        out.write(float4(smoothstep(threshold, threshold * 2.5, d)), gid);
+    }
+    kernel void compose(texture2d<float, access::read> prev [[texture(0)]], texture2d<float, access::read> next [[texture(1)]],
+                        texture2d<float, access::sample> made [[texture(2)]], texture2d<float, access::sample> moving [[texture(3)]],
+                        texture2d<float, access::write> out [[texture(4)]], constant float &phase [[buffer(0)]],
+                        uint2 gid [[thread_position_in_grid]]) {
+        uint2 size = uint2(out.get_width(), out.get_height());
+        if (gid.x >= size.x || gid.y >= size.y) return;
+        constexpr sampler linear(filter::linear, coord::normalized, address::clamp_to_edge);
+        float2 uv = (float2(gid) + 0.5) / float2(size);
+        float4 real = phase < 0.5 ? prev.read(gid) : next.read(gid);
+        out.write(mix(real, made.sample(linear, uv), moving.sample(linear, uv).r), gid);
+    }
+    """
+    /// Below this difference (0...1) a pixel counts as still: above compression noise, below real motion.
+    private static let threshold: Float = 0.04
+
+    private let device: MTLDevice
+    private let queue: MTLCommandQueue
+    private let motion: MTLComputePipelineState
+    private let blend: MTLComputePipelineState
+    private let cache: CVMetalTextureCache
+    private var pool: (width: Int, height: Int, pool: CVPixelBufferPool)?
+    private var map: MTLTexture?
+
+    init?() {
+        guard let device = MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue(),
+              let library = try? device.makeLibrary(source: Self.shader, options: nil),
+              let motion = library.makeFunction(name: "motion").flatMap({ try? device.makeComputePipelineState(function: $0) }),
+              let blend = library.makeFunction(name: "compose").flatMap({ try? device.makeComputePipelineState(function: $0) }) else { return nil }
+        var cache: CVMetalTextureCache?
+        guard CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, device, nil, &cache) == kCVReturnSuccess, let cache else { return nil }
+        self.device = device; self.queue = queue; self.motion = motion; self.blend = blend; self.cache = cache
+    }
+
+    /// All the in-between frames of one interval in a single GPU submission; nil when any of it fails.
+    func compose(previous: CVPixelBuffer, next: CVPixelBuffer, made: [CVPixelBuffer], phases: [Float]) -> [CVPixelBuffer]? {
+        let width = CVPixelBufferGetWidth(previous), height = CVPixelBufferGetHeight(previous)
+        guard CVPixelBufferGetPlaneCount(previous) == 2, CVPixelBufferGetWidth(next) == width, CVPixelBufferGetHeight(next) == height,
+              let map = motionMap(width: (width + 1) / 2, height: (height + 1) / 2),
+              let commands = queue.makeCommandBuffer() else { return nil }
+        var textures: [CVMetalTexture] = []   // kept until the GPU is done
+        var planes: [[MTLTexture]] = []
+        for plane in 0...1 {
+            guard let prev = texture(previous, plane, &textures), let nextTexture = texture(next, plane, &textures) else { return nil }
+            planes.append([prev, nextTexture])
+        }
+        guard let encoder = commands.makeComputeCommandEncoder() else { return nil }
+        encoder.setComputePipelineState(motion)
+        encoder.setTexture(planes[0][0], index: 0); encoder.setTexture(planes[0][1], index: 1); encoder.setTexture(map, index: 2)
+        var threshold = Self.threshold
+        encoder.setBytes(&threshold, length: MemoryLayout<Float>.size, index: 0)
+        encoder.dispatchThreads(MTLSize(width: map.width, height: map.height, depth: 1), threadsPerThreadgroup: MTLSize(width: 16, height: 16, depth: 1))
+        var outputs: [CVPixelBuffer] = []
+        encoder.setComputePipelineState(blend)
+        for (buffer, phase) in zip(made, phases) {
+            guard CVPixelBufferGetPlaneCount(buffer) == 2,
+                  let out = makeBuffer(width: width, height: height, format: CVPixelBufferGetPixelFormatType(previous)) else { encoder.endEncoding(); return nil }
+            for plane in 0...1 {
+                guard let madeTexture = texture(buffer, plane, &textures), let target = texture(out, plane, &textures) else { encoder.endEncoding(); return nil }
+                for (index, item) in [planes[plane][0], planes[plane][1], madeTexture, map, target].enumerated() { encoder.setTexture(item, index: index) }
+                var value = phase
+                encoder.setBytes(&value, length: MemoryLayout<Float>.size, index: 0)
+                encoder.dispatchThreads(MTLSize(width: target.width, height: target.height, depth: 1), threadsPerThreadgroup: MTLSize(width: 16, height: 16, depth: 1))
+            }
+            CVBufferPropagateAttachments(previous, out)
+            outputs.append(out)
+        }
+        encoder.endEncoding()
+        commands.commit()
+        commands.waitUntilCompleted()
+        withExtendedLifetime(textures) {}
+        return commands.status == .completed ? outputs : nil
+    }
+
+    private func motionMap(width: Int, height: Int) -> MTLTexture? {
+        if let map, map.width == width, map.height == height { return map }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .r8Unorm, width: width, height: height, mipmapped: false)
+        descriptor.usage = [.shaderRead, .shaderWrite]
+        descriptor.storageMode = .private
+        map = device.makeTexture(descriptor: descriptor)
+        return map
+    }
+
+    private func texture(_ buffer: CVPixelBuffer, _ plane: Int, _ keep: inout [CVMetalTexture]) -> MTLTexture? {
+        var made: CVMetalTexture?
+        CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, cache, buffer, nil, plane == 0 ? .r8Unorm : .rg8Unorm,
+                                                  CVPixelBufferGetWidthOfPlane(buffer, plane), CVPixelBufferGetHeightOfPlane(buffer, plane), plane, &made)
+        guard let made, let texture = CVMetalTextureGetTexture(made) else { return nil }
+        keep.append(made)
+        return texture
+    }
+
+    private func makeBuffer(width: Int, height: Int, format: OSType) -> CVPixelBuffer? {
+        if pool?.width != width || pool?.height != height {
+            var made: CVPixelBufferPool?
+            let attributes: [String: Any] = [kCVPixelBufferWidthKey as String: width, kCVPixelBufferHeightKey as String: height,
+                                             kCVPixelBufferPixelFormatTypeKey as String: format,
+                                             kCVPixelBufferIOSurfacePropertiesKey as String: [String: String](),
+                                             kCVPixelBufferMetalCompatibilityKey as String: true]
+            CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, attributes as CFDictionary, &made)
+            pool = made.map { (width, height, $0) }
+        }
+        guard let pool else { return nil }
+        var buffer: CVPixelBuffer?
+        CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool.pool, &buffer)
+        return buffer
+    }
+}
 
 /// One running processor and the pool its output frames come from.
 @available(macOS 26, iOS 26, tvOS 26, *)
