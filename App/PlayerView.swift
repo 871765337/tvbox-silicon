@@ -784,12 +784,15 @@ private struct DesktopNativePlayer: NSViewRepresentable {
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
         // The wait lives in the content overlay, under the floating controls, and lets the mouse through to them.
+        // It follows the overlay's frame and sets no size of its own: with NSHostingView's default sizing
+        // constraints, its SwiftUI content's size pushed back through the overlay and the whole player was laid
+        // out at that size (16 × 130 pt once loading ended, the video a 16 × 9 box).
         if let container = view.contentOverlayView {
             let host = PassthroughHostingView(rootView: overlay)
-            host.translatesAutoresizingMaskIntoConstraints = false
+            host.sizingOptions = []
+            host.frame = container.bounds
+            host.autoresizingMask = [.width, .height]
             container.addSubview(host)
-            NSLayoutConstraint.activate([host.leadingAnchor.constraint(equalTo: container.leadingAnchor), host.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-                                         host.topAnchor.constraint(equalTo: container.topAnchor), host.bottomAnchor.constraint(equalTo: container.bottomAnchor)])
             context.coordinator.host = host
         }
         view.controlsStyle = live ? .none : .floating
