@@ -812,3 +812,10 @@
 "Can't play this right now" = "今は再生できません";
 "Try Again" = "もう一度試す";
 "This episode's link may have expired. Open it again, or try another line." = "このエピソードのリンクは期限切れかもしれません。開き直すか、別の回線を試してください。";
+"Picture" = "画質";
+"Sharper Picture" = "高画質化";
+"Smooth Motion (60 fps)" = "なめらか補間 (60fps)";
+"Upscales video smaller than your screen with on-device machine learning." = "画面より小さい動画をデバイス上の機械学習でアップスケールします。";
+"Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas." = "フレームを補間して 24〜30fps の動画を 60fps で再生します。電池の消費が増え、映画がテレビドラマのように見えることがあります。";
+"%d comments" = "%d 件のコメント";
+"Back to Now" = "現在に戻る";

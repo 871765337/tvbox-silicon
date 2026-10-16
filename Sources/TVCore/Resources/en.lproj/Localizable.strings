@@ -812,3 +812,10 @@
 "Can't play this right now" = "Can't play this right now";
 "Try Again" = "Try Again";
 "This episode's link may have expired. Open it again, or try another line." = "This episode's link may have expired. Open it again, or try another line.";
+"Picture" = "Picture";
+"Sharper Picture" = "Sharper Picture";
+"Smooth Motion (60 fps)" = "Smooth Motion (60 fps)";
+"Upscales video smaller than your screen with on-device machine learning." = "Upscales video smaller than your screen with on-device machine learning.";
+"Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas." = "Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas.";
+"%d comments" = "%d comments";
+"Back to Now" = "Back to Now";

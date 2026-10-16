@@ -277,6 +277,8 @@ struct FormSettingsView: View {
     @State private var bilibiliSummary = ""
     @State private var douyinSummary = ""
     @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
+    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
+    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     @AppStorage(ErrorReports.key) private var sendsErrorReports = true
     #if os(iOS)
     @State private var addingSubscription = false
@@ -369,6 +371,36 @@ struct FormSettingsView: View {
                 #if os(iOS)
                 Text(danmakuNote)
                 #endif
+            }
+            if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
+                Section {
+                    if VideoEnhancement.canUpscale {
+                        Toggle(isOn: $upscalesVideo) {
+                            #if os(iOS)
+                            FormLabel(symbol: "wand.and.sparkles", tint: .purple, title: L10n.text("Sharper Picture"))
+                            #else
+                            FormLabel(symbol: "wand.and.sparkles", tint: .purple, title: L10n.text("Sharper Picture"), subtitle: upscaleNote)
+                            #endif
+                        }
+                        .settingsSwitch()
+                    }
+                    if VideoEnhancement.canSmooth {
+                        Toggle(isOn: $smoothsVideo) {
+                            #if os(iOS)
+                            FormLabel(symbol: "film.stack", tint: .indigo, title: L10n.text("Smooth Motion (60 fps)"))
+                            #else
+                            FormLabel(symbol: "film.stack", tint: .indigo, title: L10n.text("Smooth Motion (60 fps)"), subtitle: smoothNote)
+                            #endif
+                        }
+                        .settingsSwitch()
+                    }
+                } header: {
+                    Text(L10n.text("Picture"))
+                } footer: {
+                    #if os(iOS)
+                    Text(pictureNote)
+                    #endif
+                }
             }
             #if os(iOS)
             Section {
@@ -543,6 +575,9 @@ struct FormSettingsView: View {
 
     private var canAdd: Bool { !store.importing && !store.subscriptionAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var danmakuNote: String { L10n.text("Bilibili's bullet comments, drawn over the video. You can also switch them in the player.") }
+    private var upscaleNote: String { VideoEnhancement.upscaleNote }
+    private var smoothNote: String { VideoEnhancement.smoothNote }
+    private var pictureNote: String { VideoEnhancement.note }
     private var errorReportsNote: String { L10n.text("Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history.") }
     private func add() { if canAdd { Task { await store.importSubscription() } } }
 
@@ -1098,6 +1133,8 @@ struct TVSettingsView: View {
     @State private var bilibiliSummary = ""
     @State private var douyinSummary = ""
     @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
+    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
+    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
     @AppStorage(ErrorReports.key) private var sendsErrorReports = true
 
@@ -1120,6 +1157,12 @@ struct TVSettingsView: View {
                         if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
                     }
                 TVSettingsLink(title: L10n.text("Play a URL")) { TVPlayURLPage() }
+            }
+            if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
+                TVSettingsSection(title: L10n.text("Picture"), footer: VideoEnhancement.note) {
+                    if VideoEnhancement.canUpscale { TVSettingsToggle(title: L10n.text("Sharper Picture"), isOn: $upscalesVideo) }
+                    if VideoEnhancement.canSmooth { TVSettingsToggle(title: L10n.text("Smooth Motion (60 fps)"), isOn: $smoothsVideo) }
+                }
             }
             TVSettingsSection(title: L10n.text("Advanced"),
                               footer: L10n.text("Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history.")) {

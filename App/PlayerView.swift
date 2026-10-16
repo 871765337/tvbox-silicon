@@ -11,6 +11,8 @@ struct PlaybackView: View {
     @State private var hideTask: Task<Void, Never>?
     @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
     @State private var showsDanmakuList = false
+    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
+    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
 
     private var chromeVisible: Bool { showsChrome || session.error != nil || session.loading }
 
@@ -23,11 +25,12 @@ struct PlaybackView: View {
                 NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
                                  qualities: session.qualities, quality: session.quality, choose: { session.choose(quality: $0) },
                                  live: session.isLive, previous: episodeAction(store.previousEpisode(before: channel)),
-                                 next: episodeAction(store.nextEpisode(after: channel)), waiting: waitContent).ignoresSafeArea()
+                                 next: episodeAction(store.nextEpisode(after: channel)), waiting: waitContent,
+                                 enhancer: session.enhancer, upscale: $upscalesVideo, smooth: $smoothsVideo).ignoresSafeArea()
             }
             #elseif os(iOS)
             NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
-                             waiting: waitContent).ignoresSafeArea()
+                             waiting: waitContent, enhancer: session.enhancer).ignoresSafeArea()
             #else
             NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision).ignoresSafeArea()
             #endif
@@ -48,6 +51,15 @@ struct PlaybackView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .allowsHitTesting(false)
             }
+            // `-qaEnhanceHUD 1`: what the enhancer is doing, the frame rate it draws, and the screen's own rate.
+            if UserDefaults.standard.bool(forKey: "qaEnhanceHUD") {
+                Text(enhanceHUD)
+                    .font(.system(size: 22, weight: .medium, design: .monospaced)).foregroundStyle(.white)
+                    .padding(12).background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                    .padding(60)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .allowsHitTesting(false)
+            }
             #endif
         }
         .preferredColorScheme(.dark)
@@ -56,7 +68,13 @@ struct PlaybackView: View {
         #endif
         #if !os(tvOS)
         .onContinuousHover { _ in poke() }
+        #if os(iOS)
+        .simultaneousGesture(SpatialTapGesture(coordinateSpace: .global).onEnded { tapped(at: $0.location) })
+        // AVKit keeps its controls up while paused and starts its countdown again on play.
+        .onChange(of: session.paused) { _, paused in if paused { hideTask?.cancel() } else if showsChrome { scheduleHide() } }
+        #else
         .simultaneousGesture(TapGesture().onEnded { poke() })
+        #endif
         #endif
         .onAppear { startCatalogPlayback(session, channel: channel, store: store); poke() }
         .onChange(of: channel) { _, channel in startCatalogPlayback(session, channel: channel, store: store); poke() }
@@ -64,6 +82,20 @@ struct PlaybackView: View {
         .onChange(of: session.catalogDanmaku.enabled) { _, value in showsDanmaku = value }
         .onDisappear { hideTask?.cancel(); store.cancelEpisodeSelection(); session.stop() }
     }
+
+    #if DEBUG
+    private var enhanceHUD: String {
+        var lines = ["Sharper \(UserDefaults.standard.bool(forKey: VideoEnhancement.upscaleKey) ? "on" : "off") · Smooth \(UserDefaults.standard.bool(forKey: VideoEnhancement.smoothKey) ? "on" : "off")"
+                     + " · drawing: \(session.enhancer.status.upscaling ? "upscaled " : "")\(session.enhancer.status.smoothing ? "smoothed" : session.enhancer.status.active ? "" : "AVKit picture")",
+                     session.enhancer.summary]
+        #if !os(macOS)
+        if let screen = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen {
+            lines.append("screen \(screen.maximumFramesPerSecond) Hz \(Int(screen.nativeBounds.width))×\(Int(screen.nativeBounds.height))")
+        }
+        #endif
+        return lines.joined(separator: "\n")
+    }
+    #endif
 
     #if os(tvOS)
     private func episodeAction(_ episode: Episode?) -> EpisodeAction? {
@@ -88,15 +120,18 @@ struct PlaybackView: View {
             Spacer()
         }
         .sheet(isPresented: $showsDanmakuList) {
-            NavigationStack {
-                DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
-                    .navigationTitle(L10n.text("Danmaku List"))
-                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { showsDanmakuList = false } } }
-            }
-            #if os(macOS)
-            .frame(minWidth: 460, minHeight: 520)
-            #endif
+            DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
+                .danmakuListPresentation()
         }
+    }
+
+    /// Whether the picture menu has the smoothing and upscaling switches (iPhone and iPad on OS 26).
+    private var pictureSwitches: Bool {
+        #if os(iOS)
+        VideoEnhancement.canUpscale || VideoEnhancement.canSmooth
+        #else
+        false
+        #endif
     }
 
     private var chromeTitle: some View {
@@ -124,26 +159,35 @@ struct PlaybackView: View {
                 .accessibilityLabel(L10n.text("Next Episode")).help(next.name)
             }
             CatalogPlaybackActions(channel: channel, session: session)
-            if session.qualities.count > 1 {
+            // One button for the picture: the stream's quality, and on iPhone the smoothing and upscaling switches.
+            if session.qualities.count > 1 || pictureSwitches {
                 Menu {
-                    QualityPicker(session: session)
+                    if session.qualities.count > 1 { QualityPicker(session: session) }
+                    #if os(iOS)
+                    if pictureSwitches {
+                        Section(L10n.text("Picture")) {
+                            if VideoEnhancement.canSmooth { Toggle(L10n.text("Smooth Motion (60 fps)"), isOn: $smoothsVideo) }
+                            if VideoEnhancement.canUpscale { Toggle(L10n.text("Sharper Picture"), isOn: $upscalesVideo) }
+                        }
+                    }
+                    #endif
                 } label: {
                     Image(systemName: "sparkles.tv").font(.headline).frame(width: 22, height: 22)
+                        .symbolVariant(pictureSwitches && (upscalesVideo || smoothsVideo) ? .fill : .none)
                 }
                 .chromeButton()
                 .accessibilityLabel(L10n.text("Quality"))
             }
+            // One button for danmaku: show or hide them, or open the list.
             if !session.danmaku.isEmpty {
-                Button { showsDanmaku.toggle() } label: {
+                Menu {
+                    Toggle(isOn: $showsDanmaku) { Label(L10n.text("Show Danmaku"), systemImage: "text.bubble") }
+                    Button { showsDanmakuList = true } label: { Label(L10n.text("Danmaku List"), systemImage: "list.bullet.rectangle") }
+                } label: {
                     Image(systemName: showsDanmaku ? "text.bubble.fill" : "text.bubble").font(.headline).frame(width: 22, height: 22)
                 }
                 .chromeButton()
-                .accessibilityLabel(L10n.text(showsDanmaku ? "Hide Danmaku" : "Show Danmaku"))
-                Button { showsDanmakuList = true } label: {
-                    Image(systemName: "list.bullet.rectangle").font(.headline).frame(width: 22, height: 22)
-                }
-                .chromeButton()
-                .accessibilityLabel(L10n.text("Danmaku List"))
+                .accessibilityLabel(L10n.text("Danmaku"))
             }
             Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).frame(width: 22, height: 22) }
                 .chromeButton()
@@ -155,16 +199,45 @@ struct PlaybackView: View {
 
     private func poke() {
         showsChrome = true
+        scheduleHide()
+    }
+
+    private func scheduleHide() {
         hideTask?.cancel()
         #if DEBUG
         // Keep screenshot/interaction QA stable while XCTest waits for AVKit to idle.
         if UserDefaults.standard.bool(forKey: "qaPlayerControls") { return }
         #endif
+        #if os(iOS)
+        // AVKit's controls stay while paused and leave about three seconds into playback; ours go with them.
+        guard !session.paused else { return }
+        let delay = 3.0
+        #else
+        let delay = 3.5
+        #endif
         hideTask = Task {
-            try? await Task.sleep(for: .seconds(3.5))
-            if !Task.isCancelled { withAnimation(.smooth(duration: 0.35)) { showsChrome = false } }
+            try? await Task.sleep(for: .seconds(delay))
+            if !Task.isCancelled { withAnimation(.smooth(duration: 0.3)) { showsChrome = false } }
         }
     }
+
+    #if os(iOS)
+    /// Our bar can't read whether AVKit's controls are showing (iOS has no API for it), so it follows their
+    /// rules: a tap on the picture shows both or hides both, and a tap on a control (AVKit's top row, the
+    /// centre play and skip buttons, the scrubber, or our own bar) keeps both up.
+    private func tapped(at point: CGPoint) {
+        guard let window = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.keyWindow else { return poke() }
+        let size = window.bounds.size, insets = window.safeAreaInsets
+        let onControl = point.y < insets.top + 115
+            || point.y > size.height - insets.bottom - 80
+            || (abs(point.y - size.height / 2) < 44 && abs(point.x - size.width / 2) < 130)
+        if onControl || !showsChrome { poke() }
+        else {
+            hideTask?.cancel()
+            withAnimation(.smooth(duration: 0.25)) { showsChrome = false }
+        }
+    }
+    #endif
     #else
     private func poke() {}
     #endif
@@ -410,10 +483,13 @@ private struct NativePlayerView: View {
     var opacity = 0.9
     var revision = ""
     var waiting: PlaybackWaitContent? = nil
+    var enhancer: VideoEnhancer? = nil
     var body: some View {
         // The overlay sits between the video and the playback controls.
         VideoPlayer(player: player) {
             ZStack {
+                // The enhanced picture covers AVKit's own, under everything else.
+                if let enhancer { EnhancedVideoSurface(enhancer: enhancer) }
                 if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) }
                 // The artwork dissolves into the first frame.
                 if let waiting { waiting.view.transition(.opacity) }
@@ -460,10 +536,15 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     var previous: EpisodeAction? = nil
     var next: EpisodeAction? = nil
     var waiting: PlaybackWaitContent? = nil
-    final class Coordinator { var host: UIHostingController<AnyView>?; var listed = "" }
+    var enhancer: VideoEnhancer? = nil
+    var upscale: Binding<Bool> = .constant(false)
+    var smooth: Binding<Bool> = .constant(false)
+    final class Coordinator { var host: UIHostingController<AnyView>?; var listed = ""; var criteria: DisplayCriteriaKeeper? }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = TitleSafePlayerController()
+        // Decided before the controller is presented: AVKit refuses the change during playback.
+        if VideoEnhancement.canSmooth, let enhancer { context.coordinator.criteria = DisplayCriteriaKeeper(controller: controller, player: player, enhancer: enhancer) }
         controller.player = player
         let host = UIHostingController(rootView: overlay)
         host.view.backgroundColor = .clear
@@ -520,10 +601,23 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             items.insert(UIAction(title: L10n.text("Next Episode"), subtitle: next.name, image: UIImage(systemName: "forward.end.fill"),
                                   attributes: next.busy ? [.disabled] : []) { _ in next.play() }, at: previous == nil ? 0 : 1)
         }
+        if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
+            let upscale = upscale, smooth = smooth
+            var options: [UIMenuElement] = []
+            if VideoEnhancement.canUpscale {
+                options.append(UIAction(title: L10n.text("Sharper Picture"), state: upscale.wrappedValue ? .on : .off) { _ in upscale.wrappedValue.toggle() })
+            }
+            if VideoEnhancement.canSmooth {
+                options.append(UIAction(title: L10n.text("Smooth Motion (60 fps)"), state: smooth.wrappedValue ? .on : .off) { _ in smooth.wrappedValue.toggle() })
+            }
+            items.append(UIMenu(title: L10n.text("Picture"), image: UIImage(systemName: "wand.and.sparkles"), children: options))
+        }
         controller.transportBarCustomMenuItems = items
     }
+    static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Coordinator) { coordinator.criteria?.reset() }
     private var overlay: AnyView {
         AnyView(ZStack {
+            if let enhancer { EnhancedVideoSurface(enhancer: enhancer) }
             if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) }
             if let waiting { waiting.view.transition(.opacity) }
         }
@@ -657,6 +751,8 @@ private struct DesktopPlaybackView: View {
     @State private var idle = ChromeIdle()
     @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
     @State private var showsDanmakuList = false
+    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
+    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
 
     private var showsChrome: Bool { idle.visible || session.error != nil }
     private var waitContent: PlaybackWaitContent? { .make(session, channel: channel, store: store, linesHint: true) }
@@ -665,7 +761,7 @@ private struct DesktopPlaybackView: View {
         ZStack(alignment: .top) {
             ZStack {
                 Color.black
-                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: session.isLive, waiting: waitContent)
+                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: session.isLive, waiting: waitContent, enhancer: session.enhancer)
                 if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision) }
                 if let error = session.error {
                     VStack(spacing: 16) {
@@ -689,11 +785,8 @@ private struct DesktopPlaybackView: View {
         .onChange(of: showsChrome) { _, value in setTrafficLights(visible: value) }
         .onAppear { floats = window.level == .floating; idle.attach(window) }
         .sheet(isPresented: $showsDanmakuList) {
-            VStack(spacing: 0) {
-                DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
-                HStack { Spacer(); Button(L10n.text("Done")) { showsDanmakuList = false }.keyboardShortcut(.cancelAction) }.padding(12)
-            }
-            .frame(width: 520, height: 600)
+            DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
+                .danmakuListPresentation()
         }
         .onDisappear { idle.detach() }
     }
@@ -742,6 +835,8 @@ private struct DesktopPlaybackView: View {
             Toggle(L10n.text("Loop Playback"), isOn: $session.looping)
             Toggle(L10n.text("Fill Window"), isOn: $fillsFrame)
             Toggle(L10n.text("Float on Top"), isOn: $floats)
+            if VideoEnhancement.canUpscale { Toggle(L10n.text("Sharper Picture"), isOn: $upscalesVideo) }
+            if VideoEnhancement.canSmooth { Toggle(L10n.text("Smooth Motion (60 fps)"), isOn: $smoothsVideo) }
             if session.qualities.count > 1 {
                 Menu(L10n.text("Quality")) { QualityPicker(session: session) }
             }
@@ -779,6 +874,7 @@ private struct DesktopNativePlayer: NSViewRepresentable {
     let fillsFrame: Bool
     var live = false
     var waiting: PlaybackWaitContent? = nil
+    var enhancer: VideoEnhancer? = nil
     final class Coordinator { var host: PassthroughHostingView<AnyView>? }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> AVPlayerView {
@@ -812,7 +908,10 @@ private struct DesktopNativePlayer: NSViewRepresentable {
     }
     static func dismantleNSView(_ view: AVPlayerView, coordinator: Coordinator) { view.player = nil }
     private var overlay: AnyView {
-        AnyView(ZStack { if let waiting { waiting.view.transition(.opacity) } }.animation(.easeInOut(duration: 0.7), value: waiting == nil))
+        AnyView(ZStack {
+            if let enhancer { EnhancedVideoSurface(enhancer: enhancer, fills: fillsFrame) }
+            if let waiting { waiting.view.transition(.opacity) }
+        }.animation(.easeInOut(duration: 0.7), value: waiting == nil))
     }
 }
 

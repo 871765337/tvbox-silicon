@@ -32,6 +32,12 @@ enum QALaunch {
                 || UserDefaults.standard.string(forKey: "qaDownload") != nil
                 || UserDefaults.standard.string(forKey: "qaPlayLive") != nil else { return }
         if UserDefaults.standard.bool(forKey: "qaResetHistory") { store.playbackHistory.clear() }
+        // `-qaEnhance up,smooth` saves the Picture settings (unlike passing the keys, which would pin them
+        // and stop the player's menu from switching them).
+        if let enhance = UserDefaults.standard.string(forKey: "qaEnhance") {
+            UserDefaults.standard.set(enhance.contains("up"), forKey: VideoEnhancement.upscaleKey)
+            UserDefaults.standard.set(enhance.contains("smooth"), forKey: VideoEnhancement.smoothKey)
+        }
         if UserDefaults.standard.bool(forKey: "qaResetPlayerSettings") {
             EpisodeSkipSettings().saveGlobal(defaults: store.playbackDefaults)
             for key in store.playbackDefaults.dictionaryRepresentation().keys where key.hasPrefix("episodeSkip.v1.") || key == "episodeSkip.auto.v2" {
@@ -355,21 +361,36 @@ private extension Int { var nonZero: Int? { self == 0 ? nil : self } }
 
 /// `-qaPage danmaku-list`: the player's 弹幕 tab with sample comments, to check the focused row.
 private struct QADanmakuList: View {
+    /// `-qaDanmakuPlayer <hls url>` gives the list a real clock (paused at 2:20) for the now-highlight and the strip.
+    @State private var player: AVPlayer = {
+        guard let address = UserDefaults.standard.string(forKey: "qaDanmakuPlayer"), let url = URL(string: address) else { return AVPlayer() }
+        let player = AVPlayer(url: url)
+        player.seek(to: CMTime(seconds: 140, preferredTimescale: 600))
+        return player
+    }()
+    private let comments: [Danmaku] = {
+        let texts = ["失恋模式", "有用的小玩意增加了", "见缝插针属于是", "我曾经有一部手机", "这个好", "直击要害", "前方高能",
+                     "哈哈哈哈哈哈哈", "这一段的配乐真的绝了，建议单曲循环", "第一次看到这里的人举个手", "细节拉满", "泪目", "打卡", "这个镜头太美了"]
+        let colors: [UInt32] = [0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xFFD700, 0xFE0302, 0x00CD00, 0x4266BE, 0xFFFFFF, 0xCC0273]
+        var list: [Danmaku] = []
+        for index in 0..<300 {
+            // Clusters around 1:00, 2:20 and 7:30, like a real episode's busy moments.
+            let centre = [60.0, 140.0, 450.0, Double(index % 600)][index % 4]
+            let time = max(1, min(599, centre + Double((index * 37) % 41) - 20))
+            list.append(Danmaku(time: time, position: .scroll, color: colors[index % colors.count], text: texts[(index * 5 + index / 14) % texts.count]))
+        }
+        return list.sorted { $0.time < $1.time }
+    }()
     var body: some View {
+        #if os(tvOS)
         // A cover so focus starts on the first row instead of the tab bar.
-        #if os(macOS)
-        list
+        Color.clear.fullScreenCover(isPresented: .constant(true)) { DanmakuListView(player: player, comments: comments) }
         #else
-        Color.clear.fullScreenCover(isPresented: .constant(true)) { list }
+        // The list as the player shows it: a sheet over the picture.
+        LinearGradient(colors: [Color(red: 0.1, green: 0.16, blue: 0.3), .black], startPoint: .top, endPoint: .bottom)
+            .ignoresSafeArea()
+            .sheet(isPresented: .constant(true)) { DanmakuListView(player: player, comments: comments).danmakuListPresentation() }
         #endif
-    }
-    @ViewBuilder private var list: some View {
-        let texts = ["失恋模式", "有用的小玩意增加了", "见缝插针属于是", "我曾经有一部手机", "见缝插针", "这个好", "直击要害", "前方高能"]
-        DanmakuListView(player: AVPlayer(), comments: texts.enumerated().map { Danmaku(time: Double(30 + $0.offset), position: .scroll, color: $0.offset == 2 ? 0xFFD700 : 0xFFFFFF, text: $0.element) })
-            .frame(height: 480)
-            .background(Color(white: 0.18))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(LinearGradient(colors: [.teal, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing))
     }
 }
 #endif

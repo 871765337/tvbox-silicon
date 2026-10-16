@@ -169,71 +169,330 @@ enum DanmakuText {
     }
 }
 
-/// Every comment in time order, starting at the current moment. Choosing one plays from just before it.
+/// Every comment in time order, following the video. Choosing one plays from just before it.
+/// On iPhone and Mac: a dark sheet with the comment count, a density strip of the whole episode
+/// (tap it to jump), a search field, and rows marked with each comment's own colour. A playhead line
+/// sits among the rows at the current moment, comments still to come are dimmed, and the list keeps up
+/// with playback until you scroll it yourself.
 struct DanmakuListView: View {
     let player: AVPlayer
     let comments: [Danmaku]
     var chosen: () -> Void = {}
     @State private var query = ""
+    @State private var now: Double = 0
+    @State private var following = true
+    @State private var anchor: Int?
     private var shown: [(offset: Int, element: Danmaku)] {
         let all = Array(comments.enumerated())
         let text = query.trimmingCharacters(in: .whitespaces)
         return text.isEmpty ? all : all.filter { $0.element.text.localizedCaseInsensitiveContains(text) }
     }
 
+    #if os(tvOS)
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            #if !os(tvOS)
-            TextField(L10n.text("Filter comments"), text: $query)
-                .textFieldStyle(.roundedBorder)
-                .padding(.horizontal, 16).padding(.top, 14)
-            #endif
-            ScrollViewReader { proxy in
-                #if os(tvOS)
-                // Not a List: tvOS puts a square focus background behind list cells.
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 4) {
-                        ForEach(shown, id: \.offset) { item in
-                            Button { jump(to: item.element) } label: { row(item.element) }
-                                .glassRow()
-                                .id(item.offset)
-                        }
+        ScrollViewReader { proxy in
+            // Not a List: tvOS puts a square focus background behind list cells.
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 4) {
+                    ForEach(shown, id: \.offset) { item in
+                        Button { jump(to: item.element.time) } label: { tvRow(item.element) }
+                            .glassRow()
+                            .id(item.offset)
                     }
-                    .glassRowInsets()
                 }
-                .onAppear { scrollToNow(proxy) }
-                #else
-                List(shown, id: \.offset) { item in
-                    Button { jump(to: item.element) } label: { row(item.element) }
-                        .id(item.offset)
-                }
-                .onAppear { scrollToNow(proxy) }
-                #endif
+                .glassRowInsets()
+            }
+            .onAppear {
+                let now = player.currentTime().seconds
+                if now.isFinite, let target = comments.firstIndex(where: { $0.time >= now - 1 }) { proxy.scrollTo(target, anchor: .top) }
             }
         }
     }
 
-    private func scrollToNow(_ proxy: ScrollViewProxy) {
-        let now = player.currentTime().seconds
-        if now.isFinite, let target = comments.firstIndex(where: { $0.time >= now - 1 }) { proxy.scrollTo(target, anchor: .top) }
-    }
-
-    private func row(_ comment: Danmaku) -> some View {
+    private func tvRow(_ comment: Danmaku) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 14) {
-            Text(Duration.seconds(Int(comment.time)).formatted(.time(pattern: comment.time >= 3600 ? .hourMinuteSecond : .minuteSecond)))
-                .monospacedDigit().foregroundStyle(.secondary)
-            Circle().fill(Color(red: Double(comment.color >> 16 & 0xFF) / 255, green: Double(comment.color >> 8 & 0xFF) / 255, blue: Double(comment.color & 0xFF) / 255))
-                .overlay { Circle().strokeBorder(Color.primary.opacity(0.25)) }
-                .frame(width: 10, height: 10)
+            Text(Self.clock(comment.time)).monospacedDigit().foregroundStyle(.secondary)
+            Circle().fill(Self.tint(comment.color)).frame(width: 10, height: 10)
             Text(comment.text).lineLimit(2).foregroundStyle(.primary)
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
     }
+    #else
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header.padding(.horizontal, 20).padding(.top, 22)
+            DanmakuDensity(bins: density, progress: duration > 0 ? now / duration : 0) { fraction in
+                following = true
+                jump(to: fraction * duration, dismiss: false)
+            }
+            .padding(.horizontal, 20).padding(.top, 16)
+            search.padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 8)
+            list
+        }
+        .foregroundStyle(.white)
+        .environment(\.colorScheme, .dark)
+        .task {
+            // The playhead, twice a second: highlights what is on screen and keeps the list with it.
+            while !Task.isCancelled {
+                let time = player.currentTime().seconds
+                if time.isFinite { now = time }
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+        }
+    }
 
-    private func jump(to comment: Danmaku) {
-        player.seek(to: CMTime(seconds: max(0, comment.time - 1), preferredTimescale: 600))
-        player.play()
-        chosen()
+    private var header: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(L10n.text("Danmaku")).font(.title2.weight(.bold))
+                Text(L10n.text("%d comments", comments.count)).font(.subheadline).foregroundStyle(.white.opacity(0.6))
+            }
+            Spacer()
+            Button(action: chosen) {
+                Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
+                    .frame(width: 32, height: 32)
+                    .background(.white.opacity(0.14), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L10n.text("Close"))
+            #if os(macOS)
+            .keyboardShortcut(.cancelAction)
+            #endif
+        }
+    }
+
+    private var search: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.5))
+            TextField(L10n.text("Filter comments"), text: $query)
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .submitLabel(.search)
+                #endif
+            if !query.isEmpty {
+                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.5)) }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.text("Clear"))
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(.white.opacity(0.1), in: Capsule())
+    }
+
+    private var list: some View {
+        let items = shown
+        let playhead = query.isEmpty ? nowIndex : nil
+        return ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(items, id: \.offset) { item in
+                        if item.offset == playhead { nowLine }
+                        Button { jump(to: item.element.time) } label: { row(item.element, upcoming: item.element.time > now + 0.5) }
+                            .buttonStyle(DanmakuRowStyle())
+                            .id(item.offset)
+                    }
+                    if playhead == comments.count { nowLine }
+                }
+                .padding(.horizontal, 10).padding(.bottom, 80)
+            }
+            .scrollIndicators(.hidden)
+            // Rows fade out under the search field instead of being cut off.
+            .mask {
+                VStack(spacing: 0) {
+                    LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 16)
+                    Color.black
+                }
+            }
+            .onScrollPhaseChange { _, phase in
+                // Scrolling by hand stops following the video until “Back to Now”.
+                if phase == .interacting { following = false }
+            }
+            .overlay {
+                if items.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if !following, query.isEmpty {
+                    Button {
+                        following = true
+                        follow(proxy, animated: true)
+                    } label: {
+                        Label(L10n.text("Back to Now"), systemImage: "arrow.down.to.line")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 16).padding(.vertical, 10)
+                            .background(.white, in: Capsule())
+                            .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.smooth(duration: 0.3), value: following)
+            .onAppear { follow(proxy, animated: false) }
+            .onChange(of: now) { _, _ in if following { follow(proxy, animated: true) } }
+            .onChange(of: query) { _, text in if text.isEmpty { follow(proxy, animated: false) } }
+        }
+    }
+
+    private func row(_ comment: Danmaku, upcoming: Bool) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(Self.clock(comment.time))
+                .font(.footnote.monospacedDigit().weight(.medium))
+                .foregroundStyle(.white.opacity(0.45))
+                .frame(minWidth: 44, alignment: .leading)
+                .padding(.top, 2)
+            RoundedRectangle(cornerRadius: 1.5).fill(Self.tint(comment.color)).frame(width: 3)
+            Text(comment.text)
+                .font(.body)
+                .foregroundStyle(.white)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 12).padding(.vertical, 9)
+        .opacity(upcoming ? 0.42 : 1)
+        .contentShape(Rectangle())
+    }
+
+    private var nowLine: some View { DanmakuNowLine(time: now) }
+
+    /// Where the playhead falls among the comments: the first one still to come.
+    private var nowIndex: Int { comments.partitioningIndex { $0.time > now + 0.5 } }
+
+    private func follow(_ proxy: ScrollViewProxy, animated: Bool) {
+        guard query.isEmpty, !comments.isEmpty else { return }
+        // The row just after the playhead line, a third of the way down: recent comments above, the next few below.
+        let target = min(comments.count - 1, nowIndex)
+        guard target != anchor || !animated else { return }
+        anchor = target
+        if animated { withAnimation(.smooth(duration: 0.4)) { proxy.scrollTo(target, anchor: UnitPoint(x: 0.5, y: 0.4)) } }
+        else { proxy.scrollTo(target, anchor: UnitPoint(x: 0.5, y: 0.4)) }
+    }
+
+    private var duration: Double {
+        let length = player.currentItem?.duration.seconds ?? .nan
+        return length.isFinite && length > 0 ? length : (comments.last?.time ?? 0) + 1
+    }
+
+    /// Comments per stretch of the episode, scaled to the busiest one.
+    private var density: [Double] {
+        let count = 64
+        guard duration > 0, !comments.isEmpty else { return Array(repeating: 0, count: count) }
+        var bins = Array(repeating: 0.0, count: count)
+        for comment in comments { bins[min(count - 1, max(0, Int(comment.time / duration * Double(count))))] += 1 }
+        let peak = bins.max() ?? 1
+        return bins.map { ($0 / max(1, peak)).squareRoot() }
+    }
+    #endif
+
+    static func clock(_ time: Double) -> String {
+        Duration.seconds(Int(time)).formatted(.time(pattern: time >= 3600 ? .hourMinuteSecond : .minuteSecond))
+    }
+
+    /// The comment's own colour; the usual white as a quiet grey so coloured ones stand out.
+    static func tint(_ color: UInt32) -> Color {
+        let red = Double(color >> 16 & 0xFF) / 255, green = Double(color >> 8 & 0xFF) / 255, blue = Double(color & 0xFF) / 255
+        return min(red, green, blue) > 0.88 ? Color.white.opacity(0.28) : Color(red: red, green: green, blue: blue)
+    }
+
+    private func jump(to time: Double, dismiss: Bool = true) {
+        player.seek(to: CMTime(seconds: max(0, time - 1), preferredTimescale: 600))
+        if dismiss {
+            player.play()
+            chosen()
+        }
+    }
+}
+
+#if !os(tvOS)
+/// Where the comments gather across the episode, with the playhead; tap or drag to jump there.
+private struct DanmakuDensity: View {
+    let bins: [Double]
+    let progress: Double
+    let seek: (Double) -> Void
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width, height = geometry.size.height
+            HStack(alignment: .bottom, spacing: 2) {
+                ForEach(bins.indices, id: \.self) { index in
+                    let played = (Double(index) + 0.5) / Double(bins.count) <= progress
+                    Capsule()
+                        .fill(played ? Brand.cyan : Color.white.opacity(0.22))
+                        .frame(height: max(3, bins[index] * height))
+                }
+            }
+            .frame(width: width, height: height, alignment: .bottom)
+            .overlay(alignment: .bottomLeading) {
+                Capsule().fill(.white).frame(width: 2, height: height + 6)
+                    .offset(x: min(width - 2, max(0, progress * width - 1)), y: 3)
+                    .shadow(color: .black.opacity(0.4), radius: 2)
+            }
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onEnded { value in seek(min(1, max(0, value.location.x / width))) })
+        }
+        .frame(height: 34)
+        .accessibilityElement()
+        .accessibilityLabel(L10n.text("Danmaku"))
+        .accessibilityValue("\(Int(progress * 100))%")
+    }
+}
+
+/// The playhead among the comments: everything above it has been on screen.
+private struct DanmakuNowLine: View {
+    let time: Double
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(DanmakuListView.clock(time))
+                .font(.caption.monospacedDigit().weight(.bold))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 7).padding(.vertical, 3)
+                .background(Brand.cyan, in: Capsule())
+            Capsule().fill(Brand.cyan).frame(height: 2)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 6)
+    }
+}
+
+private struct DanmakuRowStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.6 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+extension View {
+    /// The danmaku list as a sheet over the player: dark, half height first, pulled up for more.
+    func danmakuListPresentation() -> some View {
+        #if os(iOS)
+        self.presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+            .presentationCornerRadius(28)
+            .preferredColorScheme(.dark)
+        #else
+        self.frame(width: 520, height: 640)
+            .background(Color(white: 0.09))
+            .preferredColorScheme(.dark)
+        #endif
+    }
+}
+#endif
+
+private extension Array {
+    /// The first index where `belongs` becomes true, for an array already sorted by it.
+    func partitioningIndex(where belongs: (Element) -> Bool) -> Int {
+        var low = 0, high = count
+        while low < high {
+            let middle = (low + high) / 2
+            if belongs(self[middle]) { high = middle } else { low = middle + 1 }
+        }
+        return low
     }
 }

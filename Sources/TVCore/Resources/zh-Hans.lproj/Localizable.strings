@@ -812,3 +812,10 @@
 "Can't play this right now" = "暂时播放不了";
 "Try Again" = "再试一次";
 "This episode's link may have expired. Open it again, or try another line." = "这一集的链接可能已经过期了。重新打开这一集，或者换条线路试试。";
+"Picture" = "画面";
+"Sharper Picture" = "画质增强";
+"Smooth Motion (60 fps)" = "智能补帧 (60 帧)";
+"Upscales video smaller than your screen with on-device machine learning." = "用设备上的机器学习放大分辨率低于屏幕的视频。";
+"Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas." = "在画面之间生成新帧，让 24–30 帧的视频以 60 帧播放。会更耗电，电影可能显得像电视剧。";
+"%d comments" = "%d 条弹幕";
+"Back to Now" = "回到当前";

@@ -3,7 +3,9 @@ import AVKit
 import TVCore
 
 @MainActor @Observable final class PlaybackSession {
-    let player = AVPlayer()
+    let player: AVPlayer
+    /// Upscaling and 60 fps smoothing, drawn over AVKit's picture when switched on in Settings.
+    let enhancer: VideoEnhancer
     let catalogDanmaku = CatalogDanmakuModel()
     var history = PlaybackHistory.shared
     var skipDefaults = UserDefaults.standard
@@ -224,6 +226,11 @@ import TVCore
         if player.rate != 0 { player.rate = speed }
     }
     private var generation = UUID()
+    init() {
+        let player = AVPlayer()
+        self.player = player
+        enhancer = VideoEnhancer(player: player)
+    }
     private var observation: NSKeyValueObservation?
     private var failureObserver: NSObjectProtocol?
     private var preparation: Task<Void, Never>?
@@ -468,10 +475,12 @@ import TVCore
         }
         transfer = next
         #if DEBUG
-        if QALaunch.page?.hasPrefix("play-source:") == true || QALaunch.page == "resume-last" {
+        if QALaunch.page?.hasPrefix("play-source:") == true || QALaunch.page == "resume-last" || UserDefaults.standard.string(forKey: "qaPlay") != nil {
             let report: [String: Any] = ["seconds": position, "duration": duration, "ready": item.status == .readyToPlay,
                 "rate": player.rate, "error": error ?? "", "danmakuCount": danmaku.count,
                 "errorDetail": item.error.map(Self.describe) ?? "", "videoWidth": item.presentationSize.width, "videoHeight": item.presentationSize.height,
+                "enhance": enhancer.summary, "upscaling": enhancer.status.upscaling, "smoothing": enhancer.status.smoothing,
+                "screenHz": Self.screenRate,
                 "danmakuState": catalogDanmaku.automaticState, "cached": catalogDanmaku.fromCache,
                 "introEnd": skipSettings.introEnd, "outroLength": skipSettings.outroLength,
                 "requestedResumePosition": requestedResumePosition ?? 0, "restoredPosition": restoredPosition ?? 0]
@@ -486,6 +495,16 @@ import TVCore
     /// Domain and code of the error and its underlying cause: AVFoundation's messages alone
     /// ("The operation could not be completed") don't tell an HTTP 403 from a decoder failure.
     nonisolated static func describe(_ error: Error) -> String { Diagnostics.describe(error) }
+    #if DEBUG
+    /// The screen's refresh rate now, which on Apple TV follows the display mode.
+    private static var screenRate: Int {
+        #if os(macOS)
+        return NSScreen.main?.maximumFramesPerSecond ?? 0
+        #else
+        return (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.maximumFramesPerSecond ?? 0
+        #endif
+    }
+    #endif
     /// What a failure report needs besides the error: the source, the way the stream reaches AVPlayer,
     /// its format, and AVPlayer's own last network error (often the HTTP status of one segment).
     private func failureContext(_ channel: Channel, url: URL, item: AVPlayerItem?) -> String {

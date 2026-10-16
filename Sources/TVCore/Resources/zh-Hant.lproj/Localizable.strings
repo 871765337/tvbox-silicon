@@ -812,3 +812,10 @@
 "Can't play this right now" = "暫時無法播放";
 "Try Again" = "再試一次";
 "This episode's link may have expired. Open it again, or try another line." = "這一集的連結可能已經過期了。重新打開這一集，或者換條線路試試。";
+"Picture" = "畫面";
+"Sharper Picture" = "畫質增強";
+"Smooth Motion (60 fps)" = "智慧補幀 (60 幀)";
+"Upscales video smaller than your screen with on-device machine learning." = "以裝置上的機器學習放大解析度低於螢幕的影片。";
+"Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas." = "在畫面之間產生新幀，讓 24–30 幀的影片以 60 幀播放。會更耗電，電影可能看起來像電視劇。";
+"%d comments" = "%d 則彈幕";
+"Back to Now" = "回到目前";
