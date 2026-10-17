@@ -128,17 +128,21 @@ actor PluginDownloads {
         func report(_ key: String?, _ stage: PluginPreparation.Stage, _ received: Int64 = 0, _ expected: Int64? = nil) {
             if let key { self.report(key, stage, received, expected) }
         }
-        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 25)
-        request.setValue(HTTPClient.userAgent, forHTTPHeaderField: "User-Agent")
-        if let (meta, _) = stored {
-            if let etag = meta.etag { request.setValue(etag, forHTTPHeaderField: "If-None-Match") }
-            if let modified = meta.modified { request.setValue(modified, forHTTPHeaderField: "If-Modified-Since") }
-        }
+        let etag = stored?.0.etag, modified = stored?.0.modified
         report(key, .downloading)
-        let transfer = PluginTransfer(configuration: http.session.configuration) { received, total in
-            if let key { Task { await self.report(key, .downloading, received, total) } }
+        let (data, response) = try await http.mirrors.fetch(url, timeout: 25) { [http] address, timeout in
+            var request = URLRequest(url: address, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: timeout)
+            request.setValue(HTTPClient.userAgent, forHTTPHeaderField: "User-Agent")
+            if let etag { request.setValue(etag, forHTTPHeaderField: "If-None-Match") }
+            if let modified { request.setValue(modified, forHTTPHeaderField: "If-Modified-Since") }
+            let transfer = PluginTransfer(configuration: http.session.configuration) { received, total in
+                if let key { Task { await self.report(key, .downloading, received, total) } }
+            }
+            let (data, response) = try await transfer.load(request)
+            // Fail here, not after, so a mirror's error page moves on to the next mirror.
+            guard (200..<300).contains(response.statusCode) || response.statusCode == 304 else { throw TVError.http(response.statusCode) }
+            return (data, response)
         }
-        let (data, response) = try await transfer.load(request)
         if response.statusCode == 304, let (old, data) = stored {
             var meta = old; meta.expires = Date().addingTimeInterval(lifetime)
             save(data, metadata: meta, url: url); report(key, .reusing); return data
