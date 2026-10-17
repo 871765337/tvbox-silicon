@@ -25,6 +25,9 @@ function writeJSON(file, object) {
 function log(...values) { process.stderr.write(values.map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(' ') + '\n'); }
 function envelope(error) {
     log(error.stack || error.message || error);
+    // A spider that parses a failed response (an HTML error page, an empty body) throws a SyntaxError.
+    // The failed request is the real cause, so report it instead (by name: spiders may run in another realm).
+    if (error?.name === 'SyntaxError' && lastFailure) error = lastFailure;
     if (error.remote) return { error: error.message, errorCode: error.status ? 'source_http' : 'source_network', host: error.remote, status: error.status };
     return { error: String(error), errorCode: 'script_error' };
 }
