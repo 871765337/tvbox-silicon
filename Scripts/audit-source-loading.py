@@ -9,7 +9,7 @@ converted=ROOT/'build/runtime-audit/converted';converted.mkdir(exist_ok=True)
 locks={};lock=threading.Lock()
 def address(value,base):
  u=urllib.parse.urljoin(base,value);s=urllib.parse.urlsplit(u)
- return urllib.parse.urlunsplit((s.scheme,s.netloc.encode('idna').decode(),urllib.parse.quote(s.path,safe='/%'),urllib.parse.quote(s.query,safe='=&%+/?:@'),s.fragment))
+ return urllib.parse.urlunsplit((s.scheme,s.netloc.encode('idna').decode(),urllib.parse.quote(s.path,safe='/%:'),urllib.parse.quote(s.query,safe='=&%+/?:@'),s.fragment))
 def download(url):
  key=hashlib.sha256(url.encode()).hexdigest()
  with lock:l=locks.setdefault(key,threading.Lock())
