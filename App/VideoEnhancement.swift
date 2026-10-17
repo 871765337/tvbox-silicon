@@ -933,11 +933,13 @@ private final class EnhancementPipeline: EnhancementEngine, @unchecked Sendable 
         return (Int(Double(width) * scale) / 16 * 16, Int(Double(height) * scale) / 2 * 2)
     }
 
-    /// Upscale only a picture clearly smaller than the screen, by the processor's factor nearest the gap.
+    /// Upscale any picture drawn larger than it is, by the processor's factor nearest the gap. Below 1.5x the
+    /// layer shrinks the result to fit and keeps the detail: 720p in a 1613-pixel-wide window (a 1x monitor)
+    /// needs only 1.1x, and a 1.4x floor left it unprocessed.
     private static func scaleFactor(width: Int, height: Int, target: CGSize) -> Float? {
         guard target.width > 0, target.height > 0, width > 0, height > 0 else { return nil }
         let need = Float(min(target.width / CGFloat(width), target.height / CGFloat(height)))
-        guard need >= 1.4 else { return nil }
+        guard need > 1.05 else { return nil }
         let factors = VTLowLatencySuperResolutionScalerConfiguration.supportedScaleFactors(frameWidth: width, frameHeight: height).filter { $0 > 1 }.sorted()
         return factors.min { abs($0 - need) < abs($1 - need) }
     }
