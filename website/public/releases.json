@@ -1,6 +1,62 @@
 {
   "releases": [
     {
+      "version": "1.7.2",
+      "date": "2026-10-17",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-macos-arm64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "network",
+          "title": {
+            "en": "Subscriptions on GitHub load more reliably",
+            "zh-Hans": "GitHub 上的订阅更容易加载",
+            "zh-Hant": "GitHub 上的訂閱更容易載入",
+            "ja": "GitHub 上の配信設定が読み込みやすく"
+          },
+          "detail": {
+            "en": "When GitHub can’t be reached, as often happens in mainland China, subscriptions and plugins hosted there now load through a mirror automatically. More subscriptions import too, including ones with line breaks in their text and addresses written with a single slash, like https:/.",
+            "zh-Hans": "当 GitHub 无法访问时（在中国大陆很常见），托管在上面的订阅和插件现在会自动通过镜像加载。能导入的订阅也更多了，包括文本中带有换行的订阅，以及只写了一个斜杠的地址（如 https:/）。",
+            "zh-Hant": "當 GitHub 無法連線時（在中國大陸很常見），託管在上面的訂閱和外掛現在會自動透過鏡像載入。能匯入的訂閱也更多了，包括文字中帶有換行的訂閱，以及只寫了一個斜線的位址（如 https:/）。",
+            "ja": "GitHub に接続できないとき（中国本土ではよくあります）、そこにある配信設定やプラグインをミラー経由で自動的に読み込むようになりました。テキストの途中に改行がある配信設定や、https:/ のようにスラッシュが 1 本しかないアドレスも読み込めます。"
+          }
+        },
+        {
+          "symbol": "sparkles.tv",
+          "title": {
+            "en": "Sharper Picture in more windows",
+            "zh-Hans": "“画质增强”适用于更多窗口",
+            "zh-Hant": "「畫質增強」適用於更多視窗",
+            "ja": "「高画質化」がより多くのウインドウで"
+          },
+          "detail": {
+            "en": "Sharper Picture now also upscales video that is only a little smaller than the screen or window, like 720p video in a large window on a regular monitor. Before, that video was left as it was.",
+            "zh-Hans": "“画质增强”现在也会放大只比屏幕或窗口略小的视频，例如在普通显示器上用大窗口播放的 720p 视频。以前这类视频不会被处理。",
+            "zh-Hant": "「畫質增強」現在也會放大只比螢幕或視窗略小的影片，例如在一般顯示器上用大視窗播放的 720p 影片。以前這類影片不會被處理。",
+            "ja": "「高画質化」は、画面やウインドウより少しだけ小さいビデオも拡大するようになりました。たとえば、一般的なモニタの大きなウインドウで再生する 720p のビデオです。以前はこうしたビデオはそのままでした。"
+          }
+        },
+        {
+          "symbol": "exclamationmark.bubble.fill",
+          "title": {
+            "en": "Clearer errors when a site is down",
+            "zh-Hans": "站点出错时提示更清楚",
+            "zh-Hant": "來源出錯時提示更清楚",
+            "ja": "サイトの障害がわかりやすく"
+          },
+          "detail": {
+            "en": "When a site’s server fails, the message now says so, for example “The source returned HTTP 526”, instead of a confusing script error.",
+            "zh-Hans": "站点的服务器出错时，提示现在会直接说明，例如“站点返回 HTTP 526”，而不再显示令人困惑的脚本错误。",
+            "zh-Hant": "來源的伺服器出錯時，提示現在會直接說明，例如「來源回傳 HTTP 526」，而不再顯示令人困惑的指令碼錯誤。",
+            "ja": "サイトのサーバーに問題があるときは、わかりにくいスクリプトエラーではなく、「ソースが HTTP 526 を返しました」のようにそのまま表示するようになりました。"
+          }
+        }
+      ]
+    },
+    {
       "version": "1.7.1",
       "date": "2026-10-17",
       "links": {
