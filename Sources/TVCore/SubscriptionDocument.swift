@@ -22,7 +22,7 @@ enum SubscriptionDocument {
             throw TVError.unsupported(L10n.text("The subscription server returned a web page instead of a configuration."))
         }
         if prefix.hasPrefix("2423") { bytes = try decrypt(bytes) }
-        return try JSONDecoder().decode([String: JSONValue].self, from: Data(normalize(bytes)))
+        return try JSONDecoder().decode([String: JSONValue].self, from: Data(escapeControlCharacters(normalize(bytes))))
     }
 
     private static func whitespace(_ byte: UInt8) -> Bool { [9, 10, 13, 32].contains(byte) }
@@ -43,6 +43,23 @@ enum SubscriptionDocument {
         var result = [UInt8](plain)
         if result.starts(with: [0xEF, 0xBB, 0xBF]) { result.removeFirst(3) }
         return result
+    }
+
+    /// Raw line breaks and tabs inside strings are invalid JSON, but Gson-based TVBox apps read them as
+    /// the characters themselves, and some configurations contain them. Escaping keeps that meaning.
+    private static func escapeControlCharacters(_ input: [UInt8]) -> [UInt8] {
+        var output = [UInt8]()
+        output.reserveCapacity(input.count)
+        var i = 0
+        var quoted = false
+        while i < input.count {
+            let byte = input[i]
+            if quoted && byte == 92 && i + 1 < input.count { output += [byte, input[i + 1]]; i += 2; continue }
+            if byte == 34 { quoted.toggle() }
+            if quoted && byte < 32 { output += Array(String(format: "\\u%04x", byte).utf8) } else { output.append(byte) }
+            i += 1
+        }
+        return output
     }
 
     private static func envelopeStart(_ bytes: [UInt8]) -> Int? {

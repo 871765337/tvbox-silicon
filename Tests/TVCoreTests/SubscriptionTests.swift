@@ -74,6 +74,22 @@ import Testing
     #expect(commented.sites[0].raw["ext"]?.string == "abcdefgh**not-base64")
 }
 
+@Test func rawLineBreaksInsideStringsReadAsTheCharacters() throws {
+    // Seen in xhztv.top/4k.json and iyouhun.com/tv/et: Gson-based TVBox apps accept these.
+    let base = try WebAddress.resolve("https://example.com/config")
+    let text = "{\"sites\":[{\"key\":\"a\",\"name\":\"优\n酷\t\",\"type\":3,\"api\":\"csp_A\"}]," +
+        "\"parses\":[{\"url\":\"   \r\nhttps://jx.example.com/?url=\"}]} // \"quoted\" comment"
+    let sub = try Subscription.parse(Data(text.utf8), origin: base)
+    #expect(sub.sites.first?.name == "优\n酷\t")
+    #expect(sub.raw["parses"]?.array?.first?.object?["url"]?.string == "   \r\nhttps://jx.example.com/?url=")
+}
+
+@Test func absoluteAddressesIgnoreMissingSlashesLikeBrowsers() throws {
+    #expect(try WebAddress.resolve("https:/raw.githubusercontent.com/a/b/main/c.json").absoluteString == "https://raw.githubusercontent.com/a/b/main/c.json")
+    #expect(try WebAddress.resolve("HTTP:///example.com/tv").host() == "example.com")
+    #expect(try WebAddress.resolve("http://肥猫.net").host() == "xn--z7x900a.net")
+}
+
 @Test func catVodEncryptedSubscriptionsDecrypt() throws {
     // `$#YingXia#$` + AES-128-CBC of a commented config (key "yingxia000000000", IV "abcdefghijklm000",
     // made with OpenSSL) + `AbcDefGhiJklM`. Uppercase hex and line breaks as some servers send it.

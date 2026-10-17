@@ -98,7 +98,10 @@ public enum JSONValue: Codable, Equatable, Sendable {
 
 public enum WebAddress {
     public static func resolve(_ text: String, relativeTo base: URL? = nil) throws -> URL {
-        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // As browsers do (WHATWG URL), an absolute http(s) address ignores missing or extra slashes:
+        // "https:/host/path" is "https://host/path". Only standalone addresses: a base keeps Foundation's rules.
+        if base == nil { value = value.replacingOccurrences(of: "^(?i)(https?):/+", with: "$1://", options: .regularExpression) }
         // Encode Unicode without re-encoding existing %HH sequences. Foundation's
         // automatic repair can otherwise turn %26 into %2526 in mixed Unicode URLs.
         var allowed = CharacterSet.urlFragmentAllowed
