@@ -53,6 +53,14 @@ import Testing
     #expect(output.contains("example.com/path"))
 }
 
+@Test func scriptSyntaxErrorsStayReadableAfterRedaction() {
+    let message = "source=咕咕 code=script_error SyntaxError: unexpected token: '<' at line 1"
+    #expect(Diagnostics.redact(message) == message)
+    for secret in ["token: abc123", "x-token=abc123", #""token": "abc123""#, "access token: abc123", "Token= abc123"] {
+        #expect(!Diagnostics.redact(secret).contains("abc123"))
+    }
+}
+
 @Test func diagnosticFileFailureDoesNotLoseViewerOrThrowToProducer() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try Data().write(to: root)

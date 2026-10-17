@@ -181,10 +181,11 @@ public final class Diagnostics: @unchecked Sendable {
 
     // Raw plugin output is untrusted. Strip URL credentials/query and common
     // authorization headers before either the viewer or disk sees the text.
+    // QuickJS's "unexpected token: '<'" names a character, not a credential, so it stays.
     private static let patterns: [(NSRegularExpression, String)] = [
         (#"(?i)(https?://)[^\s/@]+:[^\s/@]+@"#, "$1[redacted]@"),
         (#"(?i)(https?://[^\s?#]+)[?#][^\s]*"#, "$1?[redacted]"),
-        (#"(?im)\b(authorization|cookie|set-cookie|token|password|secret|api[_-]?key)\b[\"\s]*[:=][^\r\n]*"#, "$1=[redacted]")
+        (#"(?im)(?<!unexpected )\b(authorization|cookie|set-cookie|token|password|secret|api[_-]?key)\b[\"\s]*[:=][^\r\n]*"#, "$1=[redacted]")
     ].map { (try! NSRegularExpression(pattern: $0.0), $0.1) }
 
     static func redact(_ text: String) -> String {
