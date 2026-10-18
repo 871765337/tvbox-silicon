@@ -210,6 +210,14 @@ struct RootView: View {
     }
 }
 
+#if !os(macOS)
+/// What the player cover shows; the same presentation whichever channel it holds.
+private struct PlayerSlot: Identifiable {
+    let channel: Channel
+    var id: String { "player" }
+}
+#endif
+
 private struct PlayerPresentation: ViewModifier {
     @Environment(Store.self) private var store
     @Binding var playing: Channel?
@@ -226,7 +234,12 @@ private struct PlayerPresentation: ViewModifier {
             }
         }
         #else
-        content.fullScreenCover(item: $playing) { PlaybackView(channel: $0) }
+        // One presentation while anything plays: the next episode replaces the channel inside the player.
+        // Keyed by the channel, every change dismissed the player and presented a new one, so even a
+        // queued episode would stop and load.
+        content.fullScreenCover(item: Binding(get: { playing.map(PlayerSlot.init) }, set: { if $0 == nil { playing = nil } })) {
+            PlaybackView(channel: $0.channel)
+        }
         #endif
     }
 }

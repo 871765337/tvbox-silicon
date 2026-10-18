@@ -277,14 +277,49 @@ import TVCore
 
     func catalogChannel(_ resolved: Channel, video: Video, episode: Episode, client: CatalogClient,
                         resumePosition: Double? = nil) -> Channel {
+        let channel = episodeChannel(resolved, video: video, episode: episode, client: client, resumePosition: resumePosition)
+        remember(video, client: client.with(parses: subscription?.parseServices ?? client.parses), for: channel)
+        return channel
+    }
+
+    /// The channel that plays `episode`, without making its video the one playing.
+    private func episodeChannel(_ resolved: Channel, video: Video, episode: Episode, client: CatalogClient,
+                                resumePosition: Double? = nil) -> Channel {
         let context = PlaybackHistoryContext(origin: client.origin, site: client.site, video: video, episode: episode)
-        if let data = try? JSONEncoder().encode(video) {
-            MediaCache.shared.store(data, for: "detail", kind: .catalog, scope: context.id, ttl: 6 * 3600, ticket: MediaCache.shared.ticket())
-        }
-        playbackCatalog = PlaybackCatalog(video: video, client: client.with(parses: subscription?.parseServices ?? client.parses), scope: context.id)
         return Channel(name: "\(video.name) · \(episode.name)", group: resolved.group, url: resolved.url,
                        logo: resolved.logo, headers: resolved.headers, skipScope: context.id,
                        historyContext: context, resumePosition: resumePosition)
+    }
+
+    /// The video and its episode list, for the player's episode buttons and the next episode.
+    private func remember(_ video: Video, client: CatalogClient, for channel: Channel) {
+        guard let context = channel.historyContext else { return }
+        if let data = try? JSONEncoder().encode(video) {
+            MediaCache.shared.store(data, for: "detail", kind: .catalog, scope: context.id, ttl: 6 * 3600, ticket: MediaCache.shared.ticket())
+        }
+        playbackCatalog = PlaybackCatalog(video: video, client: client, scope: context.id)
+    }
+
+    /// The next episode's stream, resolved ahead so the player can queue it behind this one; nil when
+    /// auto-play is off, there is no next episode, or the source can't resolve it now.
+    func upcomingEpisode(after channel: Channel) async -> Channel? {
+        guard autoPlayNext, let catalog = catalog(for: channel), let next = nextEpisode(after: channel) else { return nil }
+        do {
+            let resolved = try await catalog.client.playback(next)
+            guard !Task.isCancelled, playing == channel else { return nil }
+            return episodeChannel(resolved, video: catalog.video, episode: next, client: catalog.client)
+        } catch {
+            if !(error is CancellationError) { Diagnostics.shared.failure("catalog", "upcoming episode \(catalog.client.reportContext) flag=\(next.flag)", error) }
+            return nil
+        }
+    }
+
+    /// The queued episode started playing by itself: it becomes the one playing, as if it had been chosen.
+    func advance(to next: Channel, from channel: Channel) {
+        guard playing == channel, let catalog = catalog(for: channel) else { return }
+        cancelEpisodeSelection()
+        remember(catalog.video, client: catalog.client, for: next)
+        playing = next
     }
 
     func catalog(for channel: Channel) -> PlaybackCatalog? {

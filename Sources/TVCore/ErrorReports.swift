@@ -1,4 +1,7 @@
 import Foundation
+#if os(iOS) || os(tvOS)
+import os
+#endif
 
 /// Sends the app's errors to the developer, so bugs nobody reports still get found
 /// (Services/error-reports; read them with Scripts/error-reports.py). On unless turned off in Settings.
@@ -6,7 +9,8 @@ import Foundation
 /// its scheme and host, home folders and private IP addresses removed. Repeats are summed on the device
 /// and sent at most every six hours, so an install costs about a request a day. The ID is random.
 /// Crashes come from MetricKit on iPhone, iPad and Mac (CrashReports); on iPhone, iPad and Apple TV an
-/// exit while on screen (a crash, or the system ending the app for memory) is noticed on the next launch.
+/// exit while on screen (a crash, or the system ending the app for memory) is noticed on the next launch,
+/// with what that launch was doing (QuitContext).
 public final class ErrorReports: @unchecked Sendable {
     public static let shared = ErrorReports()
     /// UserDefaults switch; missing means on.
@@ -33,12 +37,21 @@ public final class ErrorReports: @unchecked Sendable {
     private var retryAfter = Date.distantPast
     /// The launch that was on screen when this one began, read before this launch marks itself.
     private let previousLaunch: String?
+    /// What that launch, or a later one that left the screen normally, last saved about itself.
+    private let previousContext: QuitContext?
+    // Guarded by `lock`: this launch's context, saved while it is on screen.
+    private var context: QuitContext
+    private var sampler: DispatchSourceTimer?
+    private var pressure: DispatchSourceMemoryPressure?
 
     init(defaults: UserDefaults = .standard, directory: URL = Diagnostics.shared.directory, interval: TimeInterval = 6 * 3600) {
         self.defaults = defaults
         self.file = directory.appendingPathComponent("error-reports.json")
         self.interval = interval
         self.previousLaunch = defaults.string(forKey: Self.onScreenKey)
+        self.previousContext = defaults.data(forKey: Self.contextKey).flatMap { try? JSONDecoder().decode(QuitContext.self, from: $0) }
+        let now = Int(Date().timeIntervalSince1970)
+        self.context = QuitContext(launch: Self.launch, started: now, saved: now)
     }
 
     public var enabled: Bool { defaults.object(forKey: Self.key) as? Bool ?? true }
@@ -56,7 +69,11 @@ public final class ErrorReports: @unchecked Sendable {
         // Set by an earlier launch while it was on screen, and never cleared: it ended there.
         if let other = previousLaunch, other != Self.launch {
             if defaults.string(forKey: Self.onScreenKey) == other { defaults.removeObject(forKey: Self.onScreenKey) }
-            Diagnostics.shared.record(.error, "app", "Quit unexpectedly while on screen (a crash, or the system ended it for memory)")
+            if let report = QuitContext.report(previousContext?.launch == other ? previousContext : nil, bootTime: Self.bootTime) {
+                Diagnostics.shared.record(.error, "app", report)
+            } else {
+                Diagnostics.shared.record(.info, "app", "The device restarted while the last launch was on screen")
+            }
         }
         #endif
         #if canImport(MetricKit) && !os(tvOS)
@@ -66,13 +83,84 @@ public final class ErrorReports: @unchecked Sendable {
     }
 
     private static let onScreenKey = "errorReportsOnScreen"
+    private static let contextKey = "errorReportsOnScreenContext"
     private static let launch = UUID().uuidString
 
     /// The app's scene phase: whether this launch is on screen and active right now.
     public func onScreen(_ active: Bool) {
         #if os(iOS) || os(tvOS)
-        if active { defaults.set(Self.launch, forKey: Self.onScreenKey) } else { defaults.removeObject(forKey: Self.onScreenKey) }
+        if active { defaults.set(Self.launch, forKey: Self.onScreenKey); startSampling() } else { defaults.removeObject(forKey: Self.onScreenKey); stopSampling() }
         #endif
+    }
+
+    /// What the player shows, for a later "quit unexpectedly" report. No title or address: only its kind.
+    public func playing(live: Bool, format: String, source: String?, danmaku: Bool, sharper: Bool) {
+        let since = Int(Date().timeIntervalSince1970)
+        note { $0.playback = QuitContext.Playback(live: live, format: format.isEmpty ? "-" : String(format.lowercased().prefix(5)),
+                                                  source: source ?? "-", since: since, danmaku: danmaku, sharper: sharper) }
+    }
+
+    public func stoppedPlaying() { note { $0.playback = nil } }
+
+    private func startSampling() {
+        lock.lock(); defer { lock.unlock() }
+        guard sampler == nil else { return }
+        let queue = DispatchQueue.global(qos: .utility)
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now(), repeating: 30, leeway: .seconds(5))
+        timer.setEventHandler { [weak self] in self?.note { _ in } }
+        let memory = DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical], queue: queue)
+        memory.setEventHandler { [weak self, weak memory] in
+            let level = memory?.data.contains(.critical) == true ? "critical" : "warning"
+            self?.note { $0.pressure = Int(Date().timeIntervalSince1970); $0.pressureLevel = level }
+        }
+        sampler = timer; pressure = memory
+        timer.resume(); memory.resume()
+    }
+
+    private func stopSampling() {
+        lock.withLock {
+            sampler?.cancel(); sampler = nil
+            pressure?.cancel(); pressure = nil
+        }
+        defaults.removeObject(forKey: Self.contextKey)
+    }
+
+    /// Changes this launch's context and, while it is on screen, saves it with fresh memory figures.
+    private func note(_ change: (inout QuitContext) -> Void) {
+        let memory = Self.memory()
+        lock.withLock {
+            change(&context)
+            guard sampler != nil else { return }
+            context.footprint = memory.footprint; context.available = memory.available
+            context.saved = Int(Date().timeIntervalSince1970)
+            if let data = try? JSONEncoder().encode(context) { defaults.set(data, forKey: Self.contextKey) }
+        }
+    }
+
+    /// Megabytes: this process's footprint (what the system counts against it), and on iPhone, iPad and
+    /// Apple TV how much more it may use before the system ends it.
+    static func memory() -> (footprint: Int?, available: Int?) {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+        }
+        let footprint = result == KERN_SUCCESS ? Int(info.phys_footprint / 1_048_576) : nil
+        #if os(iOS) || os(tvOS)
+        let left = os_proc_available_memory()
+        return (footprint, left > 0 ? left / 1_048_576 : nil)
+        #else
+        return (footprint, nil)
+        #endif
+    }
+
+    /// When the device last started up, in seconds since 1970.
+    static var bootTime: Int {
+        var time = timeval()
+        var size = MemoryLayout<timeval>.size
+        guard sysctlbyname("kern.boottime", &time, &size, nil, 0) == 0 else { return 0 }
+        return Int(time.tv_sec)
     }
 
     /// Called by Diagnostics with entries it has already redacted.
@@ -232,6 +320,8 @@ public final class ErrorReports: @unchecked Sendable {
     private static let variables: [(NSRegularExpression, String)] = [
         (#"(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"#, "<id>"),
         (#"(?i)\b[0-9a-f]{12,}\b"#, "<id>"),
+        // A plugin request's trace (LocalJarHost): the first 8 characters of a UUID.
+        (#"\brequest=[0-9A-F]{8}\b"#, "request=#"),
         (#"\b(offset|at|bytes|duration|length|chunk|aid|cid|room|id|page|elapsed|total|size|seconds)=-?[0-9.]+"#, "$1=#"),
         (#"\b\d+(?:\.\d+)? ?(?:seconds|sec|ms|s)\b"#, "#s"),
         (#"(?<![\w.-])\d{5,}\b"#, "#")
