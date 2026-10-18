@@ -1,6 +1,70 @@
 {
   "releases": [
     {
+      "version": "1.7.3",
+      "date": "2026-10-18",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-arm64.dmg",
+        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-x86_64.dmg"
+      },
+      "features": [
+        {
+          "symbol": "cpu",
+          "title": {
+            "en": "Yingxia for Intel Macs",
+            "zh-Hans": "支持 Intel 芯片的 Mac",
+            "zh-Hant": "支援 Intel 處理器的 Mac",
+            "ja": "Intel 搭載 Mac に対応"
+          },
+          "detail": {
+            "en": "Yingxia now also runs on Macs with an Intel processor. Get it from the website with Download for Intel Mac. Macs with Apple silicon keep the regular download.",
+            "zh-Hans": "映匣现在也能在搭载 Intel 处理器的 Mac 上运行。请在网站上选择“下载 Intel 芯片 Mac 版”。搭载 Apple 芯片的 Mac 继续使用原来的下载。",
+            "zh-Hant": "映匣現在也能在配備 Intel 處理器的 Mac 上執行。請在網站上選擇「下載 Intel 處理器 Mac 版」。配備 Apple 晶片的 Mac 繼續使用原本的下載。",
+            "ja": "映匣は Intel プロセッサを搭載した Mac でも動くようになりました。Web サイトの「Intel 搭載 Mac 用をダウンロード」から入手できます。Apple シリコン搭載の Mac は、これまでどおりのダウンロードを使います。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        },
+        {
+          "symbol": "shippingbox",
+          "title": {
+            "en": "JAR sources start on macOS 15 again",
+            "zh-Hans": "JAR 站点在 macOS 15 上又能启动了",
+            "zh-Hant": "JAR 來源在 macOS 15 上又能啟動了",
+            "ja": "macOS 15 で JAR のサイトがまた起動"
+          },
+          "detail": {
+            "en": "On Macs with macOS 15, sources that run as JAR plugins failed to start since version 1.6.5. They work again.",
+            "zh-Hans": "在运行 macOS 15 的 Mac 上，从 1.6.5 版开始，以 JAR 插件运行的站点无法启动。现在已经恢复正常。",
+            "zh-Hant": "在執行 macOS 15 的 Mac 上，從 1.6.5 版開始，以 JAR 外掛執行的來源無法啟動。現在已經恢復正常。",
+            "ja": "macOS 15 の Mac では、バージョン 1.6.5 から JAR プラグインで動くサイトが起動しませんでした。また使えるようになりました。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        },
+        {
+          "symbol": "curlybraces",
+          "title": {
+            "en": "Script sources start on every Mac",
+            "zh-Hans": "脚本类站点在所有 Mac 上都能启动",
+            "zh-Hant": "腳本類來源在所有 Mac 上都能啟動",
+            "ja": "スクリプトのサイトがどの Mac でも起動"
+          },
+          "detail": {
+            "en": "Sources that run JavaScript didn’t start on Macs without certain developer tools (Homebrew) installed. Yingxia now brings everything they need, so they work on every Mac.",
+            "zh-Hans": "运行 JavaScript 的站点以前在没有安装某些开发工具（Homebrew）的 Mac 上无法启动。映匣现在自带它们需要的全部组件，在任何 Mac 上都能使用。",
+            "zh-Hant": "執行 JavaScript 的來源以前在沒有安裝某些開發工具（Homebrew）的 Mac 上無法啟動。映匣現在自帶它們需要的全部元件，在任何 Mac 上都能使用。",
+            "ja": "JavaScript を使うサイトは、特定の開発ツール（Homebrew）が入っていない Mac では起動しませんでした。必要なものをすべて映匣に含めたので、どの Mac でも使えます。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.2",
       "date": "2026-10-17",
       "links": {

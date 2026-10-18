@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION="${PYTHON_VERSION:-3.12}"
-DEST="$PWD/build/PythonHost"
+DEST="${PYTHON_HOST_DEST:-$PWD/build/PythonHost}"
 if [ -n "${PYTHON_HOME:-}" ]; then
   PREFIX="$PYTHON_HOME"
 else

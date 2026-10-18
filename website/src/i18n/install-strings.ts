@@ -23,6 +23,8 @@ export interface InstallCopy {
   title: Record<Platform, string>;
   /** Short download button label. */
   get: string;
+  /** The link to the Intel Mac package, beside the Mac Download button (which is Apple silicon). */
+  intel: string;
   /** Heading above the steps. */
   how: string;
   steps: Record<Platform, Step[]>;
@@ -52,11 +54,12 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     l2: "on every screen.",
     sub: "The Mac app is a signed download. The iPhone, iPad and Apple TV apps are in preview: sign and install them with cider, a free command-line tool, and your own Apple account, free or paid. Or hand the job to your AI agent.",
     device: { mac: "Mac", ios: "iPhone & iPad", tv: "Apple TV" },
-    req: { mac: "macOS 15+ · Apple silicon", ios: "iOS & iPadOS 18+", tv: "tvOS 26+" },
+    req: { mac: "macOS 15+ · Apple silicon or Intel", ios: "iOS & iPadOS 18+", tv: "tvOS 26+" },
     tag: { mac: "Signed & notarized", ios: "Preview · Sideload", tv: "Preview · Sideload" },
     dl: { mac: "Download for Mac", ios: "Download the iPhone & iPad IPA", tv: "Download the Apple TV IPA" },
     title: { mac: "Yingxia for Mac", ios: "Yingxia for iPhone and iPad", tv: "Yingxia for Apple TV" },
     get: "Download",
+    intel: "Download for Intel Mac",
     how: "Install in a few steps.",
     steps: {
       mac: [
@@ -140,11 +143,12 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     l2: "映匣を。",
     sub: "Mac 版は署名済みアプリとしてダウンロードできます。iPhone、iPad、Apple TV 版はプレビューです。無料のコマンドラインツール cider とご自身の Apple アカウント（無料・有料どちらでも可）で署名してインストールします。AI エージェントに任せることもできます。",
     device: { mac: "Mac", ios: "iPhone・iPad", tv: "Apple TV" },
-    req: { mac: "macOS 15 以降 · Apple シリコン", ios: "iOS・iPadOS 18 以降", tv: "tvOS 26 以降" },
+    req: { mac: "macOS 15 以降 · Apple シリコンまたは Intel", ios: "iOS・iPadOS 18 以降", tv: "tvOS 26 以降" },
     tag: { mac: "署名・公証済み", ios: "プレビュー · サイドロード", tv: "プレビュー · サイドロード" },
     dl: { mac: "Mac 版をダウンロード", ios: "iPhone・iPad 用 IPA をダウンロード", tv: "Apple TV 用 IPA をダウンロード" },
     title: { mac: "Mac 版 映匣", ios: "iPhone・iPad 版 映匣", tv: "Apple TV 版 映匣" },
     get: "ダウンロード",
+    intel: "Intel 搭載 Mac 用をダウンロード",
     how: "数ステップでインストール。",
     steps: {
       mac: [
@@ -228,11 +232,12 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     l2: "Yingxia를.",
     sub: "Mac 버전은 서명된 앱으로 바로 다운로드할 수 있습니다. iPhone, iPad, Apple TV 버전은 프리뷰로, 무료 명령줄 도구 cider와 본인의 Apple 계정(무료 또는 유료)으로 서명해 설치합니다. AI 에이전트에게 맡길 수도 있습니다.",
     device: { mac: "Mac", ios: "iPhone·iPad", tv: "Apple TV" },
-    req: { mac: "macOS 15 이상 · Apple 실리콘", ios: "iOS·iPadOS 18 이상", tv: "tvOS 26 이상" },
+    req: { mac: "macOS 15 이상 · Apple 실리콘 또는 Intel", ios: "iOS·iPadOS 18 이상", tv: "tvOS 26 이상" },
     tag: { mac: "서명 및 공증 완료", ios: "프리뷰 · 사이드로드", tv: "프리뷰 · 사이드로드" },
     dl: { mac: "Mac용 다운로드", ios: "iPhone·iPad용 IPA 다운로드", tv: "Apple TV용 IPA 다운로드" },
     title: { mac: "Mac용 Yingxia", ios: "iPhone·iPad용 Yingxia", tv: "Apple TV용 Yingxia" },
     get: "다운로드",
+    intel: "Intel 기반 Mac용 다운로드",
     how: "몇 단계면 설치 완료.",
     steps: {
       mac: [
@@ -316,11 +321,12 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     l2: "都有映匣。",
     sub: "Mac 版提供已簽署的下載檔。iPhone、iPad 與 Apple TV 版以預覽形式提供，用免費的命令列工具 cider 和你自己的 Apple 帳號（免費或付費皆可）簽署並安裝。也可以交給你的 AI 代理處理。",
     device: { mac: "Mac", ios: "iPhone 與 iPad", tv: "Apple TV" },
-    req: { mac: "macOS 15 以上 · Apple 晶片", ios: "iOS 與 iPadOS 18 以上", tv: "tvOS 26 以上" },
+    req: { mac: "macOS 15 以上 · Apple 晶片或 Intel", ios: "iOS 與 iPadOS 18 以上", tv: "tvOS 26 以上" },
     tag: { mac: "已簽署並公證", ios: "預覽 · 側載", tv: "預覽 · 側載" },
     dl: { mac: "下載 Mac 版", ios: "下載 iPhone 與 iPad 版 IPA", tv: "下載 Apple TV 版 IPA" },
     title: { mac: "映匣 Mac 版", ios: "映匣 iPhone 與 iPad 版", tv: "映匣 Apple TV 版" },
     get: "下載",
+    intel: "下載 Intel 處理器 Mac 版",
     how: "幾個步驟就能安裝。",
     steps: {
       mac: [

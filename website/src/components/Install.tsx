@@ -2,7 +2,7 @@ import { SFSymbol } from "./SFSymbol";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useI18n } from "../i18n/I18nProvider";
 import { INSTALL, type InstallCopy, type Mode, type Platform, type Sideload } from "../i18n/install-strings";
-import { AGENTS, CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, SIDELOADLY } from "./controls";
+import { AGENTS, CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, MAC_INTEL_DOWNLOAD, SIDELOADLY } from "./controls";
 import { AppleTVIcon, IPhoneIPadIcon, MacIcon } from "./icons-devices";
 import { Reveal } from "./Reveal";
 
@@ -145,6 +145,11 @@ export function Install() {
             <a className="btn-blue" href={DOWNLOADS[platform]}>
               {copy.get}
             </a>
+            {platform === "mac" && (
+              <a className="link-blue" href={MAC_INTEL_DOWNLOAD}>
+                {copy.intel} <SFSymbol name="chevron.right" />
+              </a>
+            )}
           </div>
           {sideload && (
             <div className="modes-wrap">

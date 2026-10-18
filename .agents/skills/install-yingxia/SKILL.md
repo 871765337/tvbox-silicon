@@ -22,10 +22,11 @@ Apple TV 4K has no USB data port; it's installed over Wi-Fi, which only works fr
 
 ## 1. Find the latest downloads
 
-The newest release is the first entry in [`website/public/releases.json`](../../../website/public/releases.json) (live at https://yingxia.getmegaportal.com/releases.json). Downloads follow one pattern:
+Releases are listed newest first in [`website/public/releases.json`](../../../website/public/releases.json) (live at https://yingxia.getmegaportal.com/releases.json). Not every release is for every device: use the newest entry whose `links` has the device's key (`macos` for Apple silicon Macs, `macos-x86_64` for Intel Macs, `ios`, `tvos`). Downloads follow one pattern:
 
 ```
 https://download.getmegaportal.com/yingxia/<version>/Yingxia-<version>-macos-arm64.dmg
+https://download.getmegaportal.com/yingxia/<version>/Yingxia-<version>-macos-x86_64.dmg
 https://download.getmegaportal.com/yingxia/<version>/Yingxia-<version>-ios.ipa
 https://download.getmegaportal.com/yingxia/<version>/Yingxia-<version>-tvos.ipa
 ```
@@ -42,6 +43,7 @@ curl.exe -LO https://download.getmegaportal.com/yingxia/<version>/Yingxia-<versi
 | Device | Requirement | File | Bundle ID |
 | --- | --- | --- | --- |
 | Mac | macOS 15+, Apple silicon | `…-macos-arm64.dmg` | `com.tvbox.yingxia.mac` |
+| Intel Mac | macOS 15+, Intel processor (1.7.3 and later) | `…-macos-x86_64.dmg` | `com.tvbox.yingxia.mac` |
 | iPhone / iPad | iOS / iPadOS 18+ | `…-ios.ipa` | `com.tvbox.yingxia.ios` |
 | Apple TV | tvOS 26+ (Apple TV 4K) | `…-tvos.ipa` | `com.tvbox.yingxia.tv` |
 

@@ -25,7 +25,7 @@ await build({
   },
 });
 
-const { render, LANGS, LOCALES, LANG_PATH, SITE_URL, INSTALL, DOWNLOADS, MAC_DOWNLOAD, INSTALL_GUIDE, REPO } = await import(
+const { render, LANGS, LOCALES, LANG_PATH, SITE_URL, INSTALL, DOWNLOADS, MAC_DOWNLOAD, MAC_INTEL_DOWNLOAD, INSTALL_GUIDE, REPO } = await import(
   pathToFileURL(join(ssrOut, "entry-server.js")).href
 );
 
@@ -57,7 +57,7 @@ function head(lang) {
     applicationCategory: "MultimediaApplication",
     operatingSystem: "macOS 15, iOS 18, iPadOS 18, tvOS 26",
     softwareVersion: VERSION,
-    downloadUrl: MAC_DOWNLOAD,
+    downloadUrl: [MAC_DOWNLOAD, MAC_INTEL_DOWNLOAD],
     installUrl: `${url}#install`,
     isAccessibleForFree: true,
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
@@ -138,6 +138,7 @@ ${FAQ.map((n) => `- **${en[`q${n}.q`]}** ${en[`q${n}.a`]}`).join("\n")}
 ## Download (version ${VERSION})
 
 ${["mac", "ios", "tv"].map((p) => `- [${install.title[p]}](${DOWNLOADS[p]}): ${install.req[p]}. ${install.tag[p]}.`).join("\n")}
+- [${install.intel}](${MAC_INTEL_DOWNLOAD}): the Mac app for Intel processors; the link above is for Apple silicon.
 - [Install guide](${INSTALL_GUIDE}): installing the iPhone, iPad and Apple TV apps with Sideloadly, keeping them signed, and troubleshooting.
 
 ## Project

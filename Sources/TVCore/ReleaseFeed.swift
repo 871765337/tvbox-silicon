@@ -11,15 +11,18 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
         public var version: String
         /// ISO date, e.g. "2026-10-09".
         public var date: String?
-        /// Where to get this release, keyed by `ReleaseFeed.platform`. A platform without a link
-        /// did not get this release, so its users are not told about it.
+        /// Where to get this release, keyed by `ReleaseFeed.platform`, plus `ReleaseFeed.intelMacKey` for the Intel
+        /// Mac package. A platform without a link did not get this release, so its users are not told about it.
         public var links: [String: URL]
         public var features: [Feature]
         public var id: String { version }
         public init(version: String, date: String? = nil, links: [String: URL], features: [Feature]) {
             self.version = version; self.date = date; self.links = links; self.features = features
         }
-        public func link(for platform: String = ReleaseFeed.platform) -> URL? { links[platform] }
+        /// Intel Macs get their own package; the `macos` link is the Apple silicon one.
+        public func link(for platform: String = ReleaseFeed.platform, intelMac: Bool = ReleaseFeed.isIntelMac) -> URL? {
+            links[platform == "macos" && intelMac ? ReleaseFeed.intelMacKey : platform]
+        }
         /// The features that apply to `platform`.
         public func features(for platform: String = ReleaseFeed.platform) -> [Feature] {
             features.filter { $0.platforms?.contains(platform) ?? true }
@@ -48,10 +51,21 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
         #endif
     }
 
+    /// The key of the Intel Mac package in `Release.links` (from 1.7.3 on).
+    public static let intelMacKey = "macos-x86_64"
+
+    public static var isIntelMac: Bool {
+        #if os(macOS) && arch(x86_64)
+        true
+        #else
+        false
+        #endif
+    }
+
     /// Releases for `platform` newer than `version`, newest first.
-    public func updates(after version: String, platform: String = ReleaseFeed.platform) -> [Release] {
+    public func updates(after version: String, platform: String = ReleaseFeed.platform, intelMac: Bool = ReleaseFeed.isIntelMac) -> [Release] {
         let current = AppVersion(version)
-        return newestFirst.filter { AppVersion($0.version) > current && $0.link(for: platform) != nil }
+        return newestFirst.filter { AppVersion($0.version) > current && $0.link(for: platform, intelMac: intelMac) != nil }
     }
 
     /// The releases someone skipped over when updating from `previous` to `current`, newest first.

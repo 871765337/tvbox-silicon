@@ -59,7 +59,7 @@ for this source.
 
 ## Node.js (Mac)
 
-The bundled standalone Node.js binary retains its complete distributed license and third-party notices in `ScriptHost/LICENSE.node`. `Scripts/build-script-host.sh` copies that file from the selected Node distribution. The development validation used Node 25.0.0 on macOS arm64. Subscription scripts and remote modules are downloaded on demand and are not bundled.
+The bundled standalone Node.js binary retains its complete distributed license and third-party notices in `ScriptHost/LICENSE.node`. `Scripts/build-script-host.sh` copies that file from the selected Node distribution. The Mac release (`Scripts/build-universal-hosts.sh`) joins the official nodejs.org arm64 and x64 builds of the same version into one universal binary and ships their LICENSE. The development validation used Node 25.0.0 on macOS arm64. Subscription scripts and remote modules are downloaded on demand and are not bundled.
 
 ## Python runtime (Mac)
 

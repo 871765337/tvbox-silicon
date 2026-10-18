@@ -12,7 +12,8 @@
 <p align="center">
   <a href="https://yingxia.getmegaportal.com"><b>yingxia.getmegaportal.com</b></a>
   &nbsp;·&nbsp;
-  <a href="https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-macos-arm64.dmg">Download for Mac</a>
+  <a href="https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-arm64.dmg">Download for Mac</a>
+  (<a href="https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-x86_64.dmg">Intel</a>)
   &nbsp;·&nbsp;
   <a href="Docs/INSTALL.md">Install on iPhone, iPad &amp; Apple TV</a>
   &nbsp;·&nbsp;
@@ -57,7 +58,7 @@ Yingxia (映匣) plays your TVBox subscriptions the way an Apple app should: liv
 
 | Platform | Status |
 | --- | --- |
-| **Mac** (macOS 15+, Apple silicon) | ✅ [Free download](https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-macos-arm64.dmg), signed and notarized |
+| **Mac** (macOS 15+, Apple silicon or Intel) | ✅ Free download for [Apple silicon](https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-arm64.dmg) or [Intel](https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-x86_64.dmg), signed and notarized |
 | **Apple TV** (tvOS 26+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-tvos.ipa) and [sideload it](Docs/INSTALL.md#install-on-apple-tv) |
 | **iPhone & iPad** (iOS 18+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad) |
 

@@ -23,6 +23,15 @@ private func release(_ version: String, platforms: [String] = ["macos", "ios", "
     #expect(feed.updates(after: "1.2", platform: "macos").isEmpty)
 }
 
+@Test func intelMacsUseTheirOwnPackageAndSkipReleasesWithoutOne() {
+    let feed = ReleaseFeed(releases: [release("1.7.2"), release("1.7.3", platforms: ["macos", ReleaseFeed.intelMacKey])])
+    #expect(feed.updates(after: "1.7.1", platform: "macos", intelMac: true).map(\.version) == ["1.7.3"])
+    #expect(feed.updates(after: "1.7.1", platform: "macos", intelMac: false).map(\.version) == ["1.7.3", "1.7.2"])
+    #expect(feed.releases[1].link(for: "macos", intelMac: true)?.absoluteString == "https://example.com/macos-x86_64")
+    #expect(feed.releases[1].link(for: "macos", intelMac: false)?.absoluteString == "https://example.com/macos")
+    #expect(feed.releases[1].link(for: "ios", intelMac: true) == nil)
+}
+
 @Test func whatsNewCoversSkippedReleasesWithFeatures() {
     let macOnly = ReleaseFeed.Feature(symbol: "macwindow", title: "Mac", detail: "Mac only", platforms: ["macos"])
     let feed = ReleaseFeed(releases: [release("1.0"), release("1.1"), release("1.2", features: [macOnly]), release("1.3"), release("1.4")])
@@ -56,7 +65,7 @@ private func release(_ version: String, platforms: [String] = ["macos", "ios", "
     #expect(Set(feed.releases.map { AppVersion($0.version) }).count == feed.releases.count)
     for entry in feed.releases {
         #expect(!entry.links.isEmpty, "\(entry.version) has no links")
-        #expect(Set(entry.links.keys).isSubset(of: ["macos", "ios", "tvos"]), "\(entry.version) has an unknown platform")
+        #expect(Set(entry.links.keys).isSubset(of: ["macos", ReleaseFeed.intelMacKey, "ios", "tvos"]), "\(entry.version) has an unknown platform")
         for feature in entry.features {
             for language in L10n.supportedLanguages {
                 #expect(!(feature.title.values[language] ?? "").isEmpty, "\(entry.version) \(feature.symbol): no \(language) title")
