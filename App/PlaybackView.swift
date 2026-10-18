@@ -3,7 +3,8 @@ import AVKit
 import TVCore
 
 @MainActor @Observable final class PlaybackSession {
-    let player: AVPlayer
+    /// A queue, so the next episode can wait behind this one and play straight on.
+    let player: AVQueuePlayer
     /// Upscaling and 60 fps smoothing, drawn over AVKit's picture when switched on in Settings.
     let enhancer: VideoEnhancer
     let catalogDanmaku = CatalogDanmakuModel()
@@ -69,7 +70,7 @@ import TVCore
 
     var error: String?
     var loading = true
-    var looping = false
+    var looping = false { didSet { if looping { discardUpcoming() } } }
     var buffering = false
     /// Whether the picture has started moving: the waiting screen stays until then, so no black frame shows between.
     private(set) var showsPicture = false
@@ -84,6 +85,33 @@ import TVCore
     /// Plays another line of the same episode when this file can't play here (an MKV original);
     /// returns that line's name, or nil when there is none.
     var onUnplayableFile: (() -> String?)?
+    /// The episode after this one, resolved for the queue; nil when there is none.
+    var upcomingEpisode: (@MainActor () async -> Channel?)?
+    /// Whether playback runs on into the next episode (auto-play can be switched off meanwhile).
+    var playsOn: @MainActor () -> Bool = { false }
+    /// The queued episode started playing by itself: it is now the episode on screen.
+    var onAdvance: (@MainActor (Channel) -> Void)?
+    /// The next episode, prepared near the end of this one and queued behind it, so playback runs
+    /// straight on instead of stopping to load it.
+    private struct Upcoming {
+        let channel: Channel
+        let item: AVPlayerItem
+        let prepared: Prepared
+    }
+    private var upcoming: Upcoming?
+    private var upcomingTask: Task<Void, Never>?
+    private var upcomingObservation: NSKeyValueObservation?
+    /// Whether this episode has already tried to queue the next one (once each, even when that failed).
+    private var upcomingAttempted = false
+    /// The queue moves past this episode because the next one was asked for, not because it ended.
+    private var skipsToUpcoming = false
+    /// The episode the queue moved on to, which `start` then finds already playing.
+    private var advanced: Channel?
+    /// The item of the episode on screen; during a move the queue's current item is already the next one.
+    private var item: AVPlayerItem?
+    private var queueObservation: NSKeyValueObservation?
+    /// How long before an episode's end (or its skipped outro) the next one starts loading.
+    static let upcomingLead: Double = 30
     /// Why the player is switching lines, shown while the other line loads.
     private var switchNotice: String?
     /// Qualities the stream can switch between (Bilibili), and the one chosen; nil is automatic.
@@ -227,9 +255,18 @@ import TVCore
     }
     private var generation = UUID()
     init() {
-        let player = AVPlayer()
+        let player = AVQueuePlayer()
+        // An episode ends paused on its last frame; only a queued next episode makes the queue move on.
+        player.actionAtItemEnd = .pause
+        #if DEBUG
+        // `-qaMute 1`: QA runs on a shared Mac play silently.
+        if UserDefaults.standard.bool(forKey: "qaMute") { player.isMuted = true }
+        #endif
         self.player = player
         enhancer = VideoEnhancer(player: player)
+        queueObservation = player.observe(\.currentItem, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in self?.queueMoved() }
+        }
     }
     private var observation: NSKeyValueObservation?
     private var failureObserver: NSObjectProtocol?
@@ -241,15 +278,10 @@ import TVCore
     static weak var current: PlaybackSession?
     func start(_ channel: Channel) {
         Self.current = self
+        // The queue has already moved on to this episode by itself.
+        if let advanced, advanced == channel { self.advanced = nil; return }
         stop(); error = nil; errorSymbol = "play.slash.fill"; loading = true; showsPicture = false; sourceDanmaku = []; qualities = []; quality = nil; switchNotice = nil
-        historyContext = channel.historyContext
-        requestedResumePosition = channel.resumePosition
-        pendingResume = channel.resumePosition.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
-        skipScope = channel.skipScope
-        skipSettings = skipScope.map { EpisodeSkipSettings.load(scope: $0, defaults: skipDefaults) } ?? EpisodeSkipSettings()
-        if !DanmakuSource.has(channel.url), channel.historyContext?.sourceKey != Bilibili.siteKey {
-            catalogDanmaku.startAutomatic(channel.historyContext)
-        }
+        begin(channel)
         isLive = LiveCatalog.isRoom(channel.url) || channel.group == L10n.text("Bilibili Live")
         liveRoom = LiveCatalog.isRoom(channel.url) ? channel : nil; liveRetried = false; liveRetrying = false
         let activeGeneration = generation
@@ -268,58 +300,28 @@ import TVCore
                     self.error = error.localizedDescription; self.loading = false; return
                 }
             }
-            var address = channel.url
-            do { address = try await EmbeddedJarHost.shared.recoverProxy(address) }
+            let prepared: Prepared
+            do { prepared = try await self.prepare(channel) }
             catch {
                 guard self.generation == activeGeneration, !Task.isCancelled else { return }
-                Diagnostics.shared.failure("player", "plugin proxy source=\(channel.historyContext?.sourceKey ?? "-")", error)
                 self.error = error.localizedDescription; self.loading = false; return
             }
-            // A cloud-drive file streams straight from its CDN: the plugin's proxy only reveals the
-            // address. Otherwise every range AVPlayer opens costs the plugin a set of threads.
-            if let media = await EmbeddedJarHost.shared.directMedia(address) {
-                guard self.generation == activeGeneration, !Task.isCancelled else { return }
-                let proxied = address
-                address = CloudStreams.register(media) { await EmbeddedJarHost.shared.directMedia(proxied) }
-                Diagnostics.shared.record(.info, "player", "cloud direct host=\(media.url.host() ?? "-") length=\(media.length)")
-                // Drives keep originals as uploaded; Apple devices can't open MKV. Say so now, or switch
-                // to the drive's transcoded line, instead of letting AVPlayer fail with a vague error.
-                if await CloudStreams.isMatroska(address) {
-                    guard self.generation == activeGeneration, !Task.isCancelled else { return }
-                    if let line = self.onUnplayableFile?() {
-                        Diagnostics.shared.record(.warning, "player", "mkv original; switching to line=\(line)")
-                        self.switchNotice = L10n.text("The original file is MKV, which Apple devices can't play, so the %@ line is playing instead.", line)
-                        return
-                    }
-                    Diagnostics.shared.record(.warning, "player", "mkv original; no transcoded line")
-                    self.error = L10n.text("This video is an MKV file, which Apple devices can't play."); self.loading = false; return
-                }
-            } else if EmbeddedJarHost.isPluginProxy(address) {
-                // Every byte of this stream passes through the plugin runtime.
-                Diagnostics.shared.record(.warning, "player", "plugin proxy stream \(EmbeddedJarHost.proxyRoute(address))")
-            }
-            // A downloaded episode plays from disk: its file, or its HLS through a loopback server.
-            if address.scheme == DownloadLibrary.scheme {
-                do { address = try await DownloadLibrary.shared.playbackAddress(for: address) }
-                catch {
-                    guard self.generation == activeGeneration, !Task.isCancelled else { return }
-                    Diagnostics.shared.failure("player", "saved download", error)
-                    self.error = error.localizedDescription; self.loading = false; return
-                }
-            }
+            guard self.generation == activeGeneration, !Task.isCancelled else { return Self.stopAdapter(prepared) }
             #if os(macOS)
-            if address.pathExtension.lowercased() == "m3u8", ["http", "https"].contains(address.scheme), channel.url.scheme != DownloadLibrary.scheme {
-                let adapter = HLSProxy(headers: channel.headers)
-                self.proxy = adapter
-                do { address = try await adapter.start(url: address) }
-                catch {
-                    guard self.generation == activeGeneration, !Task.isCancelled else { return }
-                    Diagnostics.shared.record(.error, "player", "proxy failed host=\(channel.url.host() ?? "-") \(Self.describe(error))")
-                    self.error = error.localizedDescription; self.loading = false; return
-                }
-            }
+            self.proxy = prepared.adapter
             #endif
-            guard self.generation == activeGeneration, !Task.isCancelled else { return }
+            // Drives keep originals as uploaded; Apple devices can't open MKV. Say so now, or switch
+            // to the drive's transcoded line, instead of letting AVPlayer fail with a vague error.
+            if prepared.matroska {
+                if let line = self.onUnplayableFile?() {
+                    Diagnostics.shared.record(.warning, "player", "mkv original; switching to line=\(line)")
+                    self.switchNotice = L10n.text("The original file is MKV, which Apple devices can't play, so the %@ line is playing instead.", line)
+                    return
+                }
+                Diagnostics.shared.record(.warning, "player", "mkv original; no transcoded line")
+                self.error = L10n.text("This video is an MKV file, which Apple devices can't play."); self.loading = false; return
+            }
+            let address = prepared.url
             self.configure(channel, url: address, generation: activeGeneration)
             self.playing = channel; self.automatic = address
             self.qualities = liveQualities.isEmpty ? BilibiliStreams.qualities(for: address) : liveQualities
@@ -335,12 +337,32 @@ import TVCore
             try AVAudioSession.sharedInstance().setActive(true)
         } catch { Diagnostics.shared.failure("player", "audio session", error); self.error = error.localizedDescription }
         #endif
+        let item = makeItem(channel, url: url)
+        watch(item, channel: channel, url: url, generation: activeGeneration)
+        player.preventsDisplaySleepDuringVideoPlayback = true
+        player.replaceCurrentItem(with: item)
+        if pendingResume == nil { player.play() }
+        #if DEBUG
+        // `-qaSeek <seconds>` starts playback there, for screenshots.
+        let qaSeek = UserDefaults.standard.double(forKey: "qaSeek")
+        if qaSeek > 0 { player.seek(to: CMTime(seconds: qaSeek, preferredTimescale: 600)) }
+        #endif
+    }
+
+    /// The item for a prepared stream, with the request headers and buffer its source needs.
+    private func makeItem(_ channel: Channel, url: URL) -> AVPlayerItem {
         // Some providers require request headers. AVURLAsset's HTTP-header option is
         // best-effort and is not a guarantee for every redirected HLS segment.
         let asset = CloudStreams.asset(for: url) ?? HongguoStreams.asset(for: url) ?? BilibiliStreams.asset(for: url) ?? DouyuStreams.asset(for: url)
             ?? AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": channel.headers])
         let item = AVPlayerItem(asset: asset)
         if url.scheme == HongguoStreams.scheme { item.preferredForwardBufferDuration = HongguoStreams.forwardBufferDuration }
+        return item
+    }
+
+    /// Follows the episode's item (ready, failed, ended), the player's state, and the transfer, for this playback.
+    private func watch(_ item: AVPlayerItem, channel: Channel, url: URL, generation activeGeneration: UUID) {
+        self.item = item
         observation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             let status = item.status
             let failure = item.error
@@ -380,6 +402,8 @@ import TVCore
         endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
+                // The queue plays the next episode by itself; `queueMoved` takes over from here.
+                if self.upcoming != nil { return }
                 self.saveHistory(completed: true)
                 if self.looping {
                     self.skipPass = EpisodeSkipPass()
@@ -409,14 +433,6 @@ import TVCore
             let muted = player.isMuted
             Task { @MainActor [weak self] in self?.muted = muted }
         }
-        player.preventsDisplaySleepDuringVideoPlayback = true
-        player.replaceCurrentItem(with: item)
-        if pendingResume == nil { player.play() }
-        #if DEBUG
-        // `-qaSeek <seconds>` starts playback there, for screenshots.
-        let qaSeek = UserDefaults.standard.double(forKey: "qaSeek")
-        if qaSeek > 0 { player.seek(to: CMTime(seconds: qaSeek, preferredTimescale: 600)) }
-        #endif
         let origin = channel.url.host()
         sampler = Task { [weak self] in
             var history: [(date: Date, bytes: Int64)] = []
@@ -430,9 +446,11 @@ import TVCore
     }
     private func sample(_ history: inout [(date: Date, bytes: Int64)], tick: Int, origin: String?, generation activeGeneration: UUID) -> Bool {
         guard generation == activeGeneration else { return false }
-        guard let item = player.currentItem else { return true }
+        // Once the queue has moved on, `queueMoved` is about to take over the next episode.
+        guard let item, player.currentItem === item else { return true }
         restorePositionIfNeeded(item)
         updateSkipping(item)
+        queueUpcomingIfDue(item)
         if let url = playing?.url { HongguoStreams.updatePosition(for: url, seconds: pendingResume ?? player.currentTime().seconds) }
         if tick % 5 == 0 { saveHistory() }
         let events = item.accessLog()?.events ?? []
@@ -519,6 +537,9 @@ import TVCore
     }
     func stop() {
         saveHistory()
+        discardUpcoming()
+        upcomingAttempted = false; skipsToUpcoming = false; advanced = nil
+        upcomingEpisode = nil; onAdvance = nil; playsOn = { false }
         if let url = playing?.url { HongguoStreams.stop(url) }
         if let automatic { CloudStreams.stop(automatic) }
         playing = nil
@@ -548,14 +569,31 @@ import TVCore
         endObserver = nil
         if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
         failureObserver = nil
-        player.pause(); player.replaceCurrentItem(with: nil)
+        player.pause(); player.removeAllItems(); item = nil
     }
-    func saveHistory(completed: Bool = false) {
-        guard let context = historyContext, let item = player.currentItem, item.status == .readyToPlay,
+    /// Records where the episode is; `item` is the episode's own, which the queue may already have moved past.
+    func saveHistory(completed: Bool = false, item: AVPlayerItem? = nil) {
+        guard let context = historyContext, let item = item ?? self.item, item.status == .readyToPlay,
               pendingResume == nil, !restoringPosition, !seekingSegment else { return }
         let length = item.duration.seconds
-        let time = completed && length.isFinite ? length : player.currentTime().seconds
+        let time = completed && length.isFinite ? length : item.currentTime().seconds
         history.record(context, position: time, duration: length.isFinite ? length : 0)
+    }
+
+    /// Per-episode state: where its history goes, where it resumes, the intro and outro to skip, its danmaku.
+    private func begin(_ channel: Channel) {
+        historyContext = channel.historyContext
+        requestedResumePosition = channel.resumePosition
+        pendingResume = channel.resumePosition.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        restoringPosition = false; restoredPosition = nil
+        skipScope = channel.skipScope
+        skipSettings = skipScope.map { EpisodeSkipSettings.load(scope: $0, defaults: skipDefaults) } ?? EpisodeSkipSettings()
+        skipPass = EpisodeSkipPass(); seekingSegment = false
+        position = 0; duration = 0
+        upcomingAttempted = false
+        if !DanmakuSource.has(channel.url), channel.historyContext?.sourceKey != Bilibili.siteKey {
+            catalogDanmaku.startAutomatic(channel.historyContext)
+        }
     }
 
     private func restorePositionIfNeeded(_ item: AVPlayerItem) {
@@ -577,6 +615,193 @@ import TVCore
                 self.saveHistory()
             }
         }
+    }
+}
+
+extension PlaybackSession {
+    /// A catalog stream made ready for AVPlayer: past the plugin's proxy, at a cloud drive's CDN or a
+    /// saved download, and on the Mac through the local HLS adapter, which stops with the episode.
+    fileprivate struct Prepared {
+        var url: URL
+        /// A cloud drive's MKV original, which Apple devices can't open.
+        var matroska = false
+        /// Every byte passes through the plugin runtime.
+        var pluginProxy = false
+        #if os(macOS)
+        var adapter: HLSProxy?
+        #endif
+    }
+
+    fileprivate func prepare(_ channel: Channel) async throws -> Prepared {
+        var address = channel.url
+        do { address = try await EmbeddedJarHost.shared.recoverProxy(address) }
+        catch {
+            if !Task.isCancelled { Diagnostics.shared.failure("player", "plugin proxy source=\(channel.historyContext?.sourceKey ?? "-")", error) }
+            throw error
+        }
+        var prepared = Prepared(url: address)
+        // A cloud-drive file streams straight from its CDN: the plugin's proxy only reveals the
+        // address. Otherwise every range AVPlayer opens costs the plugin a set of threads.
+        if let media = await EmbeddedJarHost.shared.directMedia(address) {
+            try Task.checkCancellation()
+            let proxied = address
+            address = CloudStreams.register(media) { await EmbeddedJarHost.shared.directMedia(proxied) }
+            prepared.url = address
+            Diagnostics.shared.record(.info, "player", "cloud direct host=\(media.url.host() ?? "-") length=\(media.length)")
+            if await CloudStreams.isMatroska(address) {
+                try Task.checkCancellation()
+                prepared.matroska = true
+                return prepared
+            }
+        } else if EmbeddedJarHost.isPluginProxy(address) {
+            Diagnostics.shared.record(.warning, "player", "plugin proxy stream \(EmbeddedJarHost.proxyRoute(address))")
+            prepared.pluginProxy = true
+        }
+        // A downloaded episode plays from disk: its file, or its HLS through a loopback server.
+        if address.scheme == DownloadLibrary.scheme {
+            do { address = try await DownloadLibrary.shared.playbackAddress(for: address) }
+            catch {
+                if !Task.isCancelled { Diagnostics.shared.failure("player", "saved download", error) }
+                throw error
+            }
+            prepared.url = address
+        }
+        #if os(macOS)
+        if address.pathExtension.lowercased() == "m3u8", ["http", "https"].contains(address.scheme), channel.url.scheme != DownloadLibrary.scheme {
+            let adapter = HLSProxy(headers: channel.headers)
+            do { prepared.url = try await adapter.start(url: address) }
+            catch {
+                if !Task.isCancelled { Diagnostics.shared.record(.error, "player", "proxy failed host=\(channel.url.host() ?? "-") \(Self.describe(error))") }
+                throw error
+            }
+            prepared.adapter = adapter
+        }
+        #endif
+        return prepared
+    }
+
+    /// The local HLS adapter of a stream that won't play after all.
+    fileprivate static func stopAdapter(_ prepared: Prepared) {
+        #if os(macOS)
+        if let adapter = prepared.adapter { Task { await adapter.stop() } }
+        #endif
+    }
+}
+
+extension PlaybackSession {
+    /// Near the end of an episode, resolves the next one and queues it behind this one, where it loads
+    /// while this one finishes; the queue then plays it straight on. When it can't be queued (no next
+    /// episode, a plugin-proxied or MKV stream, a failure), the episode ends and switches as before.
+    fileprivate func queueUpcomingIfDue(_ item: AVPlayerItem) {
+        if upcoming != nil, looping || !playsOn() { return discardUpcoming() }
+        guard !upcomingAttempted, !looping, !isLive, playsOn(), let upcomingEpisode, item.status == .readyToPlay,
+              pendingResume == nil, !restoringPosition else { return }
+        let length = item.duration.seconds, time = item.currentTime().seconds
+        guard length.isFinite, length > 0, time.isFinite else { return }
+        let end = skipSettings.enabled && skipSettings.outroLength > 0 ? length - skipSettings.outroLength : length
+        guard end - time <= Self.upcomingLead else { return }
+        upcomingAttempted = true
+        let activeGeneration = generation
+        upcomingTask = Task { [weak self] in
+            guard let next = await upcomingEpisode(), let self, self.generation == activeGeneration, !Task.isCancelled else { return }
+            let prepared: Prepared
+            do { prepared = try await self.prepare(next) }
+            catch {
+                Diagnostics.shared.record(.warning, "player", "upcoming not prepared \(Self.describe(error))")
+                return
+            }
+            guard self.generation == activeGeneration, !Task.isCancelled, !self.looping, self.playsOn(),
+                  !prepared.matroska, !prepared.pluginProxy, self.player.currentItem === item else {
+                return Self.release(next, prepared)
+            }
+            let queued = self.makeItem(next, url: prepared.url)
+            guard self.player.canInsert(queued, after: item) else { return Self.release(next, prepared) }
+            self.player.insert(queued, after: item)
+            self.player.actionAtItemEnd = .advance
+            self.upcoming = Upcoming(channel: next, item: queued, prepared: prepared)
+            Diagnostics.shared.record(.info, "player", "upcoming queued name=\(next.name) left=\(Int(length - item.currentTime().seconds))s")
+            // The next episode starts past its intro when that is skipped, rather than jumping there once it plays.
+            let intro = next.skipScope.map { EpisodeSkipSettings.load(scope: $0, defaults: self.skipDefaults) }
+            self.upcomingObservation = queued.observe(\.status, options: [.initial, .new]) { [weak self] queued, _ in
+                let status = queued.status, failure = queued.error
+                Task { @MainActor [weak self] in
+                    guard let self, self.upcoming?.item === queued else { return }
+                    if status == .failed {
+                        Diagnostics.shared.record(.warning, "player", "upcoming failed \(failure.map(Self.describe) ?? "-")")
+                        self.discardUpcoming()
+                    } else if status == .readyToPlay, let intro, intro.enabled, intro.introEnd > 0,
+                              intro.validationError(duration: queued.duration.seconds) == nil, queued.currentTime().seconds < intro.introEnd {
+                        queued.seek(to: CMTime(seconds: intro.introEnd, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: nil)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Takes the queued episode out again: auto-play went off, looping came on, or its stream failed.
+    /// The episode then ends paused and switches the ordinary way.
+    fileprivate func discardUpcoming() {
+        upcomingTask?.cancel(); upcomingTask = nil
+        upcomingObservation = nil
+        player.actionAtItemEnd = .pause
+        guard let upcoming else { return }
+        self.upcoming = nil
+        player.remove(upcoming.item)
+        Self.release(upcoming.channel, upcoming.prepared)
+    }
+
+    /// Stops the streams a prepared episode opened.
+    fileprivate static func release(_ channel: Channel, _ prepared: Prepared) {
+        HongguoStreams.stop(channel.url)
+        CloudStreams.stop(prepared.url)
+        stopAdapter(prepared)
+    }
+
+    /// Plays the queued next episode now (the Next Episode button); false when none is queued yet.
+    func playUpcoming() -> Bool {
+        guard let upcoming, upcoming.item.status != .failed, player.currentItem === item else { return false }
+        skipsToUpcoming = true
+        player.advanceToNextItem()
+        player.play()
+        return true
+    }
+
+    /// The queue moved on to the episode it held: that episode takes over the session, its item already
+    /// playing, without the wait a new start would show.
+    fileprivate func queueMoved() {
+        guard let upcoming, player.currentItem === upcoming.item else { return }
+        saveHistory(completed: !skipsToUpcoming, item: item)
+        skipsToUpcoming = false
+        let channel = upcoming.channel
+        Diagnostics.shared.record(.info, "player", "advance name=\(channel.name) ready=\(upcoming.item.status == .readyToPlay)")
+        // Let go of the finished episode's stream; the queued one's becomes the session's.
+        if let url = playing?.url { HongguoStreams.stop(url) }
+        if let automatic { CloudStreams.stop(automatic) }
+        #if os(macOS)
+        if let proxy { Task { await proxy.stop() } }
+        proxy = upcoming.prepared.adapter
+        #endif
+        detachItem(); observation = nil
+        upcomingObservation = nil; upcomingTask = nil; self.upcoming = nil
+        player.actionAtItemEnd = .pause
+        generation = UUID()
+        let activeGeneration = generation
+        transfer = Transfer()
+        catalogDanmaku.clear(); sourceDanmaku = []
+        error = nil; switchNotice = nil; quality = nil
+        begin(channel)
+        loading = upcoming.item.status != .readyToPlay
+        playing = channel; automatic = upcoming.prepared.url
+        qualities = BilibiliStreams.qualities(for: upcoming.prepared.url)
+        watch(upcoming.item, channel: channel, url: upcoming.prepared.url, generation: activeGeneration)
+        if DanmakuSource.has(channel.url) {
+            Task { [weak self] in
+                guard let comments = await DanmakuSource.comments(for: channel.url), let self, self.generation == activeGeneration else { return }
+                self.sourceDanmaku = comments
+            }
+        }
+        advanced = channel
+        onAdvance?(channel)
     }
 }
 

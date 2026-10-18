@@ -15,6 +15,17 @@ are rejected, and each segment is skipped once per play-through. Loop playback
 takes precedence over automatic next episode. tvOS keeps its native transport
 menus; history resume, automatic next and automatic danmaku use the same session.
 
+With automatic next on, the next episode is resolved 30 seconds before the
+episode (or its skipped outro) ends and queued behind it in the player's
+`AVQueuePlayer`, so it loads while this one finishes and plays straight on: no
+waiting screen, no new player. The session then takes the queued episode over
+(history, intro/outro times, danmaku) and the store makes it the playing one.
+The Next Episode button plays a queued episode the same way. Streams that pass
+through a plugin's proxy and MKV originals are never queued, and a queued item
+that fails is dropped; those episodes switch the old way when one ends. On iOS
+and tvOS the player's cover keeps one identity across episodes; keyed by the
+channel, it would be dismissed and presented again for every episode.
+
 ## Automatic catalog danmaku
 
 For subscription-source catalog videos, the app searches Dandanplay and, when
