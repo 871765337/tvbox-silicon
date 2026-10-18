@@ -15,6 +15,8 @@ struct PlaybackView: View {
     @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    /// Where our buttons are, so a tap on them keeps the controls up wherever the row sits.
+    @State private var buttonsFrame = CGRect.zero
     #endif
 
     private var chromeVisible: Bool { showsChrome || session.error != nil || session.loading }
@@ -118,18 +120,23 @@ struct PlaybackView: View {
 
     #if !os(tvOS)
     private var chrome: some View {
-        VStack {
-            // One row: a long title truncates to leave the buttons room; only when the buttons alone leave no room
-            // for a title do they get a row of their own. (One copy of each view: ViewThatFits with a candidate per
-            // title width built every glass button many times over and stalled the main thread past the watchdog.)
-            ChromeRow { chromeTitle; chromeButtons }
+        // One row when it fits. On iPhone the title must fit whole, or the buttons move to the bottom centre above
+        // AVKit's progress bar and leave the top to the title and Close; elsewhere a long title truncates, and only when the
+        // buttons leave no room for any do they get a row of their own. (One copy of each view: ViewThatFits with a
+        // candidate per title width built every glass button many times over and stalled the main thread past the
+        // watchdog.)
+        #if os(iOS)
+        let row = ChromeRow(bottomRow: 48)
+        #else
+        let row = ChromeRow()
+        #endif
+        return row { chromeTitle; chromeButtons; chromeClose }
             .padding(16)
             #if os(iOS)
             // Below VideoPlayer's own top row (Picture in Picture, volume), which would sit under the title.
             .padding(.top, 44)
             #endif
-            Spacer()
-        }
+            .frame(maxHeight: .infinity, alignment: .top)
         .sheet(isPresented: $showsDanmakuList) {
             DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
                 .danmakuListPresentation()
@@ -212,12 +219,18 @@ struct PlaybackView: View {
                 .accessibilityIdentifier("player.rotate")
             }
             #endif
-            Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).frame(width: 22, height: 22) }
-                .chromeButton()
-                .accessibilityLabel(L10n.text("Close"))
-                .accessibilityIdentifier("player.close")
-                .keyboardShortcut(.cancelAction)
         }
+        #if os(iOS)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { buttonsFrame = $0 }
+        #endif
+    }
+
+    private var chromeClose: some View {
+        Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).frame(width: 22, height: 22) }
+            .chromeButton()
+            .accessibilityLabel(L10n.text("Close"))
+            .accessibilityIdentifier("player.close")
+            .keyboardShortcut(.cancelAction)
     }
 
     private func poke() {
@@ -254,6 +267,7 @@ struct PlaybackView: View {
         let onControl = point.y < insets.top + 115
             || point.y > size.height - insets.bottom - 80
             || (abs(point.y - size.height / 2) < 44 && abs(point.x - size.width / 2) < 130)
+            || buttonsFrame.insetBy(dx: -8, dy: -8).contains(point)
         if onControl || !showsChrome { poke() }
         else {
             hideTask?.cancel()
@@ -349,43 +363,75 @@ extension PlaybackWaitContent {
 }
 
 #if !os(tvOS)
-/// The player's title bar: the title and the buttons share one row, the title truncating to leave the buttons their
-/// width; when that would leave the title less than `minimumTitle`, the buttons take a row of their own, right-aligned.
+/// The player's title bar: the title, the buttons and Close share one row, the title truncating to leave the others
+/// their width; when that would leave the title less than `minimumTitle`, the buttons and Close take a row of their
+/// own, right-aligned. With `bottomRow` (iPhone) the title must fit whole instead, or the buttons go to the bottom
+/// centre and the top row keeps the title and Close.
 private struct ChromeRow: SwiftUI.Layout {
     var spacing: CGFloat = 12
     var rowSpacing: CGFloat = 10
+    /// Between the buttons and Close, as between the buttons themselves.
+    var buttonSpacing: CGFloat = 10
     var minimumTitle: CGFloat = 110
+    /// How far above the bottom edge buttons that leave the title no room sit, at the centre (iPhone, clear of
+    /// AVKit's progress bar); nil puts them on a row of their own under the title.
+    var bottomRow: CGFloat? = nil
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
-        guard subviews.count == 2 else { return .zero }
-        let buttons = subviews[1].sizeThatFits(.unspecified)
-        let width = proposal.width ?? subviews[0].sizeThatFits(.unspecified).width + spacing + buttons.width
-        if let room = titleRoom(width, buttons: buttons) {
+        guard subviews.count == 3 else { return .zero }
+        let buttons = subviews[1].sizeThatFits(.unspecified), close = subviews[2].sizeThatFits(.unspecified)
+        let tail = tailSize(buttons, close)
+        let width = proposal.width ?? subviews[0].sizeThatFits(.unspecified).width + spacing + tail.width
+        if let room = titleRoom(width, tail: tail, title: subviews[0]) {
             let title = subviews[0].sizeThatFits(ProposedViewSize(width: room, height: nil))
-            return CGSize(width: width, height: max(title.height, buttons.height))
+            return CGSize(width: width, height: max(title.height, tail.height))
         }
+        if bottomRow != nil, let height = proposal.height, height.isFinite { return CGSize(width: width, height: height) }
         let title = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
-        return CGSize(width: width, height: title.height + rowSpacing + buttons.height)
+        return CGSize(width: width, height: title.height + rowSpacing + tail.height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
-        guard subviews.count == 2 else { return }
-        let buttons = subviews[1].sizeThatFits(.unspecified)
-        if let room = titleRoom(bounds.width, buttons: buttons) {
+        guard subviews.count == 3 else { return }
+        let buttons = subviews[1].sizeThatFits(.unspecified), close = subviews[2].sizeThatFits(.unspecified)
+        let tail = tailSize(buttons, close)
+        if let room = titleRoom(bounds.width, tail: tail, title: subviews[0]) {
             let title = subviews[0].sizeThatFits(ProposedViewSize(width: room, height: nil))
-            let row = max(title.height, buttons.height)
+            let row = max(title.height, tail.height)
             subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY + (row - title.height) / 2), proposal: ProposedViewSize(width: room, height: title.height))
-            subviews[1].place(at: CGPoint(x: bounds.maxX - buttons.width, y: bounds.minY + (row - buttons.height) / 2), proposal: .unspecified)
-        } else {
-            let title = subviews[0].sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
-            subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: title.height))
-            subviews[1].place(at: CGPoint(x: bounds.maxX - buttons.width, y: bounds.minY + title.height + rowSpacing), proposal: .unspecified)
+            placeTail(buttons, close, right: bounds.maxX, middle: bounds.minY + row / 2, subviews)
+            return
         }
+        if let bottomRow {
+            let room = bounds.width - spacing - close.width
+            let title = subviews[0].sizeThatFits(ProposedViewSize(width: room, height: nil))
+            let row = max(title.height, close.height)
+            if bounds.height >= row + rowSpacing + bottomRow + buttons.height {
+                subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY + (row - title.height) / 2), proposal: ProposedViewSize(width: room, height: title.height))
+                subviews[2].place(at: CGPoint(x: bounds.maxX - close.width, y: bounds.minY + (row - close.height) / 2), proposal: .unspecified)
+                subviews[1].place(at: CGPoint(x: bounds.midX - buttons.width / 2, y: bounds.maxY - bottomRow - buttons.height), proposal: .unspecified)
+                return
+            }
+        }
+        let title = subviews[0].sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
+        subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: title.height))
+        placeTail(buttons, close, right: bounds.maxX, middle: bounds.minY + title.height + rowSpacing + tail.height / 2, subviews)
     }
 
-    private func titleRoom(_ width: CGFloat, buttons: CGSize) -> CGFloat? {
-        let room = width - buttons.width - spacing
-        return room >= minimumTitle ? room : nil
+    /// The buttons and Close side by side.
+    private func tailSize(_ buttons: CGSize, _ close: CGSize) -> CGSize {
+        CGSize(width: buttons.width + (buttons.width > 0 ? buttonSpacing : 0) + close.width, height: max(buttons.height, close.height))
+    }
+
+    private func placeTail(_ buttons: CGSize, _ close: CGSize, right: CGFloat, middle: CGFloat, _ subviews: LayoutSubviews) {
+        subviews[2].place(at: CGPoint(x: right - close.width, y: middle - close.height / 2), proposal: .unspecified)
+        subviews[1].place(at: CGPoint(x: right - close.width - buttonSpacing - buttons.width, y: middle - buttons.height / 2), proposal: .unspecified)
+    }
+
+    private func titleRoom(_ width: CGFloat, tail: CGSize, title: LayoutSubview) -> CGFloat? {
+        let room = width - tail.width - spacing
+        let needed = bottomRow == nil ? minimumTitle : title.sizeThatFits(.unspecified).width
+        return room >= needed ? room : nil
     }
 }
 #endif
