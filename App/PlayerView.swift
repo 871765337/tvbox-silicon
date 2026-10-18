@@ -13,6 +13,9 @@ struct PlaybackView: View {
     @State private var showsDanmakuList = false
     @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
     @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
 
     private var chromeVisible: Bool { showsChrome || session.error != nil || session.loading }
 
@@ -80,7 +83,12 @@ struct PlaybackView: View {
         .onChange(of: channel) { _, channel in startCatalogPlayback(session, channel: channel, store: store); poke() }
         .onChange(of: showsDanmaku) { _, value in session.catalogDanmaku.enabled = value }
         .onChange(of: session.catalogDanmaku.enabled) { _, value in showsDanmaku = value }
-        .onDisappear { hideTask?.cancel(); store.cancelEpisodeSelection(); session.stop() }
+        .onDisappear {
+            hideTask?.cancel(); store.cancelEpisodeSelection(); session.stop()
+            #if os(iOS)
+            PlayerOrientation.release()
+            #endif
+        }
     }
 
     #if DEBUG
@@ -192,6 +200,18 @@ struct PlaybackView: View {
                 .chromeButton()
                 .accessibilityLabel(L10n.text("Danmaku"))
             }
+            #if os(iOS)
+            // Turns the picture even with Portrait Orientation Lock on, the way the system's own rotation can't.
+            if PlayerOrientation.available {
+                let landscape = verticalSizeClass == .compact
+                Button { PlayerOrientation.set(landscape: !landscape) } label: {
+                    Image(systemName: landscape ? "rectangle.portrait.rotate" : "rectangle.landscape.rotate").font(.headline).frame(width: 22, height: 22)
+                }
+                .chromeButton()
+                .accessibilityLabel(L10n.text(landscape ? "Rotate to Portrait" : "Rotate to Landscape"))
+                .accessibilityIdentifier("player.rotate")
+            }
+            #endif
             Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).frame(width: 22, height: 22) }
                 .chromeButton()
                 .accessibilityLabel(L10n.text("Close"))
@@ -500,6 +520,29 @@ private struct NativePlayerView: View {
             .animation(.easeInOut(duration: 0.7), value: waiting == nil)
             .animation(.easeInOut(duration: 0.4), value: waiting?.starting)
         }
+    }
+}
+
+/// The iPhone player's rotate button. While it holds landscape the app allows landscape only, so the phone
+/// held upright (or Portrait Orientation Lock) doesn't turn it back; the button or closing the player does.
+@MainActor enum PlayerOrientation {
+    static private(set) var mask: UIInterfaceOrientationMask = .allButUpsideDown
+    static var available: Bool { UIDevice.current.userInterfaceIdiom == .phone }
+
+    static func set(landscape: Bool) {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+        mask = landscape ? .landscape : .allButUpsideDown
+        var controller = scene.keyWindow?.rootViewController
+        while let next = controller?.presentedViewController { controller = next }
+        controller?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: landscape ? .landscape : .portrait)) { error in
+            Diagnostics.shared.record(.warning, "player", "Rotation refused: \(error.localizedDescription)")
+        }
+    }
+
+    /// Back to portrait when the player closes, if the button turned it.
+    static func release() {
+        if mask == .landscape { set(landscape: false) }
     }
 }
 #else

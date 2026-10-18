@@ -819,3 +819,5 @@
 "Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas." = "在畫面之間產生新幀，讓 24–30 幀的影片以 60 幀播放。會更耗電，電影可能看起來像電視劇。";
 "%d comments" = "%d 則彈幕";
 "Back to Now" = "回到目前";
+"Rotate to Landscape" = "切換為橫向";
+"Rotate to Portrait" = "切換為直向";

@@ -12,6 +12,7 @@ import TVCore
     #if os(iOS)
     /// An Apple TV's Douyin code, scanned with the Camera.
     @State private var douyinHandoff: DouyinHandoff.Link?
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     #endif
     init() {
         #if os(macOS)
@@ -90,3 +91,12 @@ import TVCore
         #endif
     }
 }
+
+#if os(iOS)
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    /// The player's rotate button narrows this to landscape (see PlayerOrientation).
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        MainActor.assumeIsolated { PlayerOrientation.mask }
+    }
+}
+#endif

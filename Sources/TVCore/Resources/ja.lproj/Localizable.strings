@@ -819,3 +819,5 @@
 "Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas." = "フレームを補間して 24〜30fps の動画を 60fps で再生します。電池の消費が増え、映画がテレビドラマのように見えることがあります。";
 "%d comments" = "%d 件のコメント";
 "Back to Now" = "現在に戻る";
+"Rotate to Landscape" = "横向きにする";
+"Rotate to Portrait" = "縦向きにする";
