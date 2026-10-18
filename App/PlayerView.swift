@@ -25,7 +25,7 @@ struct PlaybackView: View {
                 NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
                                  qualities: session.qualities, quality: session.quality, choose: { session.choose(quality: $0) },
                                  live: session.isLive, previous: episodeAction(store.previousEpisode(before: channel)),
-                                 next: episodeAction(store.nextEpisode(after: channel)), waiting: waitContent,
+                                 next: episodeAction(store.nextEpisode(after: channel), queued: true), waiting: waitContent,
                                  enhancer: session.enhancer, upscale: $upscalesVideo, smooth: $smoothsVideo).ignoresSafeArea()
             }
             #elseif os(iOS)
@@ -98,9 +98,12 @@ struct PlaybackView: View {
     #endif
 
     #if os(tvOS)
-    private func episodeAction(_ episode: Episode?) -> EpisodeAction? {
+    /// `queued`: the next episode, which plays straight from the queue once it is waiting there.
+    private func episodeAction(_ episode: Episode?, queued: Bool = false) -> EpisodeAction? {
         episode.map { episode in
-            EpisodeAction(name: episode.name, busy: store.resolvingEpisode != nil) { store.selectEpisode(episode, from: channel) }
+            EpisodeAction(name: episode.name, busy: store.resolvingEpisode != nil) {
+                if !(queued && session.playUpcoming()) { store.selectEpisode(episode, from: channel) }
+            }
         }
     }
     #endif
@@ -151,7 +154,7 @@ struct PlaybackView: View {
                 .accessibilityLabel(L10n.text("Previous Episode")).help(previous.name)
             }
             if let next = store.nextEpisode(after: channel) {
-                Button { store.selectEpisode(next, from: channel) } label: {
+                Button { if !session.playUpcoming() { store.selectEpisode(next, from: channel) } } label: {
                     Image(systemName: "forward.end.fill").font(.headline).frame(width: 22, height: 22)
                 }
                 .chromeButton()
@@ -655,7 +658,10 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             window = target
         }
         target.title = channel.name
-        target.contentView = NSHostingView(rootView: DesktopPlaybackView(channel: channel, session: session, window: target).environment(store))
+        // The next episode updates the view in place: a new one would rebuild the player view, a flash between episodes.
+        let root = DesktopPlaybackRoot(channel: channel, session: session, window: target, store: store)
+        if let host = target.contentView as? NSHostingView<DesktopPlaybackRoot> { host.rootView = root }
+        else { target.contentView = NSHostingView(rootView: root) }
         startCatalogPlayback(session, channel: channel, store: store)
         target.makeKeyAndOrderFront(nil)
     }
@@ -739,6 +745,14 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             NSCursor.setHiddenUntilMouseMoves(true)
         }
     }
+}
+
+private struct DesktopPlaybackRoot: View {
+    let channel: Channel
+    let session: PlaybackSession
+    let window: PlaybackWindow
+    let store: Store
+    var body: some View { DesktopPlaybackView(channel: channel, session: session, window: window).environment(store) }
 }
 
 private struct DesktopPlaybackView: View {
@@ -946,6 +960,10 @@ private struct QualityPicker: View {
         guard let store, store.autoPlayNext, let next = store.nextEpisode(after: channel) else { return }
         store.selectEpisode(next, from: channel)
     }
+    // Near the end the next episode is resolved and queued, so it plays on without stopping to load.
+    session.playsOn = { [weak store] in store?.autoPlayNext == true }
+    session.upcomingEpisode = { [weak store] in await store?.upcomingEpisode(after: channel) }
+    session.onAdvance = { [weak store] next in store?.advance(to: next, from: channel) }
     session.onUnplayableFile = { [weak store, weak session] in
         guard let store, let other = store.transcodedLine(for: channel) else { return nil }
         store.selectEpisode(other, from: channel) { session?.lineSwitchFailed($0) }
