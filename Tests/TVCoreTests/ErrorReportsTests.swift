@@ -90,6 +90,41 @@ import Testing
         "id 0a1b2c3d4e5f6a7b done 0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0": "id <id> done <id>",
         "hang in X\nmore": "hang in X",
         "timeout seconds=60 stage=startup": "timeout seconds=# stage=startup",
+        "Quit unexpectedly while on screen (low on memory, during playback)\nmemory: footprint=812MB available=40MB":
+            "Quit unexpectedly while on screen (low on memory, during playback)",
     ]
     for (message, line) in expected { #expect(ErrorReports.groupKey("c", message) == "c\n" + line) }
+}
+
+@Test func quitReportsSayWhyALaunchEndedOnScreen() throws {
+    let playback = QuitContext.Playback(live: false, format: "m3u8", source: "csp_Test", since: 1_000, danmaku: true, sharper: false)
+    let squeezed = QuitContext(launch: "a", started: 0, saved: 3_040, footprint: 812, available: 300, pressure: 3_020, pressureLevel: "critical", playback: playback)
+    let report = try #require(QuitContext.report(squeezed, bootTime: 0))
+    #expect(report == """
+        Quit unexpectedly while on screen (low on memory, during playback)
+        memory: footprint=812MB available=300MB pressure=critical 20s before the last sample
+        playing: vod format=m3u8 source=csp_Test for=34min danmaku=on sharper=off
+        launched 50min before the last sample (taken every 30s on screen)
+        """)
+
+    // Little memory left counts too; pressure long before the end does not.
+    var nearlyOut = squeezed; nearlyOut.pressure = nil; nearlyOut.available = 40
+    #expect(QuitContext.report(nearlyOut, bootTime: 0)?.hasPrefix("Quit unexpectedly while on screen (low on memory, during playback)\n") == true)
+    var browsing = squeezed; browsing.pressure = 2_000; browsing.playback = nil
+    #expect(QuitContext.report(browsing, bootTime: 0)?.hasPrefix("Quit unexpectedly while on screen (not low on memory, browsing)\n") == true)
+
+    // The device started up after the last sample: a restart, not a crash.
+    #expect(QuitContext.report(squeezed, bootTime: 3_041) == nil)
+    #expect(QuitContext.report(nil, bootTime: 3_041) == QuitContext.unknown)
+
+    // One group per cause, whatever the numbers.
+    var other = squeezed; other.footprint = 1_500; other.pressure = 9_990; other.saved = 9_999
+    #expect(ErrorReports.groupKey("app", report) == ErrorReports.groupKey("app", QuitContext.report(other, bootTime: 0)!))
+    #expect(ErrorReports.groupKey("app", report) != ErrorReports.groupKey("app", QuitContext.report(browsing, bootTime: 0)!))
+}
+
+@Test func quitContextReadsThisDevice() {
+    let now = Int(Date().timeIntervalSince1970)
+    #expect(ErrorReports.bootTime > 0 && ErrorReports.bootTime < now)
+    #expect((ErrorReports.memory().footprint ?? 0) > 0)
 }
