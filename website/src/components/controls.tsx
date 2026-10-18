@@ -21,8 +21,8 @@ export const MAC_INTEL_DOWNLOAD = "https://download.getmegaportal.com/yingxia/1.
 /** iPhone/iPad and Apple TV IPAs for sideloading, next to the Mac release. */
 export const DOWNLOADS = {
   mac: MAC_DOWNLOAD,
-  ios: "https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-ios.ipa",
-  tv: "https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-tvos.ipa",
+  ios: "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-ios.ipa",
+  tv: "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-tvos.ipa",
 } as const;
 
 /** Sideloading tools, official sources only (iloader.site and plamimpactor.site are third-party mirrors). */

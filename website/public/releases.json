@@ -2,12 +2,65 @@
   "releases": [
     {
       "version": "1.7.3",
-      "date": "2026-10-18",
+      "date": "2026-10-19",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-arm64.dmg",
-        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-x86_64.dmg"
+        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-x86_64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
       },
       "features": [
+        {
+          "symbol": "play.square.stack",
+          "title": {
+            "en": "Short dramas play straight on",
+            "zh-Hans": "短剧一集接一集连续播放",
+            "zh-Hant": "短劇一集接一集連續播放",
+            "ja": "ショートドラマが途切れずに続けて再生"
+          },
+          "detail": {
+            "en": "With Auto-play next episode on, the next episode now loads while the current one is still playing and starts the moment it ends, with no loading screen in between. Watch history, danmaku and intro skipping still work for each episode.",
+            "zh-Hans": "开启“自动播放下一集”后，下一集会在本集播放时就加载好，本集一结束就立即开始，中间不再出现加载画面。每一集的观看记录、弹幕和跳过片头都照常工作。",
+            "zh-Hant": "開啟「自動播放下一集」後，下一集會在本集播放時就載入好，本集一結束就立即開始，中間不再出現載入畫面。每一集的觀看記錄、彈幕和跳過片頭都照常運作。",
+            "ja": "「次のエピソードを自動再生」をオンにすると、再生中に次のエピソードを読み込んでおき、終わった瞬間に読み込み画面なしで始まります。視聴履歴、弾幕コメント、オープニングのスキップはエピソードごとにこれまでどおり使えます。"
+          }
+        },
+        {
+          "symbol": "rectangle.landscape.rotate",
+          "title": {
+            "en": "Landscape with one tap on iPhone",
+            "zh-Hans": "iPhone 上一键横屏",
+            "zh-Hant": "iPhone 上一鍵切換橫向",
+            "ja": "iPhone でワンタップで横向きに"
+          },
+          "detail": {
+            "en": "The iPhone player has a new rotate button that turns the video to landscape, even with Portrait Orientation Lock on. Tap it again to go back to portrait. When a long title needs the whole top bar, the player’s buttons now sit at the bottom, above the progress bar.",
+            "zh-Hans": "iPhone 播放器新增了旋转按钮，即使打开了竖排方向锁定，也能把视频切换为横屏。再点一次即可回到竖屏。标题较长、需要占满顶部时，播放器的按钮会移到底部、进度条上方。",
+            "zh-Hant": "iPhone 播放器新增了旋轉按鈕，即使開啟了直向鎖定，也能把影片切換為橫向。再點一次即可回到直向。標題較長、需要佔滿頂部時，播放器的按鈕會移到底部、進度列上方。",
+            "ja": "iPhone のプレーヤーに回転ボタンが加わり、画面縦向きのロックがオンでも動画を横向きにできます。もう一度タップすると縦向きに戻ります。長いタイトルが上のバーをすべて使うときは、プレーヤーのボタンが下のシークバーの上に並びます。"
+          },
+          "platforms": [
+            "ios"
+          ]
+        },
+        {
+          "symbol": "dot.radiowaves.left.and.right",
+          "title": {
+            "en": "Live channels no longer quit on macOS 27",
+            "zh-Hans": "直播频道在 macOS 27 上不再闪退",
+            "zh-Hant": "直播頻道在 macOS 27 上不再閃退",
+            "ja": "macOS 27 でライブチャンネルが落ちなくなりました"
+          },
+          "detail": {
+            "en": "IPTV and other live channels could make Yingxia quit on macOS 27. They now play normally, with play/pause and mute buttons in the top bar.",
+            "zh-Hans": "IPTV 等直播频道以前可能导致映匣在 macOS 27 上意外退出。现在可以正常播放，顶部栏也提供播放/暂停和静音按钮。",
+            "zh-Hant": "IPTV 等直播頻道以前可能導致映匣在 macOS 27 上意外結束。現在可以正常播放，頂部列也提供播放／暫停和靜音按鈕。",
+            "ja": "IPTV などのライブチャンネルで、macOS 27 の映匣が終了してしまうことがありました。今は普通に再生でき、上のバーに再生／一時停止とミュートのボタンがあります。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        },
         {
           "symbol": "cpu",
           "title": {

@@ -59,8 +59,8 @@ Yingxia (映匣) plays your TVBox subscriptions the way an Apple app should: liv
 | Platform | Status |
 | --- | --- |
 | **Mac** (macOS 15+, Apple silicon or Intel) | ✅ Free download for [Apple silicon](https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-arm64.dmg) or [Intel](https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-x86_64.dmg), signed and notarized |
-| **Apple TV** (tvOS 26+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-tvos.ipa) and [sideload it](Docs/INSTALL.md#install-on-apple-tv) |
-| **iPhone & iPad** (iOS 18+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad) |
+| **Apple TV** (tvOS 26+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-tvos.ipa) and [sideload it](Docs/INSTALL.md#install-on-apple-tv) |
+| **iPhone & iPad** (iOS 18+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad) |
 
 The iPhone, iPad and Apple TV apps aren't on the App Store yet. The [install guide](Docs/INSTALL.md) walks you through installing them with your own Apple account (a free one works), keeping them signed, and fixing common problems.
 
