@@ -5,7 +5,8 @@
 # Without a notary profile or key the app is signed but not notarized (local testing only). A keychain
 # profile only works while the screen is unlocked (data-protection keychain); an App Store Connect API
 # key is a file, so it also works with the screen locked.
-# Output: build/release-mac/<version>/Yingxia-<version>-macos-{arm64,x86_64}.{dmg,zip} + SHA256SUMS.txt
+# Output: build/release-mac/<version>/Yingxia-<version>-macos-{arm64,x86_64}.dmg + SHA256SUMS.txt (DMG only since
+# 1.7.4; the app inside is notarized and stapled too, so it also passes Gatekeeper once copied out)
 # One universal build (spider hosts from Scripts/build-universal-hosts.sh) is thinned into an Apple silicon and an
 # Intel package, so each download carries only its own architecture.
 set -euo pipefail
@@ -103,7 +104,6 @@ for ARCH in arm64 x86_64; do
   sign "$APP"
   codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | tail -2
 
-  ZIP="$OUT/Yingxia-$VERSION-macos-$ARCH.zip"
   DMG="$OUT/Yingxia-$VERSION-macos-$ARCH.dmg"
   if [ ${#NOTARY[@]} -gt 0 ]; then
     ditto -c -k --keepParent "$APP" "$OUT/notarize.zip"
@@ -111,7 +111,6 @@ for ARCH in arm64 x86_64; do
     rm "$OUT/notarize.zip"
     xcrun stapler staple "$APP"
   fi
-  ditto -c -k --keepParent "$APP" "$ZIP"
   ln -s /Applications "$STAGE/Applications"
   hdiutil create -volname "Yingxia $VERSION" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
   sign "$DMG"
@@ -124,5 +123,5 @@ for ARCH in arm64 x86_64; do
   rm -rf "$STAGE"
 done
 rm -rf "$OUT/universal"
-(cd "$OUT" && shasum -a 256 *.dmg *.zip > SHA256SUMS.txt)
+(cd "$OUT" && shasum -a 256 *.dmg > SHA256SUMS.txt)
 echo "$OUT"; ls -lh "$OUT"
