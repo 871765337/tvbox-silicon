@@ -320,6 +320,8 @@ public final class ErrorReports: @unchecked Sendable {
     private static let variables: [(NSRegularExpression, String)] = [
         (#"(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"#, "<id>"),
         (#"(?i)\b[0-9a-f]{12,}\b"#, "<id>"),
+        // A plugin request's trace (LocalJarHost): the first 8 characters of a UUID.
+        (#"\brequest=[0-9A-F]{8}\b"#, "request=#"),
         (#"\b(offset|at|bytes|duration|length|chunk|aid|cid|room|id|page|elapsed|total|size|seconds)=-?[0-9.]+"#, "$1=#"),
         (#"\b\d+(?:\.\d+)? ?(?:seconds|sec|ms|s)\b"#, "#s"),
         (#"(?<![\w.-])\d{5,}\b"#, "#")

@@ -118,6 +118,9 @@ import TVCore
     private(set) var qualities: [StreamQuality] = []
     /// A live stream: played at the live edge, without scrubbing.
     private(set) var isLive = false
+    /// The item is ready and has a finite duration, so there is a timeline to scrub. A live stream that
+    /// isn't a platform room (an IPTV channel, say) only shows itself here, as an indefinite duration.
+    private(set) var hasTimeline = false
     /// Mirrors the player, for play and mute buttons drawn outside AVKit's controls.
     private(set) var paused = false
     private(set) var muted = false
@@ -366,8 +369,10 @@ import TVCore
     /// Follows the episode's item (ready, failed, ended), the player's state, and the transfer, for this playback.
     private func watch(_ item: AVPlayerItem, channel: Channel, url: URL, generation activeGeneration: UUID) {
         self.item = item
+        hasTimeline = item.status == .readyToPlay && item.duration.isNumeric
         observation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             let status = item.status
+            let timeline = status == .readyToPlay && item.duration.isNumeric
             let failure = item.error
             let message = failure?.localizedDescription
             let detail = failure.map(Self.describe) ?? "-"
@@ -375,6 +380,7 @@ import TVCore
             let network = Self.networkFailure(failure)
             Task { @MainActor [weak self] in
                 guard let self, self.generation == activeGeneration else { return }
+                self.hasTimeline = timeline
                 if status == .readyToPlay {
                     self.restorePositionIfNeeded(item)
                     self.loading = self.pendingResume != nil || self.restoringPosition

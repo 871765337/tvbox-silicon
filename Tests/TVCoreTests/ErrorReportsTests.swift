@@ -92,6 +92,7 @@ import Testing
         "timeout seconds=60 stage=startup": "timeout seconds=# stage=startup",
         "Quit unexpectedly while on screen (low on memory, during playback)\nmemory: footprint=812MB available=40MB":
             "Quit unexpectedly while on screen (low on memory, during playback)",
+        "request=32D4352F source=a failed duration=0.05 seconds error=x": "request=# source=a failed duration=# seconds error=x",
     ]
     for (message, line) in expected { #expect(ErrorReports.groupKey("c", message) == "c\n" + line) }
 }

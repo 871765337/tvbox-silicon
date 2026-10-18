@@ -775,7 +775,7 @@ private struct DesktopPlaybackView: View {
         ZStack(alignment: .top) {
             ZStack {
                 Color.black
-                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: session.isLive, waiting: waitContent, enhancer: session.enhancer)
+                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: session.isLive || !session.hasTimeline, waiting: waitContent, enhancer: session.enhancer)
                 if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision) }
                 if let error = session.error {
                     VStack(spacing: 16) {
@@ -814,8 +814,8 @@ private struct DesktopPlaybackView: View {
             Spacer(minLength: 12)
             GlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
-                    if session.isLive {
-                        // Live hides AVKit's controls (see DesktopNativePlayer), so play and mute live here.
+                    if session.isLive || !session.hasTimeline {
+                        // AVKit's controls are hidden without a timeline (see DesktopNativePlayer), so play and mute live here.
                         barButton(session.paused ? "play.fill" : "pause.fill", L10n.text("Play / Pause (Space)")) { session.togglePlayback() }
                         barButton(session.muted ? "speaker.slash.fill" : "speaker.wave.2.fill", L10n.text("Mute (M)")) { session.player.isMuted.toggle() }
                     } else {
@@ -882,7 +882,9 @@ private struct DesktopPlaybackView: View {
 
 /// AVPlayerView without its controls for live streams. Its floating controls build a scrubber from the
 /// item's duration and seekable range; a live item has an indefinite duration and, at first, no
-/// seekable range, and AVKit traps on that range (macOS 27). tvOS avoids it with linear playback.
+/// seekable range, and AVKit traps on that range (macOS 27). An IPTV channel is a plain address, so it
+/// is only known to be live once its item is ready: the controls wait for a ready item with a finite
+/// duration. tvOS avoids it with linear playback.
 private struct DesktopNativePlayer: NSViewRepresentable {
     let player: AVPlayer
     let fillsFrame: Bool
