@@ -23,6 +23,7 @@ export function normalize(message: string) {
     .split("\n")[0]
     .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>")
     .replace(/\b[0-9a-f]{12,}\b/gi, "<id>")
+    .replace(/\brequest=[0-9A-F]{8}\b/g, "request=#")
     .replace(/\b(offset|at|bytes|duration|length|chunk|aid|cid|room|id|page|elapsed|total|size|seconds)=-?[0-9.]+/g, "$1=#")
     .replace(/\b\d+(?:\.\d+)? ?(?:seconds|sec|ms|s)\b/g, "#s")
     .replace(/(?<![\w.-])\d{5,}\b/g, "#")

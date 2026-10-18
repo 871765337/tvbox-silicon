@@ -90,6 +90,7 @@ import Testing
         "id 0a1b2c3d4e5f6a7b done 0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0": "id <id> done <id>",
         "hang in X\nmore": "hang in X",
         "timeout seconds=60 stage=startup": "timeout seconds=# stage=startup",
+        "request=32D4352F source=a failed duration=0.05 seconds error=x": "request=# source=a failed duration=# seconds error=x",
     ]
     for (message, line) in expected { #expect(ErrorReports.groupKey("c", message) == "c\n" + line) }
 }
