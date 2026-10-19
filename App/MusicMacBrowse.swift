@@ -397,7 +397,7 @@ struct MusicCollectionHeader: View {
                         Image(systemName: "plus").frame(width: 34, height: 34)
                     }
                     .buttonStyle(MusicHeaderButtonStyle()).help(L10n.text("Add to Up Next")).accessibilityLabel(L10n.text("Add to Up Next"))
-                    MusicDownloadButton(tracks: tracks, side: 34).buttonStyle(MusicHeaderButtonStyle())
+                    MusicDownloadButton(tracks: tracks, collection: collection, side: 34).buttonStyle(MusicHeaderButtonStyle())
                 }
                 .disabled(tracks.isEmpty)
             }

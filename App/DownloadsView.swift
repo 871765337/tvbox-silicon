@@ -8,18 +8,36 @@ import UIKit
 struct DownloadsView: View {
     @Environment(Store.self) private var store
     @State private var deleting: DownloadShow?
+    /// Videos or songs, once there are songs; videos first unless only songs are saved.
+    @State private var kind = Kind.videos
     private var library: DownloadLibrary { .shared }
+    enum Kind: Hashable { case videos, music }
+
     var body: some View {
         let pending = library.items.filter(\.isPending)
         let shows = DownloadShow.group(library.items.filter { $0.status == .completed })
         Group {
-            if library.items.isEmpty && !hasMusic {
+            #if !os(tvOS)
+            if hasMusic && kind == .music {
+                MusicDownloadsView(embedded: true)
+            } else if library.items.isEmpty {
+                EmptyDownloads(available: library.usage.available) { store.section = .sites }
+            } else {
+                content(pending: pending, shows: shows)
+            }
+            #else
+            if library.items.isEmpty {
                 // One message instead of an empty storage card above it: a 0 KB total says nothing new.
                 EmptyDownloads(available: library.usage.available) { store.section = .sites }
             } else {
                 content(pending: pending, shows: shows)
             }
+            #endif
         }
+        #if !os(tvOS)
+        .modifier(DownloadKindBar(shown: hasMusic, kind: $kind))
+        .onAppear { if library.items.isEmpty && hasMusic { kind = .music } }
+        #endif
         .screenBackdrop()
         .tabTitle(L10n.text("Downloads"))
         .task { await library.measure() }
@@ -49,9 +67,6 @@ struct DownloadsView: View {
                 StorageCard(usage: library.usage)
                 #else
                 StorageCard(usage: library.usage, songs: MusicDownloadLibrary.shared.size)
-                #endif
-                #if !os(tvOS)
-                if hasMusic { MusicDownloadsLink(card: true) }
                 #endif
                 if !pending.isEmpty { queue(pending) }
                 if !shows.isEmpty {
@@ -104,6 +119,31 @@ struct DownloadsView: View {
         return (pending.filter { $0.status == .queued }.firstIndex { $0.id == item.id } ?? 0) + 1
     }
 }
+
+#if !os(tvOS)
+/// Videos | Music over the page once songs are saved too, pinned while the page scrolls under it.
+private struct DownloadKindBar: ViewModifier {
+    let shown: Bool
+    @Binding var kind: DownloadsView.Kind
+
+    func body(content: Content) -> some View {
+        if shown {
+            content.topBar {
+                Picker(L10n.text("Downloads"), selection: $kind) {
+                    Text(L10n.text("Videos")).tag(DownloadsView.Kind.videos)
+                    Text(L10n.text("Music")).tag(DownloadsView.Kind.music)
+                }
+                .pickerStyle(.segmented).labelsHidden()
+                .frame(maxWidth: 320)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Layout.gutter).padding(.vertical, 8)
+            }
+        } else {
+            content
+        }
+    }
+}
+#endif
 
 enum DownloadMetrics {
     #if os(tvOS)

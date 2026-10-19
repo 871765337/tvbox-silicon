@@ -6,15 +6,43 @@ import TVCore
 /// nothing lasting on disk, so downloads are for iPhone, iPad and Mac.
 struct MusicDownloadsView: View {
     @Environment(Store.self) private var store
+    /// Inside the Downloads page, which has its own title.
+    var embedded = false
     @State private var confirmsDeleteAll = false
     private var library: MusicDownloadLibrary { .shared }
 
+    /// Most recently saved first.
+    private var saved: [MusicDownload] { library.completed.sorted { ($0.finished ?? $0.created) > ($1.finished ?? $1.created) } }
+
     var body: some View {
-        // Most recently saved first.
-        let saved = library.completed.sorted { ($0.finished ?? $0.created) > ($1.finished ?? $1.created) }
         let tracks = saved.map(\.track)
+        let page = list(tracks)
+            .screenBackdrop()
+            .musicPlayerInset()
+            .confirmationDialog(L10n.text("Delete all downloaded songs?"), isPresented: $confirmsDeleteAll, titleVisibility: .visible) {
+                Button(L10n.text("Delete Downloads"), role: .destructive) { library.remove(library.items.map(\.id)) }
+            }
+            #if DEBUG
+            // `-qaPlayDownloaded 1` plays the newest saved song as soon as there is one.
+            .task(id: tracks.first?.id) {
+                if UserDefaults.standard.bool(forKey: "qaPlayDownloaded"), store.music.track == nil, !tracks.isEmpty {
+                    store.music.play(MusicQueue(tracks: tracks, start: 0, source: Self.title))
+                }
+            }
+            #endif
+        if embedded {
+            page
+        } else {
+            page.screenTitle(Self.title)
+                #if os(macOS)
+                .toolbar(removing: .title)
+                #endif
+        }
+    }
+
+    private func list(_ tracks: [MusicTrack]) -> some View {
         let pending = library.pending
-        ScrollView {
+        return ScrollView {
             LazyVStack(alignment: .leading, spacing: MusicLayout.rowSpacing) {
                 header(tracks).padding(.bottom, 20)
                 if library.items.isEmpty {
@@ -26,12 +54,28 @@ struct MusicDownloadsView: View {
                     // Its own stack: a song that finishes moves to the list below under the same ID,
                     // and in one lazy stack its old row stayed on screen in place of the new one.
                     VStack(alignment: .leading, spacing: MusicLayout.rowSpacing) {
-                        SectionHeader(title: L10n.text("Downloading")).padding(.bottom, 8)
+                        // The buttons go under the title when a phone has no room beside it.
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .center, spacing: 8) {
+                                SectionHeader(title: L10n.text("Downloading"))
+                                Spacer(minLength: 8)
+                                MusicPendingActions(pending: pending)
+                            }
+                            VStack(alignment: .leading, spacing: 10) {
+                                SectionHeader(title: L10n.text("Downloading"))
+                                MusicPendingActions(pending: pending)
+                            }
+                        }
+                        .padding(.bottom, 8)
                         ForEach(pending) { MusicPendingRow(item: $0) }
                     }
                 }
+                shelf(L10n.text("Playlists"), library.collections.filter { $0.collection.kind == .playlist })
+                shelf(L10n.text("Albums"), library.collections.filter { $0.collection.kind == .album })
                 if !saved.isEmpty {
-                    if !pending.isEmpty { SectionHeader(title: L10n.text("Downloaded")).padding(.top, 24).padding(.bottom, 8) }
+                    if !pending.isEmpty || !library.collections.isEmpty {
+                        SectionHeader(title: L10n.text(library.collections.isEmpty ? "Downloaded" : "Songs")).padding(.top, 24).padding(.bottom, 8)
+                    }
                     ForEach(Array(tracks.enumerated()), id: \.element.id) { index, track in
                         MusicTrackRow(track: track) { store.music.play(MusicQueue(tracks: tracks, start: index, source: Self.title)) }
                     }
@@ -39,46 +83,140 @@ struct MusicDownloadsView: View {
             }
             .pageContainer()
         }
-        .screenBackdrop()
-        .screenTitle(Self.title)
-        #if os(macOS)
-        .toolbar(removing: .title)
-        #endif
-        .musicPlayerInset()
-        .toolbar {
-            if !library.items.isEmpty {
-                Button { confirmsDeleteAll = true } label: { Image(systemName: "trash") }
-                    .help(L10n.text("Delete Downloads")).accessibilityLabel(L10n.text("Delete Downloads"))
-            }
-        }
-        .confirmationDialog(L10n.text("Delete all downloaded songs?"), isPresented: $confirmsDeleteAll, titleVisibility: .visible) {
-            Button(L10n.text("Delete Downloads"), role: .destructive) { library.remove(library.items.map(\.id)) }
-        }
-        #if DEBUG
-        // `-qaPlayDownloaded 1` plays the newest saved song as soon as there is one.
-        .task(id: tracks.first?.id) {
-            if UserDefaults.standard.bool(forKey: "qaPlayDownloaded"), store.music.track == nil, !tracks.isEmpty {
-                store.music.play(MusicQueue(tracks: tracks, start: 0, source: Self.title))
-            }
-        }
-        #endif
     }
 
     static var title: String { L10n.text("Downloaded Songs") }
+    #if os(macOS)
+    static let tile: CGFloat = 150
+    #else
+    static let tile: CGFloat = 132
+    #endif
+
+    /// Albums or playlists downloaded from their pages, as covers in a row; each opens its saved songs.
+    @ViewBuilder private func shelf(_ title: String, _ collections: [MusicDownloadedCollection]) -> some View {
+        if !collections.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: title)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 16) {
+                        ForEach(collections) { MusicDownloadedTile(entry: $0, size: Self.tile) }
+                    }
+                }
+                .scrollClipDisabled()
+            }
+            .padding(.top, 24)
+        }
+    }
 
     private func header(_ tracks: [MusicTrack]) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             #if os(macOS)
-            Text(Self.title).font(.largeTitle.weight(.bold))
+            if !embedded { Text(Self.title).font(.largeTitle.weight(.bold)) }
             #endif
             Text([L10n.text("%lld songs", tracks.count), DownloadFormat.size(library.size)].joined(separator: " · "))
                 .font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
             HStack(spacing: 10) {
-                Button { store.music.play(MusicQueue(tracks: tracks, start: 0, source: Self.title)) } label: {
+                Group {
+                    Button { store.music.play(MusicQueue(tracks: tracks, start: 0, source: Self.title)) } label: {
+                        Label(L10n.text("Play"), systemImage: "play.fill")
+                    }
+                    .controlButton(prominent: true)
+                    Button { store.music.play(MusicQueue.shuffled(tracks, source: Self.title)) } label: {
+                        Label(L10n.text("Shuffle"), systemImage: "shuffle")
+                    }
+                    .controlButton()
+                }
+                .disabled(tracks.isEmpty)
+                // In plain sight rather than in the toolbar: it also clears songs still on their way.
+                if !library.items.isEmpty {
+                    Button { confirmsDeleteAll = true } label: { Label(L10n.text("Delete Downloads"), systemImage: "trash").labelStyle(.iconOnly) }
+                        .controlButton()
+                        .help(L10n.text("Delete Downloads"))
+                }
+            }
+            .fixedSize()
+        }
+    }
+}
+
+/// An album or playlist downloaded from its page: its saved songs in its order with Play and Shuffle,
+/// the songs still on their way, and Remove Download for all of it.
+struct MusicDownloadedCollectionView: View {
+    let id: String
+    @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var confirmsRemove = false
+    private var library: MusicDownloadLibrary { .shared }
+
+    var body: some View {
+        if let entry = library.collection(id: id) {
+            let collection = entry.collection
+            let items = library.items(in: entry)
+            let tracks = items.filter { $0.status == .completed }.map(\.track)
+            let pending = items.filter(\.isPending)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: MusicLayout.rowSpacing) {
+                    #if os(macOS)
+                    MusicCollectionHeader(collection: collection, tracks: tracks).padding(.bottom, 28)
+                    #else
+                    header(collection, tracks).padding(.bottom, 24)
+                    #endif
+                    if !pending.isEmpty {
+                        VStack(alignment: .leading, spacing: MusicLayout.rowSpacing) {
+                            ForEach(pending) { MusicPendingRow(item: $0) }
+                        }
+                        .padding(.bottom, 12)
+                    }
+                    #if os(macOS)
+                    MusicSongTable(tracks: tracks, numbered: collection.kind == .album) {
+                        store.music.play(MusicQueue(tracks: tracks, start: $0, collection: collection))
+                    }
+                    #else
+                    ForEach(Array(tracks.enumerated()), id: \.element.id) { index, track in
+                        MusicTrackRow(track: track, number: collection.kind == .album ? index + 1 : nil) {
+                            store.music.play(MusicQueue(tracks: tracks, start: index, collection: collection))
+                        }
+                    }
+                    #endif
+                }
+                .glassRowInsets()
+                .pageContainer()
+            }
+            .screenBackdrop()
+            .screenTitle(collection.title)
+            #if os(macOS)
+            .toolbar(removing: .title)
+            #endif
+            .musicPlayerInset()
+            .toolbar {
+                Button { confirmsRemove = true } label: { Image(systemName: "trash") }
+                    .help(L10n.text("Remove Download")).accessibilityLabel(L10n.text("Remove Download"))
+            }
+            .confirmationDialog(collection.title, isPresented: $confirmsRemove, titleVisibility: .visible) {
+                Button(L10n.text("Remove Download"), role: .destructive) { library.remove(collection: id); dismiss() }
+            }
+        } else {
+            ContentUnavailableView(L10n.text("No Downloaded Songs"), systemImage: "arrow.down.circle").screenBackdrop()
+        }
+    }
+
+    private func header(_ collection: MusicCollection, _ tracks: [MusicTrack]) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .center, spacing: MusicLayout.gap * 1.4) {
+                MusicArtwork(url: collection.artwork, size: MusicLayout.header, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.text(collection.kind == .album ? "Album" : "Playlist")).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent)
+                    Text(collection.title).font(.title2.weight(.bold)).lineLimit(2)
+                    Text([collection.subtitle, L10n.text("%lld songs", tracks.count)].compactMap { $0 }.joined(separator: " · "))
+                        .font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                }
+            }
+            HStack(spacing: 10) {
+                Button { store.music.play(MusicQueue(tracks: tracks, collection: collection)) } label: {
                     Label(L10n.text("Play"), systemImage: "play.fill")
                 }
                 .controlButton(prominent: true)
-                Button { store.music.play(MusicQueue.shuffled(tracks, source: Self.title)) } label: {
+                Button { store.music.play(MusicQueue.shuffled(tracks, collection: collection)) } label: {
                     Label(L10n.text("Shuffle"), systemImage: "shuffle")
                 }
                 .controlButton()
@@ -86,6 +224,63 @@ struct MusicDownloadsView: View {
             .fixedSize()
             .disabled(tracks.isEmpty)
         }
+    }
+}
+
+/// A saved album or playlist as its cover, title and song count; it opens the songs saved from it.
+private struct MusicDownloadedTile: View {
+    let entry: MusicDownloadedCollection
+    let size: CGFloat
+    @State private var hovering = false
+
+    var body: some View {
+        let collection = entry.collection
+        let saved = MusicDownloadLibrary.shared.items(in: entry).filter { $0.status == .completed }.count
+        RouteLink { MusicDownloadedCollectionView(id: entry.id) } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                MusicArtwork(url: collection.artwork, size: size, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
+                    .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.black.opacity(hovering ? 0.12 : 0)) }
+                    .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(collection.title).font(.subheadline.weight(.medium)).foregroundStyle(.primary).lineLimit(1)
+                    Text(L10n.text("%lld songs", saved)).font(.caption).monospacedDigit().foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            .frame(width: size, alignment: .leading)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.15), value: hovering)
+    }
+}
+
+/// One Pause All (Resume All once paused) for every song on its way, and Cancel All.
+private struct MusicPendingActions: View {
+    let pending: [MusicDownload]
+
+    var body: some View {
+        let library = MusicDownloadLibrary.shared
+        let paused = library.isPaused
+        HStack(spacing: 8) {
+            // Failed songs wait for Retry: with only those left there is nothing to pause.
+            if pending.contains(where: { $0.status != .failed }) {
+                Button { paused ? library.resumeAll() : library.pauseAll() } label: {
+                    Label(L10n.text(paused ? "Resume All" : "Pause All"), systemImage: paused ? "play.fill" : "pause.fill")
+                }
+            }
+            // Busy channels fail a run of songs at once; one press tries them all again.
+            if pending.filter({ $0.status == .failed }).count > 1 {
+                Button { library.retryFailed() } label: { Label(L10n.text("Retry All"), systemImage: "arrow.clockwise") }
+            }
+            Button(role: .destructive) { library.remove(pending.map(\.id)) } label: {
+                Label(L10n.text("Cancel All"), systemImage: "xmark")
+            }
+        }
+        .font(.subheadline.weight(.semibold))
+        .labelStyle(.titleAndIcon)
+        .buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.small)
+        .fixedSize()
     }
 }
 
@@ -121,7 +316,8 @@ private struct MusicPendingRow: View {
 
     private var status: String {
         switch item.status {
-        case .queued, .paused: L10n.text("Waiting")
+        case .queued: L10n.text("Waiting")
+        case .paused: L10n.text("Paused")
         case .downloading:
             if let expected = item.expected, expected > 0 {
                 L10n.text("%@ of %@", DownloadFormat.size(item.received), DownloadFormat.size(expected))
@@ -198,16 +394,20 @@ struct MusicDownloadMenuItems: View {
 /// Downloads an album's or playlist's songs; a check once they are all saved.
 struct MusicDownloadButton: View {
     let tracks: [MusicTrack]
+    /// The album or playlist they belong to, kept with them for Downloaded Songs.
+    var collection: MusicCollection?
     /// The Mac header's buttons have a fixed size.
     var side: CGFloat?
 
     var body: some View {
         let library = MusicDownloadLibrary.shared
         let items = tracks.compactMap { library.item(for: $0) }
-        let queued = !tracks.isEmpty && items.count == tracks.count && !items.contains { $0.status == .failed }
+        // Songs saved one by one before still leave the button on until the album or playlist is kept too.
+        let kept = collection.map { library.collection(id: $0.id) != nil } ?? true
+        let queued = kept && !tracks.isEmpty && items.count == tracks.count && !items.contains { $0.status == .failed }
         let done = queued && items.allSatisfy { $0.status == .completed }
         let label = L10n.text(done ? "Downloaded" : queued ? "Downloading" : "Download")
-        Button { library.download(tracks) } label: {
+        Button { library.download(tracks, from: collection) } label: {
             Image(systemName: done ? "checkmark.circle" : queued ? "arrow.down.circle.dotted" : "arrow.down.circle")
                 .frame(width: side, height: side)
         }

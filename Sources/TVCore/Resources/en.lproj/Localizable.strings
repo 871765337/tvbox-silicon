@@ -481,6 +481,9 @@
 "%lld at a time" = "%lld at a time";
 "Resume All" = "Resume All";
 "Pause All" = "Pause All";
+"Videos" = "Videos";
+"Cancel All" = "Cancel All";
+"Retry All" = "Retry All";
 "%@ left" = "%@ left";
 "Storage" = "Storage";
 "%@ free" = "%@ free";

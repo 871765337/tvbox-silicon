@@ -481,6 +481,9 @@
 "%lld at a time" = "同时 %lld 个";
 "Resume All" = "全部继续";
 "Pause All" = "全部暂停";
+"Videos" = "视频";
+"Cancel All" = "全部取消";
+"Retry All" = "全部重试";
 "%@ left" = "剩余 %@";
 "Storage" = "存储空间";
 "%@ free" = "可用 %@";

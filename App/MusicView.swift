@@ -440,7 +440,7 @@ struct MusicCollectionView: View {
                     }
                     .controlButton()
                     #if !os(tvOS)
-                    MusicDownloadButton(tracks: tracks).controlButton()
+                    MusicDownloadButton(tracks: tracks, collection: collection).controlButton()
                     #endif
             }
             .fixedSize()

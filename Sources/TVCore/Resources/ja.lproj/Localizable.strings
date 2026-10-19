@@ -481,6 +481,9 @@
 "%lld at a time" = "同時に %lld 件";
 "Resume All" = "すべて再開";
 "Pause All" = "すべて一時停止";
+"Videos" = "ビデオ";
+"Cancel All" = "すべてキャンセル";
+"Retry All" = "すべて再試行";
 "%@ left" = "残り %@";
 "Storage" = "ストレージ";
 "%@ free" = "空き %@";

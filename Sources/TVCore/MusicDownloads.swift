@@ -32,6 +32,15 @@ public struct MusicDownload: Codable, Identifiable, Hashable, Sendable {
     public var isPending: Bool { status != .completed }
 }
 
+/// An album or playlist downloaded as a whole: its songs in their order, so Downloaded Songs can
+/// list it again. A song kept by two of them is saved once.
+public struct MusicDownloadedCollection: Codable, Identifiable, Hashable, Sendable {
+    public internal(set) var collection: MusicCollection
+    public internal(set) var trackIDs: [String]
+    public internal(set) var added: Date
+    public var id: String { collection.id }
+}
+
 /// Downloaded songs and the queue that fetches them, beside the episode downloads. Each song is
 /// resolved as playing it would be (best channel, lossless first) and saved by the same transfer
 /// as an episode, so a stopped download continues and an expired link is resolved again.
@@ -41,6 +50,8 @@ public struct MusicDownload: Codable, Identifiable, Hashable, Sendable {
     static let simultaneous = 2
 
     public private(set) var items: [MusicDownload] = []
+    /// Albums and playlists downloaded from their pages, most recent first.
+    public private(set) var collections: [MusicDownloadedCollection] = []
     public let root: URL
     @ObservationIgnored private let session: URLSession
     @ObservationIgnored private var running: [String: (run: UUID, task: Task<Void, Never>, meter: DownloadMeter)] = [:]
@@ -74,11 +85,24 @@ public struct MusicDownload: Codable, Identifiable, Hashable, Sendable {
 
     public func item(for track: MusicTrack) -> MusicDownload? { item(id: track.id) }
     public func item(id: String) -> MusicDownload? { items.first { $0.id == id } }
+    public func collection(id: String) -> MusicDownloadedCollection? { collections.first { $0.id == id } }
+    /// An album's or playlist's songs that are saved or on their way, in its order.
+    public func items(in collection: MusicDownloadedCollection) -> [MusicDownload] { collection.trackIDs.compactMap { item(id: $0) } }
+    /// Songs on their way that are paused, and none running or waiting: Resume All rather than Pause All.
+    public var isPaused: Bool {
+        pending.contains { $0.status == .paused } && !pending.contains { $0.status == .queued || $0.isActive }
+    }
 
     // MARK: Queue
 
-    /// Queues the songs not saved yet, in order; failed ones are tried again.
-    public func download(_ tracks: [MusicTrack]) {
+    /// Queues the songs not saved yet, in order; failed and paused ones are tried again. Songs from an
+    /// album's or playlist's page remember it, so Downloaded Songs lists it with them.
+    public func download(_ tracks: [MusicTrack], from collection: MusicCollection? = nil) {
+        if let collection {
+            collections.removeAll { $0.id == collection.id }
+            collections.insert(MusicDownloadedCollection(collection: collection, trackIDs: tracks.map(\.id), added: Date()), at: 0)
+            saveCollections()
+        }
         for track in tracks {
             if let existing = item(for: track) {
                 if existing.status == .failed || existing.status == .paused { update(existing.id) { $0.status = .queued; $0.failure = nil } }
@@ -106,6 +130,42 @@ public struct MusicDownload: Codable, Identifiable, Hashable, Sendable {
         items.removeAll { ids.contains($0.id) }
         let kept = Set(items.compactMap(\.track.artwork))
         for cover in covers.subtracting(kept) { try? FileManager.default.removeItem(at: Self.artworkFile(for: cover)) }
+        // An album or playlist goes once none of its songs is left.
+        let removed = Set(ids)
+        collections = collections.compactMap { entry in
+            var entry = entry
+            entry.trackIDs.removeAll { removed.contains($0) }
+            return entry.trackIDs.isEmpty ? nil : entry
+        }
+        save(); saveCollections(); schedule()
+    }
+
+    /// Removes an album or playlist with its songs, except those another saved one also keeps.
+    public func remove(collection id: String) {
+        guard let entry = collection(id: id) else { return }
+        collections.removeAll { $0.id == id }
+        let shared = Set(collections.flatMap(\.trackIDs))
+        remove(entry.trackIDs.filter { !shared.contains($0) })
+    }
+
+    /// Stops every song on its way and keeps it paused, also after a relaunch, until `resumeAll()`.
+    public func pauseAll() {
+        for item in items where item.status == .queued || item.isActive {
+            stop(item.id)
+            update(item.id) { $0.status = .paused }
+        }
+        save(); schedule()
+    }
+
+    /// Puts every failed song back in the queue.
+    public func retryFailed() {
+        for item in items where item.status == .failed { update(item.id) { $0.status = .queued; $0.failure = nil } }
+        save(); schedule()
+    }
+
+    /// Puts paused songs back in the queue; they continue from where they stopped.
+    public func resumeAll() {
+        for item in items where item.status == .paused { update(item.id) { $0.status = .queued } }
         save(); schedule()
     }
 
@@ -251,8 +311,12 @@ public struct MusicDownload: Codable, Identifiable, Hashable, Sendable {
     /// Song IDs hold ":"; the folder name keeps only letters and digits plain.
     private func folder(_ id: String) -> URL { root.appending(path: id.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? id) }
     private var index: URL { root.appending(path: "music-downloads.json") }
+    private var collectionIndex: URL { root.appending(path: "music-collections.json") }
 
     private func load() {
+        if let data = try? Data(contentsOf: collectionIndex), let stored = try? JSONDecoder().decode([MusicDownloadedCollection].self, from: data) {
+            collections = stored
+        }
         guard let data = try? Data(contentsOf: index), let stored = try? JSONDecoder().decode([MusicDownload].self, from: data) else { return }
         items = stored.compactMap { item in
             var item = item
@@ -264,11 +328,22 @@ public struct MusicDownload: Codable, Identifiable, Hashable, Sendable {
             }
             return item
         }
+        let kept = Set(items.map(\.id))
+        collections = collections.compactMap { entry in
+            var entry = entry
+            entry.trackIDs.removeAll { !kept.contains($0) }
+            return entry.trackIDs.isEmpty ? nil : entry
+        }
     }
 
     private func save() {
         savedAt = Date()
         guard let data = try? JSONEncoder().encode(items) else { return }
         try? data.write(to: index, options: .atomic)
+    }
+
+    private func saveCollections() {
+        guard let data = try? JSONEncoder().encode(collections) else { return }
+        try? data.write(to: collectionIndex, options: .atomic)
     }
 }

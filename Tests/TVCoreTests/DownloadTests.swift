@@ -92,3 +92,35 @@ import Testing
     #expect(decoded == lyrics)
     #expect(decoded.index(at: 6) == 1)
 }
+
+@MainActor @Test func musicDownloadsKeepTheirAlbumsAndPlaylistsAndPauseTogether() throws {
+    let root = FileManager.default.temporaryDirectory.appending(path: "music-downloads-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: root) }
+    let songs = (1...3).map { MusicTrack(platform: .qq, songID: "s\($0)", title: "Song \($0)", artists: ["A"]) }
+    let album = MusicCollection(kind: .album, platform: .qq, collectionID: "a1", title: "Album")
+    let playlist = MusicCollection(kind: .playlist, platform: .qq, collectionID: "p1", title: "Mix")
+    let library = MusicDownloadLibrary(root: root)
+    library.download(Array(songs.prefix(2)), from: album)
+    library.download([songs[2], songs[0]], from: playlist)
+    // Most recent first, each in its own order; a song in both is saved once.
+    #expect(library.collections.map(\.id) == [playlist.id, album.id])
+    #expect(library.items(in: try #require(library.collection(id: playlist.id))).map(\.id) == [songs[2].id, songs[0].id])
+    #expect(library.items.count == 3)
+
+    library.pauseAll()
+    #expect(library.items.allSatisfy { $0.status == .paused })
+    #expect(library.isPaused)
+    // Still paused, and still grouped, when the app opens again.
+    let reopened = MusicDownloadLibrary(root: root)
+    #expect(reopened.items.allSatisfy { $0.status == .paused })
+    #expect(reopened.collections.map(\.id) == [playlist.id, album.id])
+
+    // Removing the album keeps the song the playlist shares.
+    library.remove(collection: album.id)
+    #expect(Set(library.items.map(\.id)) == [songs[0].id, songs[2].id])
+    #expect(library.collections.map(\.id) == [playlist.id])
+    library.resumeAll()
+    #expect(!library.isPaused)
+    library.remove(library.items.map(\.id))
+    #expect(library.collections.isEmpty)
+}
