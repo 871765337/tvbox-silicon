@@ -18,13 +18,30 @@ extension Site {
     public func spider(or fallback: URL?) -> URL? { provenance.map(\.spider) ?? fallback }
 
     /// Two entries are one source when they run the same way once their addresses are resolved.
-    func fingerprint(origin: URL, spider: URL?) -> String {
+    /// An archive whose MD5 the subscription declares is known by it: mirrors of one subscription
+    /// host the same spider at different addresses.
+    func fingerprint(origin: URL, spider: URL?, spiderChecksum: String?) -> String {
         let api = runtime == .jar ? self.api : ((try? WebAddress.resolve(self.api, relativeTo: origin).absoluteString) ?? self.api)
-        let archive = runtime == .jar ? (try? pluginURL(origin: origin, fallback: spider))?.absoluteString ?? "" : ""
+        let archive: String
+        if runtime != .jar {
+            archive = ""
+        } else if let jar = raw["jar"]?.string, !jar.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            archive = Self.declaredChecksum(jar) ?? (try? pluginURL(origin: origin, fallback: spider))?.absoluteString ?? ""
+        } else {
+            archive = spiderChecksum ?? spider?.absoluteString ?? ""
+        }
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         let ext = (try? pluginExtension(origin: origin)).flatMap { try? encoder.encode($0) }.map { String(decoding: $0, as: UTF8.self) } ?? ""
         return [String(type), api, archive, ext].joined(separator: "\n")
+    }
+
+    /// The MD5 an archive address declares after `;md5;`, when it is a well-formed one.
+    static func declaredChecksum(_ address: String) -> String? {
+        let fields = address.components(separatedBy: ";md5;")
+        guard fields.count > 1 else { return nil }
+        let checksum = fields[1].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return checksum.count == 32 && checksum.allSatisfy(\.isHexDigit) ? "md5:" + checksum : nil
     }
 }
 
@@ -45,7 +62,7 @@ extension Subscription {
             let provenance = SourceProvenance(origin: part.origin, spider: part.spiderURL)
             var own = Set<String>()
             for var site in part.sites {
-                let fingerprint = site.fingerprint(origin: part.origin, spider: part.spiderURL)
+                let fingerprint = site.fingerprint(origin: part.origin, spider: part.spiderURL, spiderChecksum: part.spiderChecksum)
                 guard !offered.contains(fingerprint) else { continue }
                 own.insert(fingerprint)
                 if !keys.insert(site.key).inserted {
@@ -68,6 +85,9 @@ extension Subscription {
         return Subscription(origin: first.origin, importedAt: parts.map(\.importedAt).max() ?? first.importedAt,
                             sites: sites, lives: lives, raw: raw)
     }
+
+    /// The MD5 the subscription declares for its spider archive.
+    var spiderChecksum: String? { raw["spider"]?.string.flatMap(Site.declaredChecksum) }
 
     /// A short, stable tag for this subscription's address.
     var tag: String { String(PluginChecksum.sha256(Data(origin.absoluteString.utf8)).prefix(6)) }

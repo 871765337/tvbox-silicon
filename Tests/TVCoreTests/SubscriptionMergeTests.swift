@@ -42,6 +42,25 @@ private func site(_ key: String, _ name: String, type: Int, api: String) -> [Str
     #expect(merged.sites.map { $0.key } == ["x", "y", "w"])
 }
 
+@Test func mirroredSubscriptionsShareTheirPluginSources() throws {
+    // Mirrors of one subscription host the same spider at different addresses, with the same MD5.
+    let md5 = ";md5;aa8d37525617af470b3b8dfc91db8669", other = ";md5;0123456789abcdef0123456789abcdef"
+    func plugins(spider: String, jar: String) -> [String: Any] {
+        var own = site("own", "O", type: 3, api: "csp_B")
+        own["jar"] = jar
+        return ["spider": spider, "sites": [site("csp", "J", type: 3, api: "csp_A"), own]]
+    }
+    let a = try subscription(plugins(spider: "./jar/fan.txt" + md5, jar: "./own.jar" + other), origin: first)
+    let mirror = try subscription(plugins(spider: "https://img.example/poster.jpg" + md5, jar: "https://cdn.example/x.jar" + other), origin: second)
+    #expect(try #require(Subscription.merge([a, mirror])).sites.map { $0.key } == ["csp", "own"])
+
+    // Without a matching MD5, archives at different addresses may differ, so both stay.
+    let unrelated = try subscription(plugins(spider: "https://img.example/poster.jpg" + other, jar: "https://cdn.example/x.jar"), origin: second)
+    #expect(try #require(Subscription.merge([a, unrelated])).sites.count == 4)
+    let undeclared = try subscription(plugins(spider: "./jar/fan.txt", jar: "./own.jar"), origin: second)
+    #expect(try #require(Subscription.merge([a, undeclared])).sites.count == 4)
+}
+
 @Test func oneSubscriptionMergesToItself() throws {
     let a = try subscription(["spider": "./a.jar", "sites": [site("vod", "A", type: 1, api: "./api.php")], "parses": [["name": "p", "type": 1, "url": "https://p.example/?url="]]], origin: first)
     let merged = try #require(Subscription.merge([a]))
