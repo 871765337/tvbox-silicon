@@ -121,26 +121,38 @@ struct DownloadsView: View {
 }
 
 #if !os(tvOS)
-/// Videos | Music over the page once songs are saved too, pinned while the page scrolls under it.
+/// Videos | Music once songs are saved too: in the window's toolbar on the Mac, beside the title, as
+/// Music and Photos place theirs; a band of its own took a second row there. On iPhone and iPad it is
+/// pinned under the title while the page scrolls under it.
 private struct DownloadKindBar: ViewModifier {
     let shown: Bool
     @Binding var kind: DownloadsView.Kind
 
     func body(content: Content) -> some View {
         if shown {
-            content.topBar {
-                Picker(L10n.text("Downloads"), selection: $kind) {
-                    Text(L10n.text("Videos")).tag(DownloadsView.Kind.videos)
-                    Text(L10n.text("Music")).tag(DownloadsView.Kind.music)
-                }
-                .pickerStyle(.segmented).labelsHidden()
-                .frame(maxWidth: 320)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, Layout.gutter).padding(.vertical, 8)
+            #if os(macOS)
+            content.toolbar {
+                ToolbarItem(placement: .principal) { picker.fixedSize() }
             }
+            #else
+            content.topBar {
+                picker
+                    .frame(maxWidth: 320)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, Layout.gutter).padding(.vertical, 8)
+            }
+            #endif
         } else {
             content
         }
+    }
+
+    private var picker: some View {
+        Picker(L10n.text("Downloads"), selection: $kind) {
+            Text(L10n.text("Videos")).tag(DownloadsView.Kind.videos)
+            Text(L10n.text("Music")).tag(DownloadsView.Kind.music)
+        }
+        .pickerStyle(.segmented).labelsHidden()
     }
 }
 #endif
