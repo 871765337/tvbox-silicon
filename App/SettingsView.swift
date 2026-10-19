@@ -296,6 +296,16 @@ struct FormSettingsView: View {
         Form { Group {
             heroSection
 
+            // Right under the app, so a problem or an idea is never more than one click away.
+            Section {
+                #if os(macOS)
+                SettingsLinkRow(symbol: "bubble.left.and.text.bubble.right.fill", tint: Brand.indigo, title: L10n.text("Send Feedback"),
+                                subtitle: L10n.text("Report a problem or share an idea")) { FeedbackView() }
+                #else
+                FormLink(symbol: "bubble.left.and.text.bubble.right.fill", tint: Brand.indigo, title: L10n.text("Send Feedback")) { FeedbackView() }
+                #endif
+            }
+
             Section {
                 ForEach(store.subscriptions) { entry in
                     let failure = store.subscriptionErrors[entry.address]
@@ -412,7 +422,6 @@ struct FormSettingsView: View {
                 FormLink(symbol: "internaldrive", tint: .blue, title: L10n.text("Local Cache")) { CacheSettingsView() }
                 FormLink(symbol: "cpu.fill", tint: .orange, title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
                 FormLink(symbol: "doc.text.magnifyingglass", tint: .gray, title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
-                FormLink(symbol: "bubble.left.and.text.bubble.right.fill", tint: .green, title: L10n.text("Send Feedback")) { FeedbackView() }
                 Toggle(isOn: $sendsErrorReports) {
                     #if os(iOS)
                     FormLabel(symbol: "ladybug.fill", tint: .red, title: L10n.text("Send Error Reports"))
@@ -1144,6 +1153,10 @@ struct TVSettingsView: View {
             TVSettingsHero()
         } list: {
             if !updates.available.isEmpty { updateSection }
+            // First in the list, beside the app: a problem or an idea is one press away.
+            TVSettingsSection {
+                TVSettingsLink(title: L10n.text("Send Feedback")) { FeedbackView() }
+            }
             subscriptionSection
             TVSettingsSection(title: L10n.text("Accounts")) {
                 TVSettingsLink(title: L10n.text("Bilibili"), value: bilibiliSummary) { BilibiliAccountView() }
@@ -1170,7 +1183,6 @@ struct TVSettingsView: View {
                 TVSettingsLink(title: L10n.text("Local Cache")) { CacheSettingsView() }
                 TVSettingsLink(title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
                 TVSettingsLink(title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
-                TVSettingsLink(title: L10n.text("Send Feedback")) { FeedbackView() }
                 TVSettingsToggle(title: L10n.text("Send Error Reports"), isOn: $sendsErrorReports)
                     .onChange(of: sendsErrorReports) { _, on in if !on { ErrorReports.shared.discard() } }
             }

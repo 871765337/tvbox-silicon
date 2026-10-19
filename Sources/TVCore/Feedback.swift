@@ -38,6 +38,17 @@ public enum Feedback {
     public static let limit = 5000
     static let endpoint = URL(string: "https://yingxia-reports.getmegaportal.com/v1/feedback")!
 
+    /// What goes with a message, as the issue shows it, so the page can say so before it is sent.
+    public struct Details: Sendable {
+        public let app, system, model, language: String
+    }
+
+    public static var details: Details {
+        let system = switch ErrorReports.platform { case "tvos": "tvOS"; case "ios": "iOS"; default: "macOS" }
+        return Details(app: "\(ErrorReports.bundleValue("CFBundleShortVersionString")) (\(ErrorReports.bundleValue("CFBundleVersion")))",
+                       system: "\(system) \(ErrorReports.osVersion)", model: ErrorReports.model, language: L10n.resolvedLanguage())
+    }
+
     public static func send(_ message: String, kind: Kind, defaults: UserDefaults = .standard) async throws -> Issue {
         #if DEBUG
         // Debug builds and simulators only send with `-qaFeedback <url>` (e.g. a local `wrangler dev`).
