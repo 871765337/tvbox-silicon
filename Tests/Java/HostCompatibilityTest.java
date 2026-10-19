@@ -16,8 +16,22 @@ public class HostCompatibilityTest {
             }
             return;
         }
-        reflectiveArrayCloneWorks(); conversionCacheReusesAndRepairs(); partialInitializationDoesNotHideWorkingSources(); recommendationsMerge(); stateSurvivesAndRestores(); interfaceCallsExecute(); sourceFailuresStaySpecific(); cloudLoginReturnsToTheApp(); asyncCloudLoginEndsPlayback(); packageContextExists();
+        reflectiveArrayCloneWorks(); conversionCacheReusesAndRepairs(); partialInitializationDoesNotHideWorkingSources(); recommendationsMerge(); stateSurvivesAndRestores(); interfaceCallsExecute(); sourceFailuresStaySpecific(); cloudLoginReturnsToTheApp(); asyncCloudLoginEndsPlayback(); packageContextExists(); androidLogHasEveryOverload();
         System.out.println("Java host regression checks passed (state, interface bytecode, HTTP failures, Android context).");
+    }
+
+    private static void androidLogHasEveryOverload() throws Exception {
+        // 夸父 (PanWebShareCloudKF) calls Log.w(tag, text, error) in init and failed with NoSuchMethodError.
+        Class<?>[] tagText = {String.class, String.class}, withError = {String.class, String.class, Throwable.class};
+        for (String name : new String[]{"v", "d", "i", "w", "e", "wtf"}) {
+            check(android.util.Log.class.getMethod(name, tagText).getReturnType() == int.class, "Log." + name + "(tag, text) is missing");
+            check(android.util.Log.class.getMethod(name, withError).getReturnType() == int.class, "Log." + name + "(tag, text, error) is missing");
+        }
+        android.util.Log.class.getMethod("w", String.class, Throwable.class);
+        android.util.Log.class.getMethod("wtf", String.class, Throwable.class);
+        android.util.Log.class.getMethod("println", int.class, String.class, String.class);
+        android.util.Log.class.getMethod("isLoggable", String.class, int.class);
+        check(android.util.Log.w("test", "warning", null) == 0 && android.util.Log.getStackTraceString(null).isEmpty(), "Log rejected a null error");
     }
 
     private static void reflectiveArrayCloneWorks() throws Exception {
