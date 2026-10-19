@@ -823,3 +823,17 @@
 "Back to Now" = "現在に戻る";
 "Rotate to Landscape" = "横向きにする";
 "Rotate to Portrait" = "縦向きにする";
+"Send Feedback" = "フィードバックを送信";
+"Feedback" = "フィードバック";
+"Problem" = "不具合";
+"Suggestion" = "提案";
+"Type" = "種類";
+"Message" = "内容";
+"Send" = "送信";
+"Sending…" = "送信中…";
+"Describe the problem or your idea" = "発生した問題やアイデアを入力";
+"View on GitHub" = "GitHub で見る";
+"Thanks! Your feedback is issue #%lld." = "ご協力ありがとうございます。Issue #%lld として登録されました。";
+"You've sent a lot of feedback. Please try again later." = "フィードバックの送信が多すぎます。しばらくしてからもう一度お試しください。";
+"Couldn't send feedback. Please try again later." = "フィードバックを送信できませんでした。しばらくしてからもう一度お試しください。";
+"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses." = "フィードバックは、App とシステムのバージョン、デバイスのモデル、言語とともに、映匣の GitHub ページで公開の Issue として掲載されます。アカウント、パスワード、購読 URL は書かないでください。";

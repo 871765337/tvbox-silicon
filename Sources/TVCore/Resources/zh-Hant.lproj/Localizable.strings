@@ -823,3 +823,17 @@
 "Back to Now" = "回到目前";
 "Rotate to Landscape" = "切換為橫向";
 "Rotate to Portrait" = "切換為直向";
+"Send Feedback" = "意見回饋";
+"Feedback" = "意見回饋";
+"Problem" = "問題";
+"Suggestion" = "建議";
+"Type" = "類型";
+"Message" = "內容";
+"Send" = "傳送";
+"Sending…" = "正在傳送…";
+"Describe the problem or your idea" = "描述遇到的問題或你的想法";
+"View on GitHub" = "在 GitHub 上檢視";
+"Thanks! Your feedback is issue #%lld." = "謝謝！你的意見已提交為問題 #%lld。";
+"You've sent a lot of feedback. Please try again later." = "你傳送的意見太多了，請稍後再試。";
+"Couldn't send feedback. Please try again later." = "無法傳送意見，請稍後再試。";
+"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses." = "你的意見會作為公開問題發佈在影匣的 GitHub 頁面上，並附帶 App 與系統版本、裝置型號和語言。請勿填寫帳號、密碼或訂閱網址。";

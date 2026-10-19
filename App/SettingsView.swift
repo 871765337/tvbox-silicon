@@ -412,6 +412,7 @@ struct FormSettingsView: View {
                 FormLink(symbol: "internaldrive", tint: .blue, title: L10n.text("Local Cache")) { CacheSettingsView() }
                 FormLink(symbol: "cpu.fill", tint: .orange, title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
                 FormLink(symbol: "doc.text.magnifyingglass", tint: .gray, title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
+                FormLink(symbol: "bubble.left.and.text.bubble.right.fill", tint: .green, title: L10n.text("Send Feedback")) { FeedbackView() }
                 Toggle(isOn: $sendsErrorReports) {
                     #if os(iOS)
                     FormLabel(symbol: "ladybug.fill", tint: .red, title: L10n.text("Send Error Reports"))
@@ -1169,6 +1170,7 @@ struct TVSettingsView: View {
                 TVSettingsLink(title: L10n.text("Local Cache")) { CacheSettingsView() }
                 TVSettingsLink(title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
                 TVSettingsLink(title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
+                TVSettingsLink(title: L10n.text("Send Feedback")) { FeedbackView() }
                 TVSettingsToggle(title: L10n.text("Send Error Reports"), isOn: $sendsErrorReports)
                     .onChange(of: sendsErrorReports) { _, on in if !on { ErrorReports.shared.discard() } }
             }
@@ -1364,6 +1366,8 @@ struct TVSettingsAction: View {
 struct TVSettingsField: View {
     let title: String
     @Binding var text: String
+    /// Words rather than an address: the usual keyboard, with capitals and corrections.
+    var prose = false
     @State private var editing = false
     @State private var draft = ""
     var body: some View {
@@ -1373,8 +1377,8 @@ struct TVSettingsField: View {
         .glassRow()
         .alert(title, isPresented: $editing) {
             TextField(title, text: $draft)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never).keyboardType(.URL)
+                .autocorrectionDisabled(!prose)
+                .textInputAutocapitalization(prose ? .sentences : .never).keyboardType(prose ? .default : .URL)
             Button(L10n.text("Done")) { text = draft.trimmingCharacters(in: .whitespacesAndNewlines) }
             Button(L10n.text("Cancel"), role: .cancel) {}
         }

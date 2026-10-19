@@ -823,3 +823,17 @@
 "Back to Now" = "Back to Now";
 "Rotate to Landscape" = "Rotate to Landscape";
 "Rotate to Portrait" = "Rotate to Portrait";
+"Send Feedback" = "Send Feedback";
+"Feedback" = "Feedback";
+"Problem" = "Problem";
+"Suggestion" = "Suggestion";
+"Type" = "Type";
+"Message" = "Message";
+"Send" = "Send";
+"Sending…" = "Sending…";
+"Describe the problem or your idea" = "Describe the problem or your idea";
+"View on GitHub" = "View on GitHub";
+"Thanks! Your feedback is issue #%lld." = "Thanks! Your feedback is issue #%lld.";
+"You've sent a lot of feedback. Please try again later." = "You've sent a lot of feedback. Please try again later.";
+"Couldn't send feedback. Please try again later." = "Couldn't send feedback. Please try again later.";
+"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses." = "Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses.";

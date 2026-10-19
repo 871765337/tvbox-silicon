@@ -256,16 +256,17 @@ public final class ErrorReports: @unchecked Sendable {
         let items: [Group]
     }
 
-    private var install: String {
+    /// Also sent with feedback, to the server only.
+    var install: String {
         if let id = defaults.string(forKey: "errorReportsInstall") { return id }
         let id = UUID().uuidString
         defaults.set(id, forKey: "errorReportsInstall")
         return id
     }
 
-    private static func bundleValue(_ key: String) -> String { Bundle.main.infoDictionary?[key] as? String ?? "0" }
+    static func bundleValue(_ key: String) -> String { Bundle.main.infoDictionary?[key] as? String ?? "0" }
 
-    private static var platform: String {
+    static var platform: String {
         #if os(tvOS)
         "tvos"
         #elseif os(iOS)
@@ -275,7 +276,7 @@ public final class ErrorReports: @unchecked Sendable {
         #endif
     }
 
-    private static var osVersion: String {
+    static var osVersion: String {
         let v = ProcessInfo.processInfo.operatingSystemVersion
         return "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
     }
