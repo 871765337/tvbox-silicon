@@ -32,6 +32,24 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(open.waitForExistence(timeout: 10), "Back did not return to the previous page")
     }
 
+    /// Back while a live stream is still loading closes the player. AVKit's player kept the press to itself
+    /// until the picture started, so a stream that never loaded could only be left by quitting the app (#22).
+    func testBackWhileLiveLoadsClosesThePlayer() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "live", "-qaPage", "player-stall", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/stall-config.json",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let waiting = app.descendants(matching: .any)["player.waiting"]
+        XCTAssertTrue(waiting.waitForExistence(timeout: 60), "The player did not open")
+        sleep(3)
+        XCUIRemote.shared.press(.menu)
+        sleep(3)
+        XCTAssertEqual(app.state, .runningForeground, "Back left the app")
+        XCTAssertFalse(waiting.exists, "Back did not close the loading player")
+        XCTAssertFalse(app.staticTexts["Can't play this right now"].exists, "The stream failed before Back was pressed")
+    }
+
     /// A source page searches from the remote: the search keyboard has no return key, so a Search
     /// button below it runs the query that was typed, and typing alone does not search.
     func testSourcePageSearchesWithTheSearchButton() throws {

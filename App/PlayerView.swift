@@ -33,6 +33,12 @@ struct PlaybackView: View {
                                  next: episodeAction(store.nextEpisode(after: channel), queued: true), waiting: waitContent,
                                  enhancer: session.enhancer, upscale: $upscalesVideo, smooth: $smoothsVideo).ignoresSafeArea()
             }
+            // Until the picture starts, AVKit's player keeps the Back press to itself, so a stream that never
+            // loads (a dead live channel) left no way out but quitting the app. This takes focus and closes instead.
+            if session.error == nil && !session.showsPicture {
+                Color.clear.loadingFocus(takeFocus: true) { dismiss() }
+                    .accessibilityIdentifier("player.waiting")
+            }
             #elseif os(iOS)
             NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
                              waiting: waitContent, enhancer: session.enhancer).ignoresSafeArea()
