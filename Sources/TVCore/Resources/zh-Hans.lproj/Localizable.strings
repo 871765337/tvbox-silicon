@@ -837,3 +837,9 @@
 "You've sent a lot of feedback. Please try again later." = "你发送的反馈太多了，请稍后再试。";
 "Couldn't send feedback. Please try again later." = "无法发送反馈，请稍后再试。";
 "Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses." = "你的反馈会作为公开问题发布在影匣的 GitHub 页面上，并附带 App 与系统版本、设备型号和语言。请勿填写账号、密码或订阅地址。";
+"Remove Download" = "移除下载";
+"Downloaded Songs" = "已下载的歌曲";
+"No Downloaded Songs" = "没有已下载的歌曲";
+"Download a song, album or playlist from its menu to listen without a connection." = "在歌曲、专辑或歌单的菜单中选择“下载”，没有网络时也能收听。";
+"Delete all downloaded songs?" = "删除所有已下载的歌曲？";
+"%lld downloading" = "%lld 首正在下载";

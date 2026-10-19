@@ -837,3 +837,9 @@
 "You've sent a lot of feedback. Please try again later." = "フィードバックの送信が多すぎます。しばらくしてからもう一度お試しください。";
 "Couldn't send feedback. Please try again later." = "フィードバックを送信できませんでした。しばらくしてからもう一度お試しください。";
 "Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses." = "フィードバックは、App とシステムのバージョン、デバイスのモデル、言語とともに、映匣の GitHub ページで公開の Issue として掲載されます。アカウント、パスワード、購読 URL は書かないでください。";
+"Remove Download" = "ダウンロードを削除";
+"Downloaded Songs" = "ダウンロードした曲";
+"No Downloaded Songs" = "ダウンロードした曲はありません";
+"Download a song, album or playlist from its menu to listen without a connection." = "曲、アルバム、プレイリストのメニューからダウンロードすると、オフラインでも聴けます。";
+"Delete all downloaded songs?" = "ダウンロードした曲をすべて削除しますか？";
+"%lld downloading" = "%lld 曲をダウンロード中";

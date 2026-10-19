@@ -124,7 +124,7 @@ public struct DownloadItem: Codable, Identifiable, Hashable, Sendable {
     }
 
     /// tvOS gives apps no lasting storage besides Caches, which the system may clear when space runs low.
-    public static var defaultRoot: URL {
+    public nonisolated static var defaultRoot: URL {
         #if os(tvOS)
         URL.cachesDirectory.appending(path: "Downloads")
         #elseif os(macOS)

@@ -230,6 +230,8 @@ struct MusicTrackMenu: View {
         Menu {
             Button { store.music.playNext(tracks) } label: { Label(L10n.text("Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") }
             Button { store.music.addToUpNext(tracks) } label: { Label(L10n.text("Add to Up Next"), systemImage: "text.line.last.and.arrowtriangle.forward") }
+            Divider()
+            MusicDownloadMenuItems(tracks: tracks)
         } label: {
             Image(systemName: "ellipsis").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
                 .frame(width: 26, height: 26).contentShape(.rect)
@@ -395,6 +397,7 @@ struct MusicCollectionHeader: View {
                         Image(systemName: "plus").frame(width: 34, height: 34)
                     }
                     .buttonStyle(MusicHeaderButtonStyle()).help(L10n.text("Add to Up Next")).accessibilityLabel(L10n.text("Add to Up Next"))
+                    MusicDownloadButton(tracks: tracks, side: 34).buttonStyle(MusicHeaderButtonStyle())
                 }
                 .disabled(tracks.isEmpty)
             }

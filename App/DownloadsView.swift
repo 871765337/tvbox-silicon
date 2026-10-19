@@ -13,7 +13,7 @@ struct DownloadsView: View {
         let pending = library.items.filter(\.isPending)
         let shows = DownloadShow.group(library.items.filter { $0.status == .completed })
         Group {
-            if library.items.isEmpty {
+            if library.items.isEmpty && !hasMusic {
                 // One message instead of an empty storage card above it: a 0 KB total says nothing new.
                 EmptyDownloads(available: library.usage.available) { store.section = .sites }
             } else {
@@ -33,10 +33,26 @@ struct DownloadsView: View {
         }
     }
 
+    /// Songs are saved apart, in Music; this page leads there too.
+    private var hasMusic: Bool {
+        #if os(tvOS)
+        false
+        #else
+        !MusicDownloadLibrary.shared.items.isEmpty
+        #endif
+    }
+
     private func content(pending: [DownloadItem], shows: [DownloadShow]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
+                #if os(tvOS)
                 StorageCard(usage: library.usage)
+                #else
+                StorageCard(usage: library.usage, songs: MusicDownloadLibrary.shared.size)
+                #endif
+                #if !os(tvOS)
+                if hasMusic { MusicDownloadsLink(card: true) }
+                #endif
                 if !pending.isEmpty { queue(pending) }
                 if !shows.isEmpty {
                     VStack(alignment: .leading, spacing: Layout.headerSpacing) {
@@ -151,10 +167,13 @@ private struct EmptyDownloads: View {
 /// Space used by downloads against the rest of the device, as one bar.
 private struct StorageCard: View {
     let usage: DownloadLibrary.Usage
+    /// Downloaded songs, kept apart from the episodes.
+    var songs: Int64 = 0
     var body: some View {
+        let downloads = usage.downloads + songs
         let capacity = usage.capacity ?? 0
         let free = usage.available ?? 0
-        let other = max(0, capacity - free - usage.downloads)
+        let other = max(0, capacity - free - downloads)
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Image(systemName: "internaldrive.fill").foregroundStyle(Brand.accent).accessibilityHidden(true)
@@ -165,7 +184,7 @@ private struct StorageCard: View {
                 }
             }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(DownloadFormat.size(usage.downloads)).font(.system(.title, design: .rounded).weight(.bold)).monospacedDigit()
+                Text(DownloadFormat.size(downloads)).font(.system(.title, design: .rounded).weight(.bold)).monospacedDigit()
                 Text(L10n.text("used by downloads")).font(.subheadline).foregroundStyle(.secondary)
             }
             if capacity > 0 {
@@ -173,7 +192,7 @@ private struct StorageCard: View {
                     let width = proxy.size.width
                     let share = { (bytes: Int64) in width * CGFloat(Double(bytes) / Double(capacity)) }
                     HStack(spacing: 2) {
-                        Rectangle().fill(Brand.cyan).frame(width: usage.downloads > 0 ? max(4, share(usage.downloads)) : 0)
+                        Rectangle().fill(Brand.cyan).frame(width: downloads > 0 ? max(4, share(downloads)) : 0)
                         Rectangle().fill(Color.primary.opacity(0.28)).frame(width: share(other))
                         Rectangle().fill(Color.primary.opacity(0.08))
                     }
@@ -182,7 +201,7 @@ private struct StorageCard: View {
                 .frame(height: DownloadMetrics.thumb > 60 ? 16 : 10)
                 .accessibilityHidden(true)
                 HStack(spacing: 18) {
-                    legend(Brand.cyan, L10n.text("Downloads"), usage.downloads)
+                    legend(Brand.cyan, L10n.text("Downloads"), downloads)
                     legend(Color.primary.opacity(0.28), L10n.text("Other"), other)
                     legend(Color.primary.opacity(0.12), L10n.text("Free"), free)
                 }
@@ -364,11 +383,14 @@ struct DownloadedBadge: View {
 
 /// A download's state beside an episode name: downloaded, progress, waiting or failed.
 struct DownloadState: View {
-    let item: DownloadItem
+    let status: DownloadItem.Status
+    let fraction: Double
+    init(item: DownloadItem) { status = item.status; fraction = item.fraction }
+    init(status: DownloadItem.Status, fraction: Double) { self.status = status; self.fraction = fraction }
     var body: some View {
         let size: CGFloat = DownloadMetrics.thumb > 60 ? 24 : 13
         Group {
-            switch item.status {
+            switch status {
             case .completed:
                 Image(systemName: "arrow.down.circle.fill").foregroundStyle(Brand.accent).accessibilityLabel(L10n.text("Downloaded"))
             case .failed:
@@ -376,7 +398,7 @@ struct DownloadState: View {
             case .downloading, .finishing:
                 ZStack {
                     Circle().stroke(Color.primary.opacity(0.15), lineWidth: 2)
-                    Circle().trim(from: 0, to: max(0.03, item.fraction)).stroke(Brand.accent, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    Circle().trim(from: 0, to: max(0.03, fraction)).stroke(Brand.accent, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                 }
                 .frame(width: size, height: size)
@@ -386,7 +408,7 @@ struct DownloadState: View {
             }
         }
         .font(.system(size: size))
-        .animation(.smooth, value: item.fraction)
+        .animation(.smooth, value: fraction)
     }
 }
 
@@ -524,15 +546,18 @@ extension View {
     #if !os(macOS)
     private static var task: UIBackgroundTaskIdentifier = .invalid
     static func enteredBackground() {
-        guard DownloadLibrary.shared.items.contains(where: \.isActive), task == .invalid else { return }
+        guard DownloadLibrary.shared.items.contains(where: \.isActive) || MusicDownloadLibrary.shared.items.contains(where: \.isActive),
+              task == .invalid else { return }
         task = UIApplication.shared.beginBackgroundTask(withName: "Downloads") {
             DownloadLibrary.shared.suspend()
+            MusicDownloadLibrary.shared.suspend()
             end()
         }
     }
     static func becameActive() {
         end()
         DownloadLibrary.shared.wake()
+        MusicDownloadLibrary.shared.wake()
     }
     private static func end() {
         guard task != .invalid else { return }

@@ -837,3 +837,9 @@
 "You've sent a lot of feedback. Please try again later." = "You've sent a lot of feedback. Please try again later.";
 "Couldn't send feedback. Please try again later." = "Couldn't send feedback. Please try again later.";
 "Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses." = "Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses.";
+"Remove Download" = "Remove Download";
+"Downloaded Songs" = "Downloaded Songs";
+"No Downloaded Songs" = "No Downloaded Songs";
+"Download a song, album or playlist from its menu to listen without a connection." = "Download a song, album or playlist from its menu to listen without a connection.";
+"Delete all downloaded songs?" = "Delete all downloaded songs?";
+"%lld downloading" = "%lld downloading";

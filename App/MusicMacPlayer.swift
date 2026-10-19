@@ -261,6 +261,7 @@ private struct MusicMacMenu: View {
             if let quality = MusicMacNowPlaying.quality(music) { Text(quality) }
             if let credit = MusicMacNowPlaying.credit(music) { Text(credit) }
             Button { showsChannels = true } label: { Label(L10n.text("Channels"), systemImage: "antenna.radiowaves.left.and.right") }
+            if let track = music.track { MusicDownloadMenuItems(tracks: [track]) }
             if music.lyrics?.synced == true {
                 Divider()
                 Button(L10n.text("Lyrics Earlier")) { music.adjustLyrics(by: 0.5) }

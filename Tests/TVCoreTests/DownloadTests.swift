@@ -74,3 +74,21 @@ import Testing
     let (_, refused) = try await URLSession.shared.data(from: outside)
     #expect((refused as? HTTPURLResponse)?.statusCode == 404)
 }
+
+@Test func songFilesAreNamedByTheirFirstBytes() {
+    let bare = URL(string: "https://music.example.com/stream?id=1")!
+    #expect(Transfer.fileExtension(bare, mime: "application/octet-stream", head: Data("fLaC\0\0\0\"".utf8)) == "flac")
+    #expect(Transfer.fileExtension(bare, mime: "", head: Data("ID3\u{4}\0\0\0\0\0\0\0\0".utf8)) == "mp3")
+    #expect(Transfer.fileExtension(bare, mime: "", head: Data([0xFF, 0xFB, 0x90, 0x64])) == "mp3")
+    #expect(Transfer.fileExtension(bare, mime: "", head: Data([0xFF, 0xF1, 0x50, 0x80])) == "aac")
+    #expect(Transfer.fileExtension(bare, mime: "audio/x-flac") == "flac")
+    // Video detection is unchanged.
+    #expect(Transfer.fileExtension(bare, mime: "", head: Data([0, 0, 0, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D])) == "mp4")
+}
+
+@Test func savedLyricsReadBackTheSame() throws {
+    let lyrics = try #require(MusicLyrics.parse("[00:01.00]故事的小黄花\n[00:05.50]从出生那年就飘着", platform: .qq))
+    let decoded = try JSONDecoder().decode(MusicLyrics.self, from: JSONEncoder().encode(lyrics))
+    #expect(decoded == lyrics)
+    #expect(decoded.index(at: 6) == 1)
+}

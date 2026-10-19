@@ -560,6 +560,8 @@ private actor PosterLoader {
             let cached = disk.data(for: resource.cacheKey, kind: .artwork, scope: scope)
             let data: Data
             if let cached { data = cached }
+            // Saved songs keep their covers, for listening with no connection.
+            else if let saved = try? Data(contentsOf: MusicDownloadLibrary.artworkFile(for: resource.url)) { data = saved }
             else { data = try await HTTPClient().get(resource.url, headers: resource.headers).0 }
             guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
                   let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [

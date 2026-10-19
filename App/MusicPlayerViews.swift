@@ -242,6 +242,9 @@ struct MusicNowPlaying: View {
         Menu {
             Button { showsLyrics = true } label: { Label(L10n.text("Lyrics"), systemImage: "quote.bubble") }
             Button { showsChannels = true } label: { Label(L10n.text("Channels"), systemImage: "antenna.radiowaves.left.and.right") }
+            #if !os(tvOS)
+            if let track = music.track { MusicDownloadMenuItems(tracks: [track]) }
+            #endif
             Button(role: .destructive) { music.stop() } label: { Label(L10n.text("Stop"), systemImage: "xmark") }
         } label: { Image(systemName: "ellipsis") }
             .controlButton().accessibilityLabel(L10n.text("More"))

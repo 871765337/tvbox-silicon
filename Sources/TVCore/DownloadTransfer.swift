@@ -422,6 +422,11 @@ struct Transfer: Sendable {
         let bytes = [UInt8](head.prefix(12))
         if bytes.count >= 12, bytes[4...7] == [0x66, 0x74, 0x79, 0x70] { return bytes[8...11] == [0x71, 0x74, 0x20, 0x20] ? "mov" : "mp4" }
         if bytes.count >= 4, bytes[0...3] == [0x1A, 0x45, 0xDF, 0xA3] { return "mkv" }
+        // Songs: music hosts often serve FLAC and MP3 from addresses without an extension.
+        if bytes.count >= 4, bytes[0...3] == [0x66, 0x4C, 0x61, 0x43] { return "flac" }
+        if bytes.count >= 3, bytes[0...2] == [0x49, 0x44, 0x33] { return "mp3" }
+        if bytes.count >= 2, bytes[0] == 0xFF, bytes[1] & 0xF6 == 0xF0 { return "aac" }
+        if bytes.count >= 2, bytes[0] == 0xFF, bytes[1] & 0xE0 == 0xE0 { return "mp3" }
         let known = ["mp4", "m4v", "mov", "mkv", "webm", "flv", "avi", "ts", "mp3", "m4a", "aac", "flac"]
         let named = url.pathExtension.lowercased()
         if known.contains(named) { return named }
@@ -431,6 +436,7 @@ struct Transfer: Sendable {
         case "video/mp2t": return "ts"
         case "video/x-flv": return "flv"
         case "audio/mpeg": return "mp3"
+        case "audio/flac", "audio/x-flac": return "flac"
         case "audio/mp4", "audio/x-m4a": return "m4a"
         default: return "mp4"
         }

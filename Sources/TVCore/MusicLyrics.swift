@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MusicLyricLine: Hashable, Sendable {
+public struct MusicLyricLine: Hashable, Codable, Sendable {
     /// Seconds from the start; 0 for every line of unsynced lyrics.
     public var time: Double
     /// Empty for an instrumental gap.
@@ -9,7 +9,7 @@ public struct MusicLyricLine: Hashable, Sendable {
 }
 
 /// A song's lyrics, timed when the catalog has an LRC file, with a translation per line when it has one.
-public struct MusicLyrics: Hashable, Sendable {
+public struct MusicLyrics: Hashable, Codable, Sendable {
     public var lines: [MusicLyricLine]
     public var synced: Bool
     /// Where they came from; timing fits that catalog's recording.

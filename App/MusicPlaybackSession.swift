@@ -317,6 +317,13 @@ typealias MusicTrack = TVCore.MusicTrack
         requestedAt = Date()
         phase = .resolving
         let resolver = MusicResolver(preferences: preferences), preference = preferences.quality, cache = cache
+        // A downloaded song plays from its file, with no channel to find.
+        if let saved = MusicDownloadLibrary.shared.localSelection(for: track) {
+            Diagnostics.shared.record(.info, "music", "play downloaded \(saved.probe.format.label)")
+            let length = saved.probe.duration ?? track.duration
+            start(saved, at: resumeAt.flatMap { seconds in length.map { seconds < $0 - 5 } == true ? seconds : nil }, run: run)
+            return
+        }
         Diagnostics.shared.record(.info, "music", "play \(track.ids.keys.map(\.rawValue).sorted().joined(separator: "+")) preference=\(preference.rawValue)")
         task = Task {
             do {
@@ -382,6 +389,10 @@ typealias MusicTrack = TVCore.MusicTrack
         guard lyricsFor != songID else { return }
         lyricsFor = songID
         lyricsTask?.cancel()
+        if let saved = MusicDownloadLibrary.shared.lyrics(for: selection.track) {
+            lyrics = saved; lyricsLoading = false
+            return
+        }
         lyricsLoading = true
         let loader = MusicLyricsLoader(), track = selection.track, platform = selection.candidate.platform
         lyricsTask = Task {

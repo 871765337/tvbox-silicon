@@ -14,6 +14,10 @@ struct MusicView: View {
     #if DEBUG
     /// `-qaMusicOpen 1` opens the first album or playlist found, for screenshots.
     @State private var qaOpened: MusicCollection?
+    /// `-qaMusicDownload <n>` downloads the first n songs found, once; `-qaMusicDownloads 1` opens
+    /// Downloaded Songs.
+    @State private var qaDownloaded = false
+    @State private var qaDownloads = UserDefaults.standard.bool(forKey: "qaMusicDownloads")
     #endif
 
     var body: some View {
@@ -57,6 +61,13 @@ struct MusicView: View {
             playDirectHitIfReady()
             #if DEBUG
             if !search.busy, UserDefaults.standard.bool(forKey: "qaMusicOpen"), qaOpened == nil { qaOpened = search.collections.first }
+            #if !os(tvOS)
+            let count = UserDefaults.standard.integer(forKey: "qaMusicDownload")
+            if !search.busy, count > 0, !qaDownloaded, !search.results.isEmpty {
+                qaDownloaded = true
+                MusicDownloadLibrary.shared.download(Array(search.results.prefix(count)))
+            }
+            #endif
             #endif
         }
         #if DEBUG && os(tvOS)
@@ -64,6 +75,15 @@ struct MusicView: View {
         // Now Playing once the song is loaded, for screenshots.
         .onChange(of: store.music.track != nil) { _, loaded in
             if loaded, UserDefaults.standard.bool(forKey: "qaNowPlayingTab") { store.section = .nowPlaying }
+        }
+        #endif
+        #if DEBUG && !os(tvOS)
+        .navigationDestination(isPresented: $qaDownloads) {
+            #if os(macOS)
+            MusicDownloadsView().musicBar()
+            #else
+            MusicDownloadsView()
+            #endif
         }
         #endif
         #if DEBUG
@@ -206,6 +226,12 @@ private struct MusicHome: View {
         if let point = resumable, let track = point.queue.current {
             MusicContinueCard(point: point, track: track).padding(.bottom, 20)
         }
+        #if !os(tvOS)
+        let downloads = !MusicDownloadLibrary.shared.items.isEmpty
+        if downloads { MusicDownloadsLink().padding(.bottom, 20) }
+        #else
+        let downloads = false
+        #endif
         if !library.history.isEmpty {
             HStack {
                 SectionHeader(title: L10n.text("Recently Played"))
@@ -221,7 +247,7 @@ private struct MusicHome: View {
                     MusicTrackRow(track: track) { store.music.play(track) }
                 }
             }
-        } else if resumable == nil {
+        } else if resumable == nil && !downloads {
             EmptyPage(symbol: "music.note", title: L10n.text("Search for a Song"),
                       message: L10n.text("Type a song's name, or its name and the artist. Yingxia finds the recording and plays it from the best channel available, lossless first."),
                       action: L10n.text("Music Settings"), actionSymbol: "slider.horizontal.3", perform: openSettings)
@@ -286,11 +312,22 @@ struct MusicTrackRow: View {
                 if let duration = track.duration {
                     Text(MusicTime.text(duration)).font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
                 }
+                #if !os(tvOS)
+                if let saved = MusicDownloadLibrary.shared.item(for: track) { DownloadState(status: saved.status, fraction: saved.fraction) }
+                #endif
             }
             .padding(.vertical, number == nil ? 6 : 10)
             .contentShape(Rectangle())
         }
         .glassRow()
+        #if !os(tvOS)
+        .contextMenu {
+            Button { store.music.playNext([track]) } label: { Label(L10n.text("Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") }
+            Button { store.music.addToUpNext([track]) } label: { Label(L10n.text("Add to Up Next"), systemImage: "text.line.last.and.arrowtriangle.forward") }
+            Divider()
+            MusicDownloadMenuItems(tracks: [track])
+        }
+        #endif
         .accessibilityLabel(Text([track.title, track.artistLine].joined(separator: ", ")))
     }
 }
@@ -402,6 +439,9 @@ struct MusicCollectionView: View {
                         Label(L10n.text("Shuffle"), systemImage: "shuffle")
                     }
                     .controlButton()
+                    #if !os(tvOS)
+                    MusicDownloadButton(tracks: tracks).controlButton()
+                    #endif
             }
             .fixedSize()
             .disabled(tracks.isEmpty)

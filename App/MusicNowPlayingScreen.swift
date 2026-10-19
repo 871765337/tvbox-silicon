@@ -89,6 +89,7 @@ struct MusicNowPlayingScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             Menu {
                 Button { showsChannels = true } label: { Label(L10n.text("Channels"), systemImage: "antenna.radiowaves.left.and.right") }
+                if let track = music.track { MusicDownloadMenuItems(tracks: [track]) }
                 Button(role: .destructive) { music.stop() } label: { Label(L10n.text("Stop"), systemImage: "xmark") }
             } label: {
                 Image(systemName: "ellipsis").font(.body.weight(.bold))
