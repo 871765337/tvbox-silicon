@@ -44,14 +44,16 @@ struct CatalogPlaybackActions: View {
             } label: {
                 #if os(macOS)
                 Image(systemName: "ellipsis").font(.system(size: 14, weight: .medium))
+                    .frame(width: 34, height: 34).contentShape(Circle())
                 #else
                 Image(systemName: "ellipsis.circle").font(.headline).frame(width: 22, height: 22)
                 #endif
             }
             #if os(macOS)
-            // The same 34 pt glass circle as the window's other buttons; a bordered menu drew a wider capsule.
-            .menuStyle(.borderlessButton).menuIndicator(.hidden)
-            .frame(width: 34, height: 34)
+            // The same 34 pt glass circle as the window's other buttons; a bordered menu drew a wider capsule, and a
+            // borderless one drew its icon at the leading edge of the circle instead of the centre.
+            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+            .fixedSize()
             .glassSurface(.regular.interactive(), in: Circle())
             .help(L10n.text("Episodes"))
             #else
