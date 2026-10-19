@@ -8,6 +8,7 @@ import TVCore
 /// click opens Now Playing), and the menu, lyrics, Up Next, AirPlay and volume on the right.
 struct MusicMacBar: View {
     @Environment(Store.self) private var store
+    @Environment(\.openWindow) private var openWindow
     @State private var showsVolume = false
     @State private var showsChannels = false
     #if DEBUG
@@ -32,6 +33,7 @@ struct MusicMacBar: View {
                 MusicMacRoutePicker(player: music.player).frame(width: 30, height: 30).help(L10n.text("AirPlay"))
                 MusicMacButton(symbol: MusicMacVolume.symbol(music.volume), label: "Volume", size: 13) { showsVolume.toggle() }
                     .popover(isPresented: $showsVolume, arrowEdge: .top) { MusicMacVolume().frame(width: 200).padding(14) }
+                MusicMacButton(symbol: "pip.enter", label: "Mini Player", size: 13) { openWindow(id: MusicMacMiniPlayer.windowID) }
             }
         }
         .padding(.horizontal, 10)
@@ -184,7 +186,7 @@ private struct MusicMacWindowControls: View {
 }
 
 /// The song's progress as a hairline along the bottom of the bar's middle.
-private struct MusicMacProgressLine: View {
+struct MusicMacProgressLine: View {
     @Environment(Store.self) private var store
     var body: some View {
         let music = store.music

@@ -89,6 +89,22 @@ import TVCore
             }
         }
         #endif
+        #if os(macOS)
+        // The music mini player, floating over other apps at the bottom right; also in the Window menu.
+        Window(L10n.text("Mini Player"), id: MusicMacMiniPlayer.windowID) {
+            MusicMacMiniPlayer().environment(store).tint(Brand.accent)
+        }
+        .windowStyle(.plain)
+        .windowLevel(.floating)
+        .windowResizability(.contentSize)
+        .restorationBehavior(.disabled)
+        .defaultWindowPlacement { content, context in
+            let size = content.sizeThatFits(.unspecified)
+            let screen = context.defaultDisplay.visibleRect
+            return WindowPlacement(CGPoint(x: screen.maxX - size.width - 20, y: screen.maxY - size.height - 20), size: size)
+        }
+        .keyboardShortcut("m", modifiers: [.command, .shift])
+        #endif
     }
 }
 
