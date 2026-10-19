@@ -59,6 +59,8 @@ class Handler(BaseHTTPRequestHandler):
             if 'ids' in q or 'play' in q: time.sleep(120); return self.send({'list': []})
             return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,
                 'list':[{'vod_id':str(i),'vod_name':f'测试影片 {i:02d}','vod_pic':base+'/poster.png','vod_remarks':'更新至 36 集'} for i in range(1,13)]})
+        # A live stream that never answers, for Back while the player is still loading.
+        if path == '/stall.m3u8': time.sleep(120); return self.send('Not found',404,'text/plain')
         if path == '/invalid.json': return self.send('{invalid JSON')
         if path == '/empty.m3u': return self.send('#EXTM3U', mime='audio/x-mpegurl')
         if path == '/failure.m3u': return self.send('Unavailable',503,'text/plain')

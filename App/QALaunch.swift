@@ -140,6 +140,10 @@ enum QALaunch {
         if page == "player-error", let url = URL(string: "http://127.0.0.1:8765/missing.mp4") {
             store.playing = Channel(name: "无法播放的频道", url: url)
         }
+        // A live channel whose stream never answers, from Scripts/test-tv-ui.sh's server.
+        if page == "player-stall", let url = URL(string: "http://127.0.0.1:8776/stall.m3u8") {
+            store.playing = Channel(name: "卡住的直播", url: url)
+        }
     }
 
     /// The pushed page to show as the section's root, so detail screens can be captured without taps.
