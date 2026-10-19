@@ -960,9 +960,13 @@ private struct DesktopPlaybackView: View {
             Text(L10n.text("Space: Play / Pause"))
             Text(L10n.text("← / →: Seek 10s · Shift: 60s"))
             Text(L10n.text("↑ / ↓: Volume · M: Mute · F: Full Screen"))
-        } label: { Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .medium)) }
-            .menuStyle(.borderlessButton).menuIndicator(.hidden)
-            .frame(width: 34, height: 34)
+        } label: {
+            Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .medium))
+                .frame(width: 34, height: 34).contentShape(Circle())
+        }
+            // A borderless menu drew its icon at the leading edge of the circle; a plain one keeps it centred.
+            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+            .fixedSize()
             .glassSurface(.regular.interactive(), in: Circle())
             .help(L10n.text("Playback Options"))
             .accessibilityLabel(L10n.text("Playback Options"))
