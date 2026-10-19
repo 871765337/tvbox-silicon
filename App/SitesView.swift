@@ -171,14 +171,16 @@ struct MonogramIcon: View {
         let shape = RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
         Group {
             if let systemImage {
-                Image(systemName: systemImage).font(.system(size: size * 0.42, weight: .semibold)).foregroundStyle(.white)
+                // Sized by frame rather than font: font-sized symbols sit off-center (baseline/ascent padding) before macOS 26.
+                Image(systemName: systemImage).resizable().scaledToFit().fontWeight(.semibold)
+                    .frame(width: size * 0.46, height: size * 0.46).foregroundStyle(.white)
             } else if let symbol = label.symbol {
                 Text(symbol).font(.system(size: size * 0.5))
             } else {
                 Text(String(label.parts[0].prefix(1)).uppercased()).font(.system(size: size * 0.44, weight: .bold, design: .rounded)).foregroundStyle(.white)
             }
         }
-        .frame(width: size, height: size)
+        .frame(width: size, height: size, alignment: .center)
         .background(LinearGradient(colors: [tint.opacity(0.85), tint.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing), in: shape)
         .overlay { shape.strokeBorder(.white.opacity(0.12), lineWidth: 1) }
         .accessibilityHidden(true)
