@@ -80,6 +80,18 @@ export default {
     #expect(broken["error"]?.string?.hasPrefix("SyntaxError") == true)
 }
 
+/// 剧圈/咕咕 (AppSx.js) reported an unreachable server as "index/searchList returned no data".
+@Test func appSxReportsAFailedRequestInsteadOfNoData() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent("script-test-" + UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let session = try await ScriptSession.start(api: "assets://sites/AppSx.js", key: "test", ext: #"{"host":"http://127.0.0.1:1","key":"0123456789abcdef"}"#, profile: folder.appendingPathComponent("profile"), label: "test")
+    defer { session.close() }
+    let failed = try await session.call(["wd": "test", "pg": "1"])
+    #expect(failed["errorCode"]?.string == "source_network", "\(failed)")
+    #expect(failed["host"]?.string == "127.0.0.1")
+}
+
 @Test func retiredDrpyLibrariesResolveToBundledCopies() {
     #expect(ScriptAssets.resolve("https://down.nigx.cn/qu.ax/XUKQ.js", from: "https://x.example/drpy2.min.js") == "assets://js/lib/模板.js")
     #expect(ScriptAssets.resolve("./gbk.js", from: "assets://js/lib/drpy2.min.js") == "assets://js/lib/gbk.js")

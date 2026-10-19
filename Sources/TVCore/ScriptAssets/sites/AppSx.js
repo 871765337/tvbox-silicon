@@ -10,7 +10,8 @@ const HEADERS = { 'app-ui-mode': 'light', 'app-version-code': '113', 'app-user-d
 function call(action, form = {}) {
     const now = String(Math.floor(Date.now() / 1000));
     const headers = { ...HEADERS, 'app-api-verify-time': now, 'app-api-verify-sign': aesEncrypt(now, key, key), 'Content-Type': 'application/x-www-form-urlencoded' };
-    const reply = JSON.parse(globalThis.req(`${host}/api.php/getappapi.${action}`, { method: 'POST', headers, body: formBody(form), timeout: 20000 }).content || '{}');
+    // No `|| '{}'`: a failed request has an empty body, and its SyntaxError lets the host report the failure itself.
+    const reply = JSON.parse(globalThis.req(`${host}/api.php/getappapi.${action}`, { method: 'POST', headers, body: formBody(form), timeout: 20000 }).content);
     if (!reply.data) throw new Error(String(reply.msg || `${action} returned no data`));
     return JSON.parse(aesDecrypt(reply.data, key, key));
 }
