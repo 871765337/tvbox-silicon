@@ -71,6 +71,7 @@ struct RootView: View {
                 if nowPlayingShown { MusicMacNowPlaying().ignoresSafeArea().transition(.move(edge: .bottom)) }
             }
             .background { NowPlayingWindowChrome(active: hidesToolbar, store: store) }
+            .background { MusicMiniPlayerTrigger() }
             .onChange(of: store.music.presentsPlayer && store.music.track != nil) { _, show in
                 // Hiding the toolbar moves the page under it. The player slides up over the window
                 // first and the toolbar goes once it is covered; closing brings the toolbar back
