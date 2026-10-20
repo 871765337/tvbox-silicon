@@ -17,27 +17,17 @@ struct DownloadsView: View {
         let pending = library.items.filter(\.isPending)
         let shows = DownloadShow.group(library.items.filter { $0.status == .completed })
         Group {
-            #if !os(tvOS)
             if hasMusic && kind == .music {
                 MusicDownloadsView(embedded: true)
             } else if library.items.isEmpty {
-                EmptyDownloads(available: library.usage.available) { store.section = .sites }
-            } else {
-                content(pending: pending, shows: shows)
-            }
-            #else
-            if library.items.isEmpty {
                 // One message instead of an empty storage card above it: a 0 KB total says nothing new.
                 EmptyDownloads(available: library.usage.available) { store.section = .sites }
             } else {
                 content(pending: pending, shows: shows)
             }
-            #endif
         }
-        #if !os(tvOS)
         .modifier(DownloadKindBar(shown: hasMusic, kind: $kind))
         .onAppear { if library.items.isEmpty && hasMusic { kind = .music } }
-        #endif
         .screenBackdrop()
         .tabTitle(L10n.text("Downloads"))
         .task { await library.measure() }
@@ -52,22 +42,12 @@ struct DownloadsView: View {
     }
 
     /// Songs are saved apart, in Music; this page leads there too.
-    private var hasMusic: Bool {
-        #if os(tvOS)
-        false
-        #else
-        !MusicDownloadLibrary.shared.items.isEmpty
-        #endif
-    }
+    private var hasMusic: Bool { !MusicDownloadLibrary.shared.items.isEmpty }
 
     private func content(pending: [DownloadItem], shows: [DownloadShow]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
-                #if os(tvOS)
-                StorageCard(usage: library.usage)
-                #else
                 StorageCard(usage: library.usage, songs: MusicDownloadLibrary.shared.size)
-                #endif
                 if !pending.isEmpty { queue(pending) }
                 if !shows.isEmpty {
                     VStack(alignment: .leading, spacing: Layout.headerSpacing) {
@@ -120,10 +100,10 @@ struct DownloadsView: View {
     }
 }
 
-#if !os(tvOS)
 /// Videos | Music once songs are saved too: in the window's toolbar on the Mac, beside the title, as
 /// Music and Photos place theirs; a band of its own took a second row there. On iPhone and iPad it is
-/// pinned under the title while the page scrolls under it.
+/// pinned under the title while the page scrolls under it; on Apple TV it is two chips over the page,
+/// like the Music page's kinds.
 private struct DownloadKindBar: ViewModifier {
     let shown: Bool
     @Binding var kind: DownloadsView.Kind
@@ -133,6 +113,20 @@ private struct DownloadKindBar: ViewModifier {
             #if os(macOS)
             content.toolbar {
                 ToolbarItem(placement: .principal) { picker.fixedSize() }
+            }
+            #elseif os(tvOS)
+            content.safeAreaInset(edge: .top, spacing: 0) {
+                GlassGroup(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Chip(title: L10n.text("Videos"), selected: kind == .videos) { kind = .videos }
+                        Chip(title: L10n.text("Music"), selected: kind == .music) { kind = .music }
+                    }
+                }
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Layout.gutter)
+                .background(TVStyle.background)
+                .focusSection()
             }
             #else
             content.topBar {
@@ -155,7 +149,6 @@ private struct DownloadKindBar: ViewModifier {
         .pickerStyle(.segmented).labelsHidden()
     }
 }
-#endif
 
 enum DownloadMetrics {
     #if os(tvOS)
@@ -439,8 +432,9 @@ struct DownloadState: View {
     let fraction: Double
     init(item: DownloadItem) { status = item.status; fraction = item.fraction }
     init(status: DownloadItem.Status, fraction: Double) { self.status = status; self.fraction = fraction }
+    static var size: CGFloat { DownloadMetrics.thumb > 60 ? 24 : 13 }
     var body: some View {
-        let size: CGFloat = DownloadMetrics.thumb > 60 ? 24 : 13
+        let size = Self.size
         Group {
             switch status {
             case .completed:

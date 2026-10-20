@@ -93,10 +93,8 @@ import TVCore
             guard let self else { throw CancellationError() }
             return try await self.resolveDownload(item)
         }
-        #if !os(tvOS)
         // Songs that were downloading when the app quit carry on.
         MusicDownloadLibrary.shared.wake()
-        #endif
     }
     /// The current media address of a downloading episode, from its source; the queue asks again when a link expires.
     private func resolveDownload(_ item: DownloadItem) async throws -> Channel {

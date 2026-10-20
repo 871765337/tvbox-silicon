@@ -61,13 +61,11 @@ struct MusicView: View {
             playDirectHitIfReady()
             #if DEBUG
             if !search.busy, UserDefaults.standard.bool(forKey: "qaMusicOpen"), qaOpened == nil { qaOpened = search.collections.first }
-            #if !os(tvOS)
             let count = UserDefaults.standard.integer(forKey: "qaMusicDownload")
             if !search.busy, count > 0, !qaDownloaded, !search.results.isEmpty {
                 qaDownloaded = true
                 MusicDownloadLibrary.shared.download(Array(search.results.prefix(count)))
             }
-            #endif
             #endif
         }
         #if DEBUG && os(tvOS)
@@ -77,7 +75,7 @@ struct MusicView: View {
             if loaded, UserDefaults.standard.bool(forKey: "qaNowPlayingTab") { store.section = .nowPlaying }
         }
         #endif
-        #if DEBUG && !os(tvOS)
+        #if DEBUG
         .navigationDestination(isPresented: $qaDownloads) {
             #if os(macOS)
             MusicDownloadsView().musicBar()
@@ -106,7 +104,11 @@ struct MusicView: View {
                 .accessibilityLabel(L10n.text("Music Settings"))
         }
         #endif
+        #if os(tvOS)
+        .fullScreenCover(isPresented: $showsSettings) { MusicSettingsView() }
+        #else
         .sheet(isPresented: $showsSettings) { MusicSettingsView() }
+        #endif
         .task {
             if query.isEmpty, !search.query.isEmpty { query = search.query }
             if let kind = Self.searchKind, search.kind != kind { search.search(search.query, kind: kind) }
@@ -117,6 +119,8 @@ struct MusicView: View {
                 query = text
                 search.search(text, kind: UserDefaults.standard.string(forKey: "qaMusicKind").flatMap(MusicSearchKind.init(rawValue:)), immediately: true)
             }
+            // `-qaMusicSettings 1` opens Music Settings.
+            if UserDefaults.standard.bool(forKey: "qaMusicSettings") { showsSettings = true }
             #endif
         }
     }
@@ -226,12 +230,8 @@ private struct MusicHome: View {
         if let point = resumable, let track = point.queue.current {
             MusicContinueCard(point: point, track: track).padding(.bottom, 20)
         }
-        #if !os(tvOS)
         let downloads = !MusicDownloadLibrary.shared.items.isEmpty
         if downloads { MusicDownloadsLink().padding(.bottom, 20) }
-        #else
-        let downloads = false
-        #endif
         if !library.history.isEmpty {
             HStack {
                 SectionHeader(title: L10n.text("Recently Played"))
@@ -309,25 +309,31 @@ struct MusicTrackRow: View {
                 Spacer(minLength: 8)
                 ForEach(track.tags.sorted(), id: \.self) { tag in Pill(text: tag.name) }
                 if current { MusicActivityMark() }
-                if let duration = track.duration {
-                    Text(MusicTime.text(duration)).font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
+                // A slot for the download state on every row, saved or not, and lengths at least as wide
+                // as "00:00", trailing: the marks and the lengths each stay in a column.
+                Group {
+                    if let saved = MusicDownloadLibrary.shared.item(for: track) { DownloadState(status: saved.status, fraction: saved.fraction) }
                 }
-                #if !os(tvOS)
-                if let saved = MusicDownloadLibrary.shared.item(for: track) { DownloadState(status: saved.status, fraction: saved.fraction) }
-                #endif
+                .frame(width: DownloadState.size * 1.2)
+                if let duration = track.duration {
+                    ZStack(alignment: .trailing) {
+                        Text(verbatim: "00:00").hidden()
+                        Text(MusicTime.text(duration))
+                    }
+                    .font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, number == nil ? 6 : 10)
             .contentShape(Rectangle())
         }
         .glassRow()
-        #if !os(tvOS)
+        // On Apple TV, a long press.
         .contextMenu {
             Button { store.music.playNext([track]) } label: { Label(L10n.text("Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") }
             Button { store.music.addToUpNext([track]) } label: { Label(L10n.text("Add to Up Next"), systemImage: "text.line.last.and.arrowtriangle.forward") }
             Divider()
             MusicDownloadMenuItems(tracks: [track])
         }
-        #endif
         .accessibilityLabel(Text([track.title, track.artistLine].joined(separator: ", ")))
     }
 }
@@ -416,6 +422,10 @@ struct MusicCollectionView: View {
             if UserDefaults.standard.bool(forKey: "qaMusicPlay"), store.music.track == nil, !tracks.isEmpty {
                 store.music.play(MusicQueue(tracks: tracks, collection: collection))
             }
+            // `-qaMusicSaveCollection 1` downloads the album or playlist, for its shelf in Downloaded Songs.
+            if UserDefaults.standard.bool(forKey: "qaMusicSaveCollection"), !tracks.isEmpty {
+                MusicDownloadLibrary.shared.download(tracks, from: collection)
+            }
             #endif
         }
     }
@@ -439,9 +449,7 @@ struct MusicCollectionView: View {
                         Label(L10n.text("Shuffle"), systemImage: "shuffle")
                     }
                     .controlButton()
-                    #if !os(tvOS)
                     MusicDownloadButton(tracks: tracks, collection: collection).controlButton()
-                    #endif
             }
             .fixedSize()
             .disabled(tracks.isEmpty)

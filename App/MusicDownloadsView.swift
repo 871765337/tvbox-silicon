@@ -1,9 +1,8 @@
 import SwiftUI
 import TVCore
 
-#if !os(tvOS)
-/// Songs saved for listening without a connection, and those still on their way. Apple TV keeps
-/// nothing lasting on disk, so downloads are for iPhone, iPad and Mac.
+/// Songs saved for listening without a connection, and those still on their way. Apple TV keeps them
+/// in Caches, as it does episodes, and tvOS may clear them when it runs low on space.
 struct MusicDownloadsView: View {
     @Environment(Store.self) private var store
     /// Inside the Downloads page, which has its own title.
@@ -19,6 +18,9 @@ struct MusicDownloadsView: View {
         let page = list(tracks)
             .screenBackdrop()
             .musicPlayerInset()
+            #if os(tvOS)
+            .onPlayPauseCommand { store.music.toggle() }
+            #endif
             .confirmationDialog(L10n.text("Delete all downloaded songs?"), isPresented: $confirmsDeleteAll, titleVisibility: .visible) {
                 Button(L10n.text("Delete Downloads"), role: .destructive) { library.remove(library.items.map(\.id)) }
             }
@@ -67,6 +69,7 @@ struct MusicDownloadsView: View {
                             }
                         }
                         .padding(.bottom, 8)
+                        .tvFocusSection()
                         ForEach(pending) { MusicPendingRow(item: $0) }
                     }
                 }
@@ -87,9 +90,11 @@ struct MusicDownloadsView: View {
 
     static var title: String { L10n.text("Downloaded Songs") }
     #if os(macOS)
-    static let tile: CGFloat = 150
+    static let tile: CGFloat = 150, tileSpacing: CGFloat = 16
+    #elseif os(tvOS)
+    static let tile = MusicBrowseMetrics.cover, tileSpacing = MusicBrowseMetrics.tileSpacing
     #else
-    static let tile: CGFloat = 132
+    static let tile: CGFloat = 132, tileSpacing: CGFloat = 16
     #endif
 
     /// Albums or playlists downloaded from their pages, as covers in a row; each opens its saved songs.
@@ -98,13 +103,14 @@ struct MusicDownloadsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader(title: title)
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: 16) {
+                    LazyHStack(alignment: .top, spacing: Self.tileSpacing) {
                         ForEach(collections) { MusicDownloadedTile(entry: $0, size: Self.tile) }
                     }
                 }
                 .scrollClipDisabled()
             }
             .padding(.top, 24)
+            .tvFocusSection()
         }
     }
 
@@ -135,6 +141,7 @@ struct MusicDownloadsView: View {
                 }
             }
             .fixedSize()
+            .tvFocusSection()
         }
     }
 }
@@ -188,10 +195,14 @@ struct MusicDownloadedCollectionView: View {
             .toolbar(removing: .title)
             #endif
             .musicPlayerInset()
+            #if os(tvOS)
+            .onPlayPauseCommand { store.music.toggle() }
+            #else
             .toolbar {
                 Button { confirmsRemove = true } label: { Image(systemName: "trash") }
                     .help(L10n.text("Remove Download")).accessibilityLabel(L10n.text("Remove Download"))
             }
+            #endif
             .confirmationDialog(collection.title, isPresented: $confirmsRemove, titleVisibility: .visible) {
                 Button(L10n.text("Remove Download"), role: .destructive) { library.remove(collection: id); dismiss() }
             }
@@ -212,17 +223,27 @@ struct MusicDownloadedCollectionView: View {
                 }
             }
             HStack(spacing: 10) {
-                Button { store.music.play(MusicQueue(tracks: tracks, collection: collection)) } label: {
-                    Label(L10n.text("Play"), systemImage: "play.fill")
+                Group {
+                    Button { store.music.play(MusicQueue(tracks: tracks, collection: collection)) } label: {
+                        Label(L10n.text("Play"), systemImage: "play.fill")
+                    }
+                    .controlButton(prominent: true)
+                    Button { store.music.play(MusicQueue.shuffled(tracks, collection: collection)) } label: {
+                        Label(L10n.text("Shuffle"), systemImage: "shuffle")
+                    }
+                    .controlButton()
                 }
-                .controlButton(prominent: true)
-                Button { store.music.play(MusicQueue.shuffled(tracks, collection: collection)) } label: {
-                    Label(L10n.text("Shuffle"), systemImage: "shuffle")
+                .disabled(tracks.isEmpty)
+                #if os(tvOS)
+                // Apple TV hides the navigation bar, and the toolbar's trash with it.
+                Button(role: .destructive) { confirmsRemove = true } label: {
+                    Label(L10n.text("Remove Download"), systemImage: "trash")
                 }
                 .controlButton()
+                #endif
             }
             .fixedSize()
-            .disabled(tracks.isEmpty)
+            .tvFocusSection()
         }
     }
 }
@@ -236,23 +257,33 @@ private struct MusicDownloadedTile: View {
     var body: some View {
         let collection = entry.collection
         let saved = MusicDownloadLibrary.shared.items(in: entry).filter { $0.status == .completed }.count
-        RouteLink { MusicDownloadedCollectionView(id: entry.id) } label: {
+        let link = RouteLink { MusicDownloadedCollectionView(id: entry.id) } label: {
             VStack(alignment: .leading, spacing: 7) {
                 MusicArtwork(url: collection.artwork, size: size, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
                     .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.black.opacity(hovering ? 0.12 : 0)) }
                     .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(collection.title).font(.subheadline.weight(.medium)).foregroundStyle(.primary).lineLimit(1)
-                    Text(L10n.text("%lld songs", saved)).font(.caption).monospacedDigit().foregroundStyle(.secondary).lineLimit(1)
+                    Text(collection.title).font(Self.titleFont).foregroundStyle(.primary).lineLimit(1)
+                    Text(L10n.text("%lld songs", saved)).font(Self.subtitleFont).monospacedDigit().foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             .frame(width: size, alignment: .leading)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.15), value: hovering)
+        #if os(tvOS)
+        link.cardButton()
+        #else
+        link.buttonStyle(.plain)
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.15), value: hovering)
+        #endif
     }
+
+    #if os(tvOS)
+    private static let titleFont = Font.system(size: 24, weight: .semibold), subtitleFont = Font.system(size: 20)
+    #else
+    private static let titleFont = Font.subheadline.weight(.medium), subtitleFont = Font.caption
+    #endif
 }
 
 /// One Pause All (Resume All once paused) for every song on its way, and Cancel All.
@@ -277,18 +308,37 @@ private struct MusicPendingActions: View {
                 Label(L10n.text("Cancel All"), systemImage: "xmark")
             }
         }
-        .font(.subheadline.weight(.semibold))
         .labelStyle(.titleAndIcon)
+        #if os(tvOS)
+        .controlButton()
+        #else
+        .font(.subheadline.weight(.semibold))
         .buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.small)
+        #endif
         .fixedSize()
     }
 }
 
-/// A song on its way: how far it got, or why it stopped, with Retry and Cancel.
+/// A song on its way: how far it got, or why it stopped, with Retry and Cancel. On Apple TV the row
+/// is one button that offers them: small buttons beside each other are hard to reach with a remote.
 private struct MusicPendingRow: View {
     let item: MusicDownload
+    @State private var choosing = false
 
     var body: some View {
+        #if os(tvOS)
+        Button { choosing = true } label: { row.contentShape(.rect) }
+            .glassRow()
+            .confirmationDialog(item.track.title, isPresented: $choosing, titleVisibility: .visible) {
+                if item.status == .failed { Button(L10n.text("Retry")) { MusicDownloadLibrary.shared.retry(item.id) } }
+                Button(L10n.text("Cancel Download"), role: .destructive) { MusicDownloadLibrary.shared.remove([item.id]) }
+            }
+        #else
+        row
+        #endif
+    }
+
+    private var row: some View {
         HStack(spacing: MusicLayout.gap) {
             MusicArtwork(url: item.track.artwork, size: MusicLayout.art)
             VStack(alignment: .leading, spacing: 3) {
@@ -297,6 +347,9 @@ private struct MusicPendingRow: View {
                     .foregroundStyle(item.status == .failed ? AnyShapeStyle(Brand.rose) : AnyShapeStyle(.secondary))
             }
             Spacer(minLength: 8)
+            #if os(tvOS)
+            DownloadState(status: item.status, fraction: item.fraction)
+            #else
             if item.status == .failed {
                 Button { MusicDownloadLibrary.shared.retry(item.id) } label: {
                     Image(systemName: "arrow.clockwise").font(.body.weight(.semibold)).frame(width: 30, height: 30).contentShape(.rect)
@@ -310,6 +363,7 @@ private struct MusicPendingRow: View {
                     .frame(width: 30, height: 30).contentShape(.rect)
             }
             .buttonStyle(.borderless).help(L10n.text("Cancel Download")).accessibilityLabel(L10n.text("Cancel Download"))
+            #endif
         }
         .padding(.vertical, 6)
     }
@@ -408,11 +462,13 @@ struct MusicDownloadButton: View {
         let done = queued && items.allSatisfy { $0.status == .completed }
         let label = L10n.text(done ? "Downloaded" : queued ? "Downloading" : "Download")
         Button { library.download(tracks, from: collection) } label: {
-            Image(systemName: done ? "checkmark.circle" : queued ? "arrow.down.circle.dotted" : "arrow.down.circle")
+            Label(label, systemImage: done ? "checkmark.circle" : queued ? "arrow.down.circle.dotted" : "arrow.down.circle")
+                #if !os(tvOS)
+                .labelStyle(.iconOnly)
+                #endif
                 .frame(width: side, height: side)
         }
         .disabled(tracks.isEmpty || queued)
         .help(label).accessibilityLabel(label)
     }
 }
-#endif

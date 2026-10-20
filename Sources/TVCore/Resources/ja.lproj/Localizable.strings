@@ -456,6 +456,7 @@
 "Following" = "フォロー中";
 "Bilibili Live could not be reached. Try again later." = "ビリビリ生配信に接続できません。しばらくしてからもう一度お試しください。";
 "Quality" = "画質";
+"Audio Quality" = "音質";
 "Auto" = "自動";
 "LIVE" = "配信中";
 

@@ -456,6 +456,7 @@
 "Following" = "关注";
 "Bilibili Live could not be reached. Try again later." = "无法连接哔哩哔哩直播，请稍后再试。";
 "Quality" = "画质";
+"Audio Quality" = "音质";
 "Auto" = "自动";
 "LIVE" = "直播";
 

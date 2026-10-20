@@ -1304,6 +1304,8 @@ struct TVSettingsSection<Content: View>: View {
 /// The title on the leading edge; the current value, an accessory and a chevron on the trailing one.
 struct TVSettingsRowLabel<Accessory: View>: View {
     let title: String
+    /// A line under the title, saying what the row is about.
+    var detail: String? = nil
     var value: String? = nil
     var warning = false
     var busy = false
@@ -1311,7 +1313,11 @@ struct TVSettingsRowLabel<Accessory: View>: View {
     @ViewBuilder var accessory: Accessory
     var body: some View {
         HStack(spacing: 18) {
-            Text(title).font(.system(size: 29, weight: .medium)).lineLimit(1).layoutPriority(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 29, weight: .medium)).lineLimit(1)
+                if let detail { Text(detail).font(.system(size: 22)).foregroundStyle(.secondary).lineLimit(1) }
+            }
+            .layoutPriority(1)
             Spacer(minLength: 32)
             if busy { ProgressView() }
             if let value, !value.isEmpty {
@@ -1329,8 +1335,8 @@ struct TVSettingsRowLabel<Accessory: View>: View {
 }
 
 extension TVSettingsRowLabel where Accessory == EmptyView {
-    init(title: String, value: String? = nil, warning: Bool = false, busy: Bool = false, chevron: Bool = false) {
-        self.init(title: title, value: value, warning: warning, busy: busy, chevron: chevron) { EmptyView() }
+    init(title: String, detail: String? = nil, value: String? = nil, warning: Bool = false, busy: Bool = false, chevron: Bool = false) {
+        self.init(title: title, detail: detail, value: value, warning: warning, busy: busy, chevron: chevron) { EmptyView() }
     }
 }
 
@@ -1349,9 +1355,10 @@ struct TVSettingsLink<Destination: View>: View {
 /// A switch as a row: selecting it flips the value shown at the trailing edge.
 struct TVSettingsToggle: View {
     let title: String
+    var detail: String? = nil
     @Binding var isOn: Bool
     var body: some View {
-        Button { isOn.toggle() } label: { TVSettingsRowLabel(title: title, value: L10n.text(isOn ? "On" : "Off")) }
+        Button { isOn.toggle() } label: { TVSettingsRowLabel(title: title, detail: detail, value: L10n.text(isOn ? "On" : "Off")) }
             .glassRow()
             .accessibilityValue(L10n.text(isOn ? "On" : "Off"))
     }

@@ -178,6 +178,8 @@ private struct MusicSongCell: View {
         .contextMenu {
             Button { store.music.playNext([track]) } label: { Label(L10n.text("Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") }
             Button { store.music.addToUpNext([track]) } label: { Label(L10n.text("Add to Up Next"), systemImage: "text.line.last.and.arrowtriangle.forward") }
+            Divider()
+            MusicDownloadMenuItems(tracks: [track])
         }
         #else
         HStack(spacing: 10) {

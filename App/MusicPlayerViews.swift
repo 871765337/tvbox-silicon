@@ -242,9 +242,7 @@ struct MusicNowPlaying: View {
         Menu {
             Button { showsLyrics = true } label: { Label(L10n.text("Lyrics"), systemImage: "quote.bubble") }
             Button { showsChannels = true } label: { Label(L10n.text("Channels"), systemImage: "antenna.radiowaves.left.and.right") }
-            #if !os(tvOS)
             if let track = music.track { MusicDownloadMenuItems(tracks: [track]) }
-            #endif
             Button(role: .destructive) { music.stop() } label: { Label(L10n.text("Stop"), systemImage: "xmark") }
         } label: { Image(systemName: "ellipsis") }
             .controlButton().accessibilityLabel(L10n.text("More"))
@@ -438,24 +436,61 @@ struct MusicChannelsView: View {
 struct MusicSettingsView: View {
     @Environment(Store.self) private var store
 
+    /// Each channel and the services it plays from.
+    private static var channels: [(MusicProviderID, String)] {
+        [(.migu, L10n.text("Migu Music")),
+         (.nianxin, L10n.text("Kuwo Music and NetEase Cloud Music")),
+         (.vkeys, L10n.text("QQ Music")),
+         (.gdstudio, L10n.text("NetEase Cloud Music")),
+         (.xinghai, L10n.text("Kuwo Music and NetEase Cloud Music, when the others fail")),
+         (.hyw, L10n.text("QQ Music, when VKeys fails"))]
+    }
+    private static var qualityNote: String {
+        L10n.text("Lossless first plays the best lossy stream, marked as such, when no channel has lossless audio. Lossless only stops instead.")
+    }
+    private static var channelNotes: [String] {
+        [L10n.text("HYW stays off until you enter the key from its published script. GD Music (music.gdstudio.xyz) is for personal, non-commercial use and allows 50 requests every 5 minutes."),
+         L10n.text("Xinghai (yy.zddyr.top) asks to be credited and not overused, so it is only asked when the other channels fail.")]
+    }
+
     var body: some View {
         @Bindable var music = store.music
+        #if os(tvOS)
+        // A page like Settings' own, over the whole screen: a tvOS sheet is a small card that cut the
+        // channels off. Quality steps through its choices; Menu closes the page.
+        TVSettingsSubpage(symbol: "slider.horizontal.3", title: L10n.text("Music Settings")) {
+            TVSettingsSection(footer: Self.qualityNote) {
+                TVSettingsAction(title: L10n.text("Audio Quality"), value: music.preferences.quality.name) {
+                    let choices = MusicQualityPreference.allCases
+                    music.preferences.quality = choices[((choices.firstIndex(of: music.preferences.quality) ?? 0) + 1) % choices.count]
+                }
+            }
+            TVSettingsSection(title: L10n.text("Channels"), footer: Self.channelNotes.joined(separator: "\n\n")) {
+                ForEach(Self.channels, id: \.0) { provider, detail in
+                    TVSettingsToggle(title: provider.name, detail: detail, isOn: enabled(provider, music: music))
+                }
+                TVSettingsField(title: L10n.text("HYW key"), text: $music.preferences.hywKey)
+            }
+        }
+        #else
         MusicSheet(title: L10n.text("Music Settings"), symbol: "slider.horizontal.3") {
             Form {
                 Section {
-                    Picker(L10n.text("Quality"), selection: $music.preferences.quality) {
+                    Picker(L10n.text("Audio Quality"), selection: $music.preferences.quality) {
                         ForEach(MusicQualityPreference.allCases, id: \.self) { Text($0.name).tag($0) }
                     }
                 } footer: {
-                    Text(L10n.text("Lossless first plays the best lossy stream, marked as such, when no channel has lossless audio. Lossless only stops instead."))
+                    Text(Self.qualityNote)
                 }
                 Section {
-                    toggle(.migu, detail: L10n.text("Migu Music"), music: music)
-                    toggle(.nianxin, detail: L10n.text("Kuwo Music and NetEase Cloud Music"), music: music)
-                    toggle(.vkeys, detail: L10n.text("QQ Music"), music: music)
-                    toggle(.gdstudio, detail: L10n.text("NetEase Cloud Music"), music: music)
-                    toggle(.xinghai, detail: L10n.text("Kuwo Music and NetEase Cloud Music, when the others fail"), music: music)
-                    toggle(.hyw, detail: L10n.text("QQ Music, when VKeys fails"), music: music)
+                    ForEach(Self.channels, id: \.0) { provider, detail in
+                        Toggle(isOn: enabled(provider, music: music)) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(provider.name)
+                                Text(detail).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                     TextField(L10n.text("HYW key"), text: $music.preferences.hywKey)
                         .autocorrectionDisabled()
                         #if os(iOS)
@@ -465,8 +500,7 @@ struct MusicSettingsView: View {
                     Text(L10n.text("Channels"))
                 } footer: {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.text("HYW stays off until you enter the key from its published script. GD Music (music.gdstudio.xyz) is for personal, non-commercial use and allows 50 requests every 5 minutes."))
-                        Text(L10n.text("Xinghai (yy.zddyr.top) asks to be credited and not overused, so it is only asked when the other channels fail."))
+                        ForEach(Self.channelNotes, id: \.self) { Text($0) }
                     }
                 }
             }
@@ -474,17 +508,13 @@ struct MusicSettingsView: View {
             .formStyle(.grouped)
             #endif
         }
+        #endif
     }
 
-    private func toggle(_ provider: MusicProviderID, detail: String, music: MusicPlaybackSession) -> some View {
-        Toggle(isOn: Binding(get: { !music.preferences.disabled.contains(provider) }, set: { on in
+    private func enabled(_ provider: MusicProviderID, music: MusicPlaybackSession) -> Binding<Bool> {
+        Binding(get: { !music.preferences.disabled.contains(provider) }, set: { on in
             if on { music.preferences.disabled.remove(provider) } else { music.preferences.disabled.insert(provider) }
-        })) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(provider.name)
-                Text(detail).font(.caption).foregroundStyle(.secondary)
-            }
-        }
+        })
     }
 }
 
