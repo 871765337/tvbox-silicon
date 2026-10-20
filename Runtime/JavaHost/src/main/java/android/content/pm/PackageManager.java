@@ -26,5 +26,6 @@ public class PackageManager {
         info.sourceDir = tvbox.runtime.HostEnvironment.plugin(); info.publicSourceDir = info.sourceDir;
         return info;
     }
+    public CharSequence getApplicationLabel(ApplicationInfo info) { return info.loadLabel(this); }
     public boolean hasSystemFeature(String name) { return false; }
 }
