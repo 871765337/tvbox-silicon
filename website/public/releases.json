@@ -1,6 +1,117 @@
 {
   "releases": [
     {
+      "version": "1.7.5",
+      "date": "2026-10-20",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.5/Yingxia-1.7.5-macos-arm64.dmg",
+        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.5/Yingxia-1.7.5-macos-x86_64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "arrow.down.circle",
+          "title": {
+            "en": "Download music to listen offline",
+            "zh-Hans": "下载音乐，离线收听",
+            "zh-Hant": "下載音樂，離線收聽",
+            "ja": "音楽をダウンロードしてオフラインで再生"
+          },
+          "detail": {
+            "en": "Download a song from its menu, or a whole album or playlist with the Download button on its page, then play it without a connection, lyrics included. Saved music is under Music in Downloads, and in Downloaded Songs on the Music page. Pause All holds every download until you resume it. On Apple TV, the system may remove downloaded songs when storage runs low.",
+            "zh-Hans": "可以从歌曲的菜单下载单曲，也可以用专辑或歌单页面上的“下载”按钮下载整张专辑或歌单，之后无需联网也能播放，歌词一并保存。下载的音乐在“下载”页的“音乐”中，也可以从“音乐”页的“已下载的歌曲”进入。“全部暂停”会暂停所有下载，直到你继续。在 Apple TV 上，存储空间不足时系统可能会删除已下载的歌曲。",
+            "zh-Hant": "可以從歌曲的選單下載單曲，也可以用專輯或歌單頁面上的「下載」按鈕下載整張專輯或歌單，之後不必連網也能播放，歌詞一併儲存。下載的音樂在「下載」頁的「音樂」中，也可以從「音樂」頁的「已下載的歌曲」進入。「全部暫停」會暫停所有下載，直到你繼續。在 Apple TV 上，儲存空間不足時系統可能會刪除已下載的歌曲。",
+            "ja": "曲はメニューから、アルバムやプレイリストはそのページの「ダウンロード」ボタンからまとめてダウンロードでき、歌詞も含めてオフラインで再生できます。保存した音楽は「ダウンロード」の「ミュージック」と、「ミュージック」ページの「ダウンロードした曲」にあります。「すべて一時停止」で、再開するまですべてのダウンロードを止められます。Apple TV では、ストレージが少なくなるとシステムがダウンロードした曲を削除することがあります。"
+          }
+        },
+        {
+          "symbol": "bubble.left.and.text.bubble.right",
+          "title": {
+            "en": "Send feedback from Settings",
+            "zh-Hans": "在设置中反馈问题",
+            "zh-Hant": "在設定中傳送意見回饋",
+            "ja": "設定からフィードバックを送信"
+          },
+          "detail": {
+            "en": "Report a problem or suggest an idea in Settings › Send Feedback, no account needed. Your message becomes a public issue on Yingxia’s GitHub page, where you can follow the reply. The app version, system, device model and language are sent with it.",
+            "zh-Hans": "在“设置 › 反馈问题”中报告问题或提出建议，无需注册账号。你的留言会成为映匣 GitHub 页面上的一条公开 issue，可以在那里查看回复。App 版本、系统、设备型号和语言会随留言一起发送。",
+            "zh-Hant": "在「設定 › 意見回饋」中回報問題或提出建議，不需要帳號。你的留言會成為映匣 GitHub 頁面上的一則公開 issue，可以在那裡查看回覆。App 版本、系統、裝置型號和語言會隨留言一起傳送。",
+            "ja": "「設定 › フィードバックを送信」から、アカウントなしで不具合の報告やアイデアの提案ができます。メッセージは映匣の GitHub ページに公開の issue として載り、そこで返信を確認できます。アプリのバージョン、システム、デバイスのモデル、言語が一緒に送られます。"
+          }
+        },
+        {
+          "symbol": "pip",
+          "title": {
+            "en": "Music mini player on Mac",
+            "zh-Hans": "Mac 上的音乐迷你播放器",
+            "zh-Hant": "Mac 上的音樂迷你播放器",
+            "ja": "Mac に音楽のミニプレーヤー"
+          },
+          "detail": {
+            "en": "Minimize the window while music is on and a small player stays on top of other apps, with the cover, progress, and previous, play and next buttons. You can also open it with the button at the right end of the music bar or Window › Mini Player (Shift-Command-M). Click the cover to go back to Now Playing.",
+            "zh-Hans": "播放音乐时把窗口最小化，会有一个小播放器浮在其他 App 之上，显示封面、进度以及上一首、播放和下一首按钮。也可以用音乐栏右端的按钮或“窗口 › 迷你播放器”（Shift-Command-M）随时打开。点按封面即可回到“正在播放”。",
+            "zh-Hant": "播放音樂時把視窗縮到最小，會有一個小播放器浮在其他 App 之上，顯示封面、進度以及上一首、播放和下一首按鈕。也可以用音樂列右端的按鈕或「視窗 › 迷你播放器」（Shift-Command-M）隨時打開。按一下封面即可回到「正在播放」。",
+            "ja": "音楽の再生中にウインドウをしまうと、小さなプレーヤーがほかのアプリの手前に残り、カバー、再生位置、前へ・再生・次へのボタンが表示されます。ミュージックバーの右端のボタンや「ウインドウ › ミニプレーヤー」（Shift-Command-M）からもいつでも開けます。カバーをクリックすると「再生中」に戻ります。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        },
+        {
+          "symbol": "arrow.uturn.backward",
+          "title": {
+            "en": "Back works while a video loads on Apple TV",
+            "zh-Hans": "Apple TV 上加载视频时可以返回",
+            "zh-Hant": "Apple TV 上載入影片時可以返回",
+            "ja": "Apple TV で読み込み中でも戻れるように"
+          },
+          "detail": {
+            "en": "When a channel or video never started, the Siri Remote’s Back button did nothing, and the only way out was to quit Yingxia. Back now closes the player while it is still loading.",
+            "zh-Hans": "以前频道或视频一直无法开始播放时，Siri Remote 的返回按钮没有反应，只能退出映匣。现在播放器还在加载时，按返回即可关闭它。",
+            "zh-Hant": "以前頻道或影片一直無法開始播放時，Siri Remote 的返回按鈕沒有反應，只能結束映匣。現在播放器還在載入時，按返回即可關閉它。",
+            "ja": "チャンネルやビデオが再生を始めないとき、Siri Remote の戻るボタンが効かず、映匣を終了するしかありませんでした。読み込み中でも、戻るボタンでプレーヤーを閉じられるようになりました。"
+          },
+          "platforms": [
+            "tvos"
+          ]
+        },
+        {
+          "symbol": "puzzlepiece.extension",
+          "title": {
+            "en": "More sources start, and none are listed twice",
+            "zh-Hans": "更多站点能启动，也不再重复列出",
+            "zh-Hant": "更多來源能啟動，也不再重複列出",
+            "ja": "起動するサイトが増え、重複表示もなくなりました"
+          },
+          "detail": {
+            "en": "Some JAR sources, including cloud-drive ones, failed to start because of how they write their logs. They start now. Subscriptions that mirror each other no longer list every JAR source twice. And when the server behind some sources can’t be reached, Yingxia now says so instead of saying the source returned no data.",
+            "zh-Hans": "部分 JAR 站点（包括一些网盘站点）因为写日志的方式不受支持而无法启动，现在可以正常启动了。互为镜像的订阅不再把每个 JAR 站点列出两次。一些站点的服务器无法连接时，映匣现在会如实说明，而不是提示站点没有返回数据。",
+            "zh-Hant": "部分 JAR 來源（包括一些雲端硬碟來源）因為寫入記錄的方式不受支援而無法啟動，現在可以正常啟動了。互為鏡像的訂閱不再把每個 JAR 來源列出兩次。一些來源的伺服器無法連線時，映匣現在會如實說明，而不是提示來源沒有傳回資料。",
+            "ja": "一部の JAR のサイト（クラウドドライブのものを含む）は、ログの書き方に対応していなかったため起動しませんでした。今は起動します。互いにミラーになっている配信設定で、JAR のサイトが 2 回ずつ表示されることもなくなりました。また、一部のサイトでサーバーに接続できないときは、「データが返されなかった」ではなく、接続できないことを伝えるようになりました。"
+          }
+        },
+        {
+          "symbol": "macwindow",
+          "title": {
+            "en": "Tidier on macOS 15",
+            "zh-Hans": "在 macOS 15 上显示更整齐",
+            "zh-Hant": "在 macOS 15 上顯示更整齊",
+            "ja": "macOS 15 での表示を整えました"
+          },
+          "detail": {
+            "en": "On macOS 15, site icons and the player’s Episodes and Playback Options buttons sat off center, and a light strip ran across the top of Now Playing. They now look right.",
+            "zh-Hans": "在 macOS 15 上，站点图标以及播放器的“选集”和“播放选项”按钮没有居中，“正在播放”顶部还有一条浅色横条。现在都已修正。",
+            "zh-Hant": "在 macOS 15 上，來源圖示以及播放器的「選集」和「播放選項」按鈕沒有置中，「正在播放」頂部還有一條淺色橫條。現在都已修正。",
+            "ja": "macOS 15 では、サイトのアイコンとプレーヤーの「エピソード」「再生オプション」ボタンが中央からずれ、「再生中」の上部に明るい帯が出ていました。正しく表示されるようになりました。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.3",
       "date": "2026-10-19",
       "links": {
