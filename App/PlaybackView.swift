@@ -131,6 +131,8 @@ import TVCore
     private var liveRoom: Channel?
     private var liveRetried = false
     private var liveRetrying = false
+    /// The episode was already asked for again after its server ignored AVPlayer's byte range.
+    private var rangeRetried = false
     /// A live room's chat, whose comments join `danmaku` as they are sent.
     private var chat: BilibiliLiveChat?
     /// Download state while connecting or buffering, sampled once a second from AVFoundation's logs.
@@ -246,6 +248,18 @@ import TVCore
         return true
     }
 
+    /// A server that answers the first request for a file with the whole file, ignoring the two bytes
+    /// AVPlayer asked for (CoreMedia -12939), can answer properly the next time: 立播's v.vimsec.app does
+    /// this for every episode nobody has opened lately. One more try, at once, does what Retry would.
+    private func retryRange(after failure: Error?, channel: Channel, url: URL, generation active: UUID) -> Bool {
+        guard !rangeRetried, Self.ignoredRange(failure) else { return false }
+        rangeRetried = true
+        detachItem(); observation = nil
+        Diagnostics.shared.record(.warning, "player", "range retry host=\(url.host() ?? "-") \(failure.map(Self.describe) ?? "-")")
+        configure(channel, url: url, generation: active)
+        return true
+    }
+
     /// The other line could not be resolved either: show why instead of loading forever.
     func lineSwitchFailed(_ message: String) {
         guard switchNotice != nil else { return }
@@ -286,7 +300,7 @@ import TVCore
         stop(); error = nil; errorSymbol = "play.slash.fill"; loading = true; showsPicture = false; sourceDanmaku = []; qualities = []; quality = nil; switchNotice = nil
         begin(channel)
         isLive = LiveCatalog.isRoom(channel.url) || channel.group == L10n.text("Bilibili Live")
-        liveRoom = LiveCatalog.isRoom(channel.url) ? channel : nil; liveRetried = false; liveRetrying = false
+        liveRoom = LiveCatalog.isRoom(channel.url) ? channel : nil; liveRetried = false; liveRetrying = false; rangeRetried = false
         ErrorReports.shared.playing(live: isLive, format: channel.url.pathExtension, source: channel.historyContext?.sourceKey,
                                     danmaku: UserDefaults.standard.object(forKey: DanmakuPreference.key) == nil || UserDefaults.standard.bool(forKey: DanmakuPreference.key),
                                     sharper: UserDefaults.standard.bool(forKey: VideoEnhancement.upscaleKey))
@@ -387,6 +401,7 @@ import TVCore
                     Diagnostics.shared.record(.info, "player", "ready host=\(self.transfer.host ?? channel.url.host() ?? "-")")
                 }
                 if status == .failed {
+                    if self.retryRange(after: failure, channel: channel, url: url, generation: activeGeneration) { return }
                     Diagnostics.shared.record(.error, "player", "failed host=\(self.transfer.host ?? channel.url.host() ?? "-") \(self.transfer.failure.map { "upstream=\($0) " } ?? "")\(detail) \(self.failureContext(channel, url: url, item: item))")
                     if self.retryLive(after: failure) { return }
                     // A refused link is usually an expired one: say so in plain words rather than the system's.
@@ -865,6 +880,17 @@ extension PlaybackSession {
                [NSURLErrorNoPermissionsToReadFile, NSURLErrorFileDoesNotExist, NSURLErrorUserAuthenticationRequired].contains(error.code) { return true }
             // Core Media's codes for HTTP 403 and 404.
             if error.domain == "CoreMediaErrorDomain", [-12660, -12938].contains(error.code) { return true }
+            current = error.userInfo[NSUnderlyingErrorKey] as? NSError
+        }
+        return false
+    }
+
+    /// The server sent a different length than the byte range AVPlayer asked for (CoreMedia -12939,
+    /// "byte range length mismatch"; an OSStatus on older systems).
+    nonisolated static func ignoredRange(_ error: Error?) -> Bool {
+        var current = error as NSError?
+        while let error = current {
+            if ["CoreMediaErrorDomain", NSOSStatusErrorDomain].contains(error.domain), error.code == -12939 { return true }
             current = error.userInfo[NSUnderlyingErrorKey] as? NSError
         }
         return false
