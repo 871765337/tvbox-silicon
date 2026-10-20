@@ -11,6 +11,11 @@ public final class PluginClassLoader extends dalvik.system.DexClassLoader {
             if (loaded == null && name.startsWith("com.github.catvod.") && !name.startsWith("com.github.catvod.crawler.")) {
                 try { loaded = findClass(name); } catch (ClassNotFoundException absent) { }
             }
+            if (loaded == null && name.startsWith("org.slf4j.")) {
+                // The host ships slf4j-simple for its own libraries. A plugin that bundles slf4j, often with
+                // an obfuscated API, must keep its own binder as on Android; others still get the host's.
+                try { loaded = findOwnClass(name); } catch (ClassNotFoundException absent) { }
+            }
             if (loaded == null) loaded = super.loadClass(name, false);
             if (resolve) resolveClass(loaded);
             return loaded;

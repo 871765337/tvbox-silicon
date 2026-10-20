@@ -16,7 +16,7 @@ public class HostCompatibilityTest {
             }
             return;
         }
-        reflectiveArrayCloneWorks(); conversionCacheReusesAndRepairs(); partialInitializationDoesNotHideWorkingSources(); recommendationsMerge(); stateSurvivesAndRestores(); interfaceCallsExecute(); sourceFailuresStaySpecific(); cloudLoginReturnsToTheApp(); asyncCloudLoginEndsPlayback(); packageContextExists(); androidLogHasEveryOverload();
+        reflectiveArrayCloneWorks(); conversionCacheReusesAndRepairs(); partialInitializationDoesNotHideWorkingSources(); recommendationsMerge(); stateSurvivesAndRestores(); interfaceCallsExecute(); sourceFailuresStaySpecific(); cloudLoginReturnsToTheApp(); asyncCloudLoginEndsPlayback(); packageContextExists(); androidLogHasEveryOverload(); pluginKeepsItsOwnSlf4j();
         System.out.println("Java host regression checks passed (state, interface bytecode, HTTP failures, Android context).");
     }
 
@@ -32,6 +32,29 @@ public class HostCompatibilityTest {
         android.util.Log.class.getMethod("println", int.class, String.class, String.class);
         android.util.Log.class.getMethod("isLoggable", String.class, int.class);
         check(android.util.Log.w("test", "warning", null) == 0 && android.util.Log.getStackTraceString(null).isEmpty(), "Log rejected a null error");
+    }
+
+    private static void pluginKeepsItsOwnSlf4j() throws Exception {
+        // 动漫直链 bundles slf4j with an obfuscated API. The host's slf4j-simple binder took the place of its own:
+        // "SimpleLoggerFactory does not implement the requested interface" and NoSuchMethodError in StaticLoggerBinder.
+        var folder = java.nio.file.Files.createTempDirectory("plugin-slf4j-test");
+        var jar = folder.resolve("plugin.jar");
+        try (var output = new java.util.jar.JarOutputStream(java.nio.file.Files.newOutputStream(jar))) {
+            var writer = new ClassWriter(0);
+            writer.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER, "org/slf4j/impl/StaticLoggerBinder", null, "java/lang/Object", null);
+            writer.visitEnd();
+            output.putNextEntry(new java.util.jar.JarEntry("org/slf4j/impl/StaticLoggerBinder.class"));
+            output.write(writer.toByteArray());
+            output.closeEntry();
+        }
+        try (var loader = new PluginClassLoader(jar.toString(), folder.toString(), HostCompatibilityTest.class.getClassLoader())) {
+            check(loader.loadClass("org.slf4j.impl.StaticLoggerBinder").getClassLoader() == loader, "The host's slf4j replaced the plugin's own");
+            check(loader.loadClass("org.slf4j.impl.SimpleLoggerFactory").getClassLoader() != loader, "A plugin without that class lost the host's");
+        } finally {
+            try (var paths = java.nio.file.Files.walk(folder)) {
+                for (var path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) java.nio.file.Files.deleteIfExists(path);
+            }
+        }
     }
 
     private static void reflectiveArrayCloneWorks() throws Exception {
