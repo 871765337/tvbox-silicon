@@ -834,7 +834,6 @@
 "Message" = "内容";
 "Send" = "送信";
 "Sending…" = "送信中…";
-"Describe the problem or your idea" = "発生した問題やアイデアを入力";
 "View on GitHub" = "GitHub で見る";
 "Thanks! Your feedback is issue #%lld." = "ご協力ありがとうございます。Issue #%lld として登録されました。";
 "You've sent a lot of feedback. Please try again later." = "フィードバックの送信が多すぎます。しばらくしてからもう一度お試しください。";

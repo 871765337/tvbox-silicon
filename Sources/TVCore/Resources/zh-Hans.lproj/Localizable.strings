@@ -834,7 +834,6 @@
 "Message" = "内容";
 "Send" = "发送";
 "Sending…" = "正在发送…";
-"Describe the problem or your idea" = "描述遇到的问题或你的想法";
 "View on GitHub" = "在 GitHub 上查看";
 "Thanks! Your feedback is issue #%lld." = "谢谢！你的反馈已提交为问题 #%lld。";
 "You've sent a lot of feedback. Please try again later." = "你发送的反馈太多了，请稍后再试。";
