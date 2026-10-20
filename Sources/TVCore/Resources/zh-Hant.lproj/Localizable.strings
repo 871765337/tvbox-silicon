@@ -21,7 +21,8 @@
 "Updated %@" = "更新於 %@";
 "You can also enter another TVBox JSON subscription URL in Settings." = "也可以在設定中輸入其他 TVBox JSON 訂閱網址。";
 "Subscription" = "訂閱";
-"TVBox JSON URL" = "TVBox JSON 網址";
+"Subscription URL (TVBox JSON, M3U or TXT)" = "訂閱網址（TVBox JSON、M3U 或 TXT）";
+"Subscription URL" = "訂閱網址";
 "Save and Refresh" = "儲存並更新訂閱";
 "Use Default URL" = "使用預設網址";
 "Current subscription: %@" = "目前訂閱：%@";
@@ -779,7 +780,7 @@
 "Choose your tabs and their order." = "選擇要顯示的標籤及其順序。";
 "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "拖移即可調整順序。標籤列最多放四項，其餘的留在「更多」中。";
 "Add" = "新增";
-"Paste the address of a TVBox JSON subscription." = "貼上 TVBox JSON 訂閱網址。";
+"Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist." = "貼上 TVBox JSON 訂閱網址，或 M3U / TXT 直播清單網址。";
 "Up to Date" = "已是最新";
 "Migu Music" = "咪咕音樂";
 "Kuwo Music" = "酷我音樂";

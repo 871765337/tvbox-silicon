@@ -21,7 +21,8 @@
 "Updated %@" = "更新日時：%@";
 "You can also enter another TVBox JSON subscription URL in Settings." = "設定で別の TVBox JSON 配信設定 URL を入力することもできます。";
 "Subscription" = "配信設定";
-"TVBox JSON URL" = "TVBox JSON URL";
+"Subscription URL (TVBox JSON, M3U or TXT)" = "配信設定 URL（TVBox JSON・M3U・TXT）";
+"Subscription URL" = "配信設定 URL";
 "Save and Refresh" = "保存して更新";
 "Use Default URL" = "既定の URL を使用";
 "Current subscription: %@" = "現在の配信設定：%@";
@@ -779,7 +780,7 @@
 "Choose your tabs and their order." = "表示するタブとその順番を選べます。";
 "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "ドラッグして並べ替えます。タブバーには4つまで置けて、残りは「その他」に入ります。";
 "Add" = "追加";
-"Paste the address of a TVBox JSON subscription." = "TVBox JSON サブスクリプションのアドレスを貼り付けます。";
+"Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist." = "TVBox JSON 配信設定、または M3U / TXT ライブ再生リストのアドレスを貼り付けます。";
 "Up to Date" = "最新";
 "Migu Music" = "咪咕音楽";
 "Kuwo Music" = "酷我音楽";
