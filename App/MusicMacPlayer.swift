@@ -114,6 +114,8 @@ private struct MusicBarInset: ViewModifier {
 /// replacing the window's toolbar made SwiftUI throw; hiding its items one by one lasted only
 /// until SwiftUI next refreshed them. So the toolbar's own view is hidden instead: the toolbar
 /// still holds its height, and the window's buttons keep the room they have on the pages.
+/// Before macOS 26 the title bar also draws the toolbar's background over the player, a light
+/// strip across the top, so it is made transparent while covered.
 struct NowPlayingWindowChrome: NSViewRepresentable {
     let active: Bool
     let store: Store
@@ -130,11 +132,16 @@ struct NowPlayingWindowChrome: NSViewRepresentable {
     @MainActor final class Coordinator {
         private var accessories: [NSTitlebarAccessoryViewController] = []
         private weak var toolbarView: NSView?
+        private var titlebarWasTransparent = false
 
         func cover(_ window: NSWindow, store: Store) {
             guard accessories.isEmpty else { return }
             toolbarView = window.contentView?.superview.flatMap(Self.toolbarView)
             toolbarView?.isHidden = true
+            if #unavailable(macOS 26) {
+                titlebarWasTransparent = window.titlebarAppearsTransparent
+                window.titlebarAppearsTransparent = true
+            }
             window.titleVisibility = .hidden
             let host = NSHostingView(rootView: MusicMacWindowControls().environment(store).environment(\.colorScheme, .dark))
             host.frame.size = host.fittingSize
@@ -150,6 +157,7 @@ struct NowPlayingWindowChrome: NSViewRepresentable {
             accessories.forEach { $0.removeFromParent() }
             accessories = []
             toolbarView?.isHidden = false
+            if #unavailable(macOS 26) { window.titlebarAppearsTransparent = titlebarWasTransparent }
             window.titleVisibility = .visible
         }
 
