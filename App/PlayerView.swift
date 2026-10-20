@@ -870,7 +870,10 @@ private struct DesktopPlaybackView: View {
         ZStack(alignment: .top) {
             ZStack {
                 Color.black
-                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: session.isLive || !session.hasTimeline, waiting: waitContent, enhancer: session.enhancer)
+                let bare = session.isLive || !session.hasTimeline
+                // A new player view whenever the controls come or go (see DesktopNativePlayer).
+                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: bare, waiting: waitContent, enhancer: session.enhancer)
+                    .id(bare)
                 if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision) }
                 if let error = session.error {
                     VStack(spacing: 16) {
@@ -984,6 +987,9 @@ private struct DesktopPlaybackView: View {
 /// seekable range, and AVKit traps on that range (macOS 27). An IPTV channel is a plain address, so it
 /// is only known to be live once its item is ready: the controls wait for a ready item with a finite
 /// duration. tvOS avoids it with linear playback.
+/// `live` is fixed for a view's life: set to `.none` on a view that has shown its floating controls,
+/// AVKit takes the buttons away but leaves their empty glass platter, which still fades in under the
+/// mouse (macOS 27). A view made without controls has no platter.
 private struct DesktopNativePlayer: NSViewRepresentable {
     let player: AVPlayer
     let fillsFrame: Bool
@@ -1015,8 +1021,6 @@ private struct DesktopNativePlayer: NSViewRepresentable {
         return view
     }
     func updateNSView(_ view: AVPlayerView, context: Context) {
-        let style: AVPlayerViewControlsStyle = live ? .none : .floating
-        if view.controlsStyle != style { view.controlsStyle = style }
         view.player = player
         view.videoGravity = fillsFrame ? .resizeAspectFill : .resizeAspect
         context.coordinator.host?.rootView = overlay
