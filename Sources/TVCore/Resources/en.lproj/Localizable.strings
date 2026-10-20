@@ -21,7 +21,8 @@
 "Updated %@" = "Updated %@";
 "You can also enter another TVBox JSON subscription URL in Settings." = "You can also enter another TVBox JSON subscription URL in Settings.";
 "Subscription" = "Subscription";
-"TVBox JSON URL" = "TVBox JSON URL";
+"Subscription URL (TVBox JSON, M3U or TXT)" = "Subscription URL (TVBox JSON, M3U or TXT)";
+"Subscription URL" = "Subscription URL";
 "Save and Refresh" = "Save and Refresh";
 "Use Default URL" = "Use Default URL";
 "Current subscription: %@" = "Current subscription: %@";
@@ -779,7 +780,7 @@
 "Choose your tabs and their order." = "Choose your tabs and their order.";
 "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More.";
 "Add" = "Add";
-"Paste the address of a TVBox JSON subscription." = "Paste the address of a TVBox JSON subscription.";
+"Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist." = "Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist.";
 "Up to Date" = "Up to Date";
 "Migu Music" = "Migu Music";
 "Kuwo Music" = "Kuwo Music";

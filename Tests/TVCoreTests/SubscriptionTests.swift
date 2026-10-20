@@ -175,3 +175,19 @@ import Testing
     // Then the Python-only channel, then the JAR-only channel; the XML source is not offered.
     #expect(arranged.map(\.key) == ["api-b", "api-a", "py-a", "py-b", "js-a", "js-b", "jar-a", "jar-b", "py-other", "jar-only"])
 }
+
+@Test func bareLivePlaylistsImportAsSubscriptions() throws {
+    let origin = URL(string: "https://example.com/output/result.txt")!
+    let txt = "\u{FEFF}🕘️更新时间,#genre#\n2026-10-14 08:47:48,http://example.com/a.m3u8\n\n📺央视频道,#genre#\nCCTV-1,http://example.com/cctv1.m3u8\n"
+    let config = try Subscription.parse(Data(txt.utf8), origin: origin)
+    #expect(config.sites.isEmpty)
+    #expect(config.lives.map(\.url) == [origin])
+    let m3u = "#EXTM3U\n#EXTINF:-1 group-title=\"新闻\",一台\nhttps://example.com/1.m3u8\n"
+    #expect(try Subscription.parse(Data(m3u.utf8), origin: origin).lives.map(\.url) == [origin])
+    let plain = "一台,https://example.com/1.m3u8\r\n二台,https://example.com/2.m3u8"
+    #expect(try Subscription.parse(Data(plain.utf8), origin: origin).lives.count == 1)
+    // Broken JSON and other text still fail instead of turning into a playlist.
+    #expect(throws: (any Error).self) { try Subscription.parse(Data(#"{"sites":[{"key":"a","api":"https://x/y"}"#.utf8), origin: origin) }
+    #expect(throws: (any Error).self) { try Subscription.parse(Data("hello,world\n".utf8), origin: origin) }
+    #expect(throws: (any Error).self) { try Subscription.parse(Data("分组,#genre#\n".utf8), origin: origin) }
+}

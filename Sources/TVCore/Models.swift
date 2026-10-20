@@ -225,7 +225,13 @@ public struct Subscription: Codable, Sendable {
         return try? WebAddress.resolve(text, relativeTo: origin)
     }
     public static func parse(_ data: Data, origin: URL) throws -> Subscription {
-        let raw = try SubscriptionDocument.decode(data)
+        let raw: [String: JSONValue]
+        do { raw = try SubscriptionDocument.decode(data) } catch {
+            // A bare M3U / TXT live playlist imports as a subscription that holds just that playlist.
+            guard isLivePlaylist(data, origin: origin) else { throw error }
+            return Subscription(origin: origin, importedAt: Date(), sites: [],
+                                lives: [LiveSource(name: L10n.text("Live TV"), url: origin)], raw: [:])
+        }
         if raw["sites"] == nil, raw["lives"] == nil,
            raw["urls"] != nil || raw["storeHouse"] != nil {
             throw TVError.unsupported(L10n.text("This URL is a subscription directory. Import an individual subscription URL from it."))
@@ -245,6 +251,17 @@ public struct Subscription: Codable, Sendable {
         }
         guard !sites.isEmpty || !lives.isEmpty else { throw TVError.invalidConfiguration }
         return Subscription(origin: origin, importedAt: Date(), sites: sites, lives: lives, raw: raw)
+    }
+    /// An M3U playlist, or a TXT one that opens with a `group,#genre#` header or a `name,url` channel,
+    /// with at least one channel. A malformed JSON configuration never qualifies.
+    static func isLivePlaylist(_ data: Data, origin: URL) -> Bool {
+        guard let text = String(data: data, encoding: .utf8),
+              let first = text.replacingOccurrences(of: "\u{FEFF}", with: "").split(whereSeparator: \.isNewline)
+                .lazy.map({ $0.trimmingCharacters(in: .whitespaces) }).first(where: { !$0.isEmpty }) else { return false }
+        let parts = first.split(separator: ",", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+        let playlist = first.hasPrefix("#EXTM3U") || first.hasPrefix("#EXTINF:")
+            || (parts.count == 2 && (parts[1] == "#genre#" || parts[1].contains("://")))
+        return playlist && (try? Playlist.parse(text, origin: origin)) != nil
     }
 }
 

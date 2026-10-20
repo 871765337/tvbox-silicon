@@ -321,7 +321,7 @@ struct FormSettingsView: View {
                     FormLabel(symbol: "plus", tint: .green, title: L10n.text("Add Subscription")).foregroundStyle(.primary)
                 }
                 #else
-                TextField(L10n.text("TVBox JSON URL"), text: $store.subscriptionAddress, prompt: Text(L10n.text("TVBox JSON URL")))
+                TextField(L10n.text("Subscription URL (TVBox JSON, M3U or TXT)"), text: $store.subscriptionAddress, prompt: Text(L10n.text("Subscription URL (TVBox JSON, M3U or TXT)")))
                     .labelsHidden()
                     .autocorrectionDisabled()
                     .onSubmit { add() }
@@ -640,7 +640,7 @@ private struct AddSubscriptionSheet: View {
         NavigationStack {
             Form { Group {
                 Section {
-                    TextField(L10n.text("TVBox JSON URL"), text: $store.subscriptionAddress, prompt: Text(L10n.text("TVBox JSON URL")))
+                    TextField(L10n.text("Subscription URL (TVBox JSON, M3U or TXT)"), text: $store.subscriptionAddress, prompt: Text(L10n.text("Subscription URL (TVBox JSON, M3U or TXT)")))
                         .labelsHidden()
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never).keyboardType(.URL)
@@ -649,7 +649,7 @@ private struct AddSubscriptionSheet: View {
                         .onSubmit(add)
                 } footer: {
                     if let error = store.error { Text(error).foregroundStyle(Brand.amber) }
-                    else { Text(L10n.text("Paste the address of a TVBox JSON subscription.")) }
+                    else { Text(L10n.text("Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist.")) }
                 }
                 Section {
                     Button { store.subscriptionAddress = Store.defaultURL } label: {
@@ -701,7 +701,7 @@ private struct SubscriptionDetailView: View {
                 }
                 .settingsSwitch()
                 .disabled(store.importing)
-                LabeledContent(L10n.text("TVBox JSON URL")) {
+                LabeledContent(L10n.text("Subscription URL")) {
                     Text(current.address).lineLimit(2).truncationMode(.middle).textSelection(.enabled).foregroundStyle(.secondary)
                 }
             } footer: {
@@ -1472,7 +1472,7 @@ private struct TVAddSubscriptionPage: View {
         let empty = store.subscriptionAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         TVSettingsSubpage(symbol: "plus.rectangle.on.rectangle", title: L10n.text("Add Subscription")) {
             TVSettingsSection(title: L10n.text("Subscription"), footer: store.error ?? store.notice) {
-                TVSettingsField(title: L10n.text("TVBox JSON URL"), text: $store.subscriptionAddress)
+                TVSettingsField(title: L10n.text("Subscription URL (TVBox JSON, M3U or TXT)"), text: $store.subscriptionAddress)
                 TVSettingsAction(title: store.importing ? L10n.text("Importing…") : L10n.text("Add Subscription"), busy: store.importing) {
                     Task {
                         let before = store.subscriptions.count
