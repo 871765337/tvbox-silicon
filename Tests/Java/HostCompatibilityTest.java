@@ -272,6 +272,9 @@ public class HostCompatibilityTest {
         check(android.os.SystemClock.elapsedRealtime() > 0, "Missing monotonic clock");
         check(android.graphics.Color.parseColor("#12abef") == 0xff12abef, "Color parser failed");
         check(application.getPackageManager().getPackageInfo(application.getPackageName(), 0).versionName != null, "Missing host version");
+        // 多多 reads its own app name with getApplicationLabel in init and failed with NoSuchMethodError.
+        var manager = application.getPackageManager();
+        check(manager.getApplicationLabel(manager.getApplicationInfo(application.getPackageName(), 0)).length() > 0, "Missing application label");
         try { application.getPackageManager().getPackageInfo("other.package", 0); throw new AssertionError("Fabricated installed package"); }
         catch (android.content.pm.PackageManager.NameNotFoundException expected) { }
         java.nio.file.Files.delete(folder.resolve("external"));
