@@ -45,6 +45,8 @@ public class DexClassLoader extends URLClassLoader {
             return defineClass(name, bytes, 0, bytes.length);
         }
     }
+    /** A class the plugin's own archive defines: never a placeholder, never the parent's. */
+    protected Class<?> findOwnClass(String name) throws ClassNotFoundException { return findPluginClass(name); }
     private Class<?> findPluginClass(String name) throws ClassNotFoundException {
         // URLClassLoader otherwise scans every previously converted class JAR on
         // each miss. For N lazy classes that is quadratic archive lookup work.
