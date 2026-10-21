@@ -319,6 +319,9 @@ import TVCore
                     Diagnostics.shared.failure("player", "live room=\(channel.url.absoluteString)", error)
                     self.error = error.localizedDescription; self.loading = false; return
                 }
+            } else {
+                // A Huya stream a playlist reaches through an FLV relay plays as HLS.
+                channel = await LiveCatalog.playable(channel)
             }
             let prepared: Prepared
             do { prepared = try await self.prepare(channel) }

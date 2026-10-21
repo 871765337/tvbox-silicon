@@ -125,6 +125,17 @@ public enum LiveCatalog {
         return (Channel(name: name, group: channel.group.isEmpty ? platform.name : channel.group, url: stream.url, logo: channel.logo, headers: stream.headers),
                 qualities, stream.current)
     }
+
+    /// A playlist channel whose FLV address is a Huya stream, directly or through a relay, as the HLS
+    /// line of the same stream; any other channel is returned unchanged.
+    public static func playable(_ channel: Channel) async -> Channel { await playable(channel, session: LiveHTTP.unredirected) }
+    static func playable(_ channel: Channel, session: URLSession) async -> Channel {
+        guard channel.url.pathExtension.lowercased() == "flv",
+              let url = await HuyaLive.hlsAddress(relay: channel.url, headers: channel.headers, session: session) else { return channel }
+        Diagnostics.shared.record(.info, "player", "huya flv as hls relay=\(channel.url.host() ?? "-") line=\(url.host() ?? "-")")
+        return Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo, headers: channel.headers, skipScope: channel.skipScope,
+                       historyContext: channel.historyContext, resumePosition: channel.resumePosition)
+    }
 }
 
 /// A room's current stream address.
@@ -149,6 +160,14 @@ extension LiveSource {
 enum LiveHTTP {
     static let desktopAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
     static let mobileAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+
+    private final class Redirects: NSObject, URLSessionTaskDelegate {
+        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+            completionHandler(nil)
+        }
+    }
+    /// Answers redirects instead of following them.
+    static let unredirected = URLSession(configuration: .ephemeral, delegate: Redirects(), delegateQueue: nil)
 
     static func data(_ url: URL, headers: [String: String] = [:], form: String? = nil) async throws -> (Data, HTTPURLResponse) {
         var request = URLRequest(url: url, timeoutInterval: 15)
