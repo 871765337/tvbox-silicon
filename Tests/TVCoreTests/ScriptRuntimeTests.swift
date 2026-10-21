@@ -92,6 +92,53 @@ export default {
     #expect(failed["host"]?.string == "127.0.0.1")
 }
 
+/// 立播 "BD播放" (34e8957751c1): player_aaaa.url is a token that the line's iframe exchanges at /vid/parse.php.
+/// The port passed the token to the player, which refused it as "请输入有效的 HTTP 或 HTTPS 地址".
+@Test func libvioExchangesLineTokensForTheMediaAddress() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent("script-test-" + UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let source = #"""
+    import libvio from 'assets://sites/Libvio.js';
+    const site = 'https://lib.example', token = 'Ln2h+F2w/sa=';
+    const frame = `${site}/vid/ty4.php?url=${token}&next=&id=7&nid=1`;
+    let posted = null;
+    globalThis.req = (url, options = {}) => {
+        const h = options.headers || {};
+        if (url === `${site}/w/7-4-1.html` || url === `${site}/w/7-3-1.html`) {
+            const line = url.includes('-4-') ? { encrypt: 3, url: token, from: 'ty_new1' } : { encrypt: 0, url: 'https://cdn.example/a.mp4', from: 'vr2' };
+            return { code: 200, headers: {}, content: `<script>var player_aaaa=${JSON.stringify({ ...line, id: '7', nid: 1, link_next: '' })}</script>` };
+        }
+        if (url === `${site}/static/player/ty_new1.js`) return { code: 200, headers: {}, content: `MacPlayer.Html = '<iframe border="0" src="/vid/ty4.php?url='+MacPlayer.PlayUrl+'&next='+MacPlayer.PlayLinkNext+'&id='+MacPlayer.Id+'&nid='+MacPlayer.Nid+'" width="100%"></iframe>'; MacPlayer.Show();` };
+        if (url === frame && h.Referer === `${site}/w/7-4-1.html`) {
+            return { code: 200, headers: { 'set-cookie': '_lvs=S1; path=/; HttpOnly' }, content: '<script>window.LIBVIO_CFG = {"parseUrl":"\\/vid\\/parse.php?_t=T\\u0026id=7\\u0026nid=1","rawUrl":"' + token + '","sid":"S1"};</script>' };
+        }
+        if (url === `${site}/vid/parse.php?_t=T&id=7&nid=1` && options.method === 'POST') {
+            posted = { body: JSON.parse(options.body), sid: h['X-LV-S'], cookie: h.Cookie, referer: h.Referer };
+            return { code: 200, headers: {}, content: '{"code":200,"url":"https:\\/\\/media.example\\/hope.mp4","fatal":false,"msg":""}' };
+        }
+        return { code: 404, headers: {}, content: '' };
+    };
+    export default { home() {
+        libvio.init({ site });
+        return { bd: libvio.play('BD播放', '7-4-1'), direct: libvio.play('BD5播放', '7-3-1'), posted };
+    } };
+    """#
+    let session = try await ScriptSession.start(api: "https://scripts.example/libvio-lines.js", key: "test", ext: "", profile: folder.appendingPathComponent("profile"), label: "test", source: source)
+    defer { session.close() }
+    let envelope = try await session.call([:])
+    let json = try #require(envelope["result"]?.string, "\(envelope)")
+    let checks = try JSONDecoder().decode([String: JSONValue].self, from: Data(json.utf8))
+    #expect(checks["bd"]?.object?["url"]?.string == "https://media.example/hope.mp4", "\(checks)")
+    #expect(checks["bd"]?.object?["header"]?.object?["Cookie"] == nil)
+    #expect(checks["direct"]?.object?["url"]?.string == "https://cdn.example/a.mp4")
+    let posted = try #require(checks["posted"]?.object, "\(checks)")
+    #expect(posted["body"] == .object(["url": .string("Ln2h+F2w/sa="), "sid": .string("S1")]))
+    #expect(posted["sid"]?.string == "S1")
+    #expect(posted["cookie"]?.string?.contains("_lvs=S1") == true)
+    #expect(posted["referer"]?.string == "https://lib.example/vid/ty4.php?url=Ln2h+F2w/sa=&next=&id=7&nid=1")
+}
+
 @Test func retiredDrpyLibrariesResolveToBundledCopies() {
     #expect(ScriptAssets.resolve("https://down.nigx.cn/qu.ax/XUKQ.js", from: "https://x.example/drpy2.min.js") == "assets://js/lib/模板.js")
     #expect(ScriptAssets.resolve("./gbk.js", from: "assets://js/lib/drpy2.min.js") == "assets://js/lib/gbk.js")
