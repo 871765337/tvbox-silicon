@@ -75,6 +75,39 @@ enum HuyaLive {
                           qualities: rates.map { (id: $0.0, label: $0.1) }, current: bitRate)
     }
 
+    /// The HLS address of a Huya FLV address (`<line>.flv.huya.com/src/<stream>.flv?<token>`): the same
+    /// stream and token on the line's HLS host, which accepts them. AVPlayer can't play FLV.
+    static func hlsAddress(flv url: URL) -> URL? {
+        let suffix = ".flv.huya.com"
+        guard url.pathExtension.lowercased() == "flv", let host = url.host()?.lowercased(), host.hasSuffix(suffix),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        components.scheme = "https"
+        components.host = String(host.dropLast(suffix.count)) + ".hls.huya.com"
+        components.percentEncodedPath = String(components.percentEncodedPath.dropLast(3)) + "m3u8"
+        return components.url
+    }
+
+    /// The HLS address of the Huya stream an FLV address lands on, itself or through the redirects of a
+    /// relay (such as one serving `/huya/<room>.flv`); nil for any other stream. `session` must not
+    /// follow redirects.
+    static func hlsAddress(relay url: URL, headers: [String: String], session: URLSession) async -> URL? {
+        var address = url
+        for _ in 0..<4 {
+            if let hls = hlsAddress(flv: address) { return hls }
+            var request = URLRequest(url: address, timeoutInterval: 8)
+            // Relays made for Android TVBox can refuse other clients.
+            request.setValue(HTTPClient.subscriptionUserAgent, forHTTPHeaderField: "User-Agent")
+            headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+            guard let (bytes, response) = try? await session.bytes(for: request) else { return nil }
+            bytes.task.cancel() // A live stream's body never ends.
+            guard let http = response as? HTTPURLResponse, (300..<400).contains(http.statusCode),
+                  let location = http.value(forHTTPHeaderField: "Location"),
+                  let next = URL(string: location, relativeTo: address)?.absoluteURL else { return nil }
+            address = next
+        }
+        return nil
+    }
+
     /// The page's `window.HNF_GLOBAL_INIT` object, without the functions it embeds.
     static func initialState(_ page: String) -> [String: JSONValue]? {
         guard let start = page.range(of: #"window\.HNF_GLOBAL_INIT\s*=\s*"#, options: .regularExpression),
