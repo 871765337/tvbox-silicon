@@ -112,6 +112,25 @@ function get(path, referer) {
 
 function persist() { saved.set('cookie', jar.toString()); }
 
+/** Lines whose player_aaaa.url is a token, not an address (BD播放, encrypt 3): load the line's iframe
+ *  (static/player/<from>.js) for its session, then exchange the token at /vid/parse.php as /vid/ty/player.js does. */
+function lineUrl(player, pageUrl) {
+    const template = match('src="([^"]*)"', get(`static/player/${encodeURIComponent(String(player.from || ''))}.js`, pageUrl));
+    const values = { PlayUrl: player.url, PlayLinkNext: player.link_next, Id: player.id, Nid: player.nid };
+    const frame = template && template.replace(/'\s*\+\s*MacPlayer\.(\w+)\s*\+\s*'/g, (_, name) => String(values[name] ?? ''));
+    if (!frame || frame.includes("'")) return '';
+    const frameUrl = absolute(site, frame);
+    let config;
+    try { config = JSON.parse(match('LIBVIO_CFG\\s*=\\s*(\\{.*?\\});', page(frameUrl, pageUrl).body)); } catch { return ''; }
+    if (!config || !config.parseUrl) return '';
+    const sid = String(config.sid || '');
+    const reply = globalThis.req(absolute(site, String(config.parseUrl)), {
+        method: 'POST', timeout: 15000, body: JSON.stringify({ url: String(config.rawUrl || player.url), sid }),
+        headers: { ...headers(frameUrl), Accept: 'application/json', 'Content-Type': 'application/json', 'X-LV-S': sid, Origin: site }
+    });
+    try { const url = String(JSON.parse(reply.content).url || ''); return /^https?:\/\//.test(url) ? url : ''; } catch { return ''; }
+}
+
 /** Mirrors listed on a publish page (xorDecode('n,n,...', _K) entries, then plain URLs). */
 function mirrorsFrom(body) {
     const found = [];
@@ -249,8 +268,10 @@ export default {
         let url = String(player.url || '');
         if (Number(player.encrypt) === 2) url = decodeURIComponent(Buffer.from(url, 'base64').toString('latin1'));
         else if (Number(player.encrypt) === 1) url = decodeURIComponent(url);
+        let header = headers(pageUrl);
+        if (url && !/^https?:\/\//.test(url)) { url = lineUrl(player, pageUrl); header = { 'User-Agent': UA }; }
         if (!url) return { parse: 0, url: '', msg: '解析失败' };
-        const result = { parse: 0, url, header: headers(pageUrl) };
+        const result = { parse: 0, url, header };
         if (url.includes('.m3u8')) result.format = 'application/x-mpegURL';
         return result;
     }
