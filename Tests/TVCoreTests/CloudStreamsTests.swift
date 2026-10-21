@@ -12,6 +12,23 @@ struct CloudStreamsTests {
         return (RangeServer.add(name, bytes), bytes)
     }
 
+    @Test func hevcThatPlaysOnlyItsSoundIsRetagged() {
+        func entry(_ tag: String, size: UInt32 = 120, reference: UInt8 = 1) -> Data {
+            Data([UInt8(size >> 24), UInt8(size >> 16 & 0xff), UInt8(size >> 8 & 0xff), UInt8(size & 0xff)])
+                + Data(tag.utf8) + Data(repeating: 0, count: 6) + Data([0, reference]) + Data(repeating: 7, count: 20)
+        }
+        let header = Data([0, 0, 0, 0x7a]) + Data("stsd".utf8) + Data([0, 0, 0, 0, 0, 0, 0, 1])
+        #expect(CloudStreams.playableSampleEntries(header + entry("hev1")) == header + entry("hvc1"))
+        #expect(CloudStreams.playableSampleEntries(entry("dvhe")) == entry("dvh1"))
+        // Bytes that merely contain the letters stay as they are.
+        for other in [entry("hev1", size: 40), entry("hev1", reference: 2), Data("hev1 in some text".utf8), entry("avc1"), Data("hev1".utf8)] {
+            #expect(CloudStreams.playableSampleEntries(other) == other)
+        }
+        // A slice keeps its own indices.
+        let slice = (Data(repeating: 9, count: 5) + entry("hev1")).dropFirst(5)
+        #expect(CloudStreams.playableSampleEntries(slice) == entry("hvc1"))
+    }
+
     @Test func containerComesFromTheBytesNotTheName() throws {
         let mp4 = Data([0, 0, 0, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D])
         #expect(try CloudStreams.contentType(mp4, name: "4KXIN 192.mp3") == AVFileType.mp4.rawValue)

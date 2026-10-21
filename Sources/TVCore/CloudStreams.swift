@@ -53,6 +53,28 @@ public enum CloudStreams {
         if let stream = CloudStreamStore.shared.stream(url) { Task { await stream.clear() } }
     }
 
+    /// HEVC that an MP4 tags `hev1` (Dolby Vision: `dvhe`) plays only its sound: AVFoundation decodes
+    /// those sample entries inside HLS alone. Tagged `hvc1` (`dvh1`) the picture plays; the decoder
+    /// settings are in the entry's configuration box either way. A sample entry is the tag after a
+    /// plausible box size, then six reserved zero bytes and data reference 1, which media data
+    /// practically never repeats. An entry split across two chunks stays as it is.
+    static func playableSampleEntries(_ data: Data) -> Data {
+        var result = data
+        for (tag, playable) in [("hev1", "hvc1"), ("dvhe", "dvh1")] {
+            var from = data.startIndex
+            while let found = data.range(of: Data(tag.utf8), in: from..<data.endIndex) {
+                from = found.upperBound
+                let at = found.lowerBound
+                guard at - 4 >= data.startIndex, found.upperBound + 8 <= data.endIndex else { continue }
+                let size = data[at - 4..<at].reduce(0) { $0 << 8 | Int($1) }
+                let reserved = data[found.upperBound..<found.upperBound + 6], reference = data[found.upperBound + 6..<found.upperBound + 8]
+                guard (86..<65_536).contains(size), reserved.allSatisfy({ $0 == 0 }), reference.elementsEqual([0, 1]) else { continue }
+                result.replaceSubrange(at..<found.upperBound, with: Data(playable.utf8))
+            }
+        }
+        return result
+    }
+
     /// The container AVFoundation should parse, from the file's first bytes rather than its name.
     static func contentType(_ head: Data, name: String) throws -> String {
         let bytes = [UInt8](head.prefix(16))
@@ -235,10 +257,11 @@ actor CloudByteStream {
                     Diagnostics.shared.record(.debug, "cloud.stream", "rate bytesPerSecond=\(Int(Double(rate.bytes) / seconds)) readers=\(readers) inflight=\(inflight.count)")
                     rate = (Date(), 0)
                 }
-                cache[index] = data
+                let playable = CloudStreams.playableSampleEntries(data)
+                cache[index] = playable
                 recent.removeAll { $0 == index }; recent.append(index)
                 while recent.count > Self.cacheChunks { cache[recent.removeFirst()] = nil }
-                return data
+                return playable
             } catch let error as URLError where error.code != .cancelled && attempt < 3 {
                 Diagnostics.shared.record(.debug, "cloud.stream", "chunk=\(index) retry \(error.code.rawValue)")
                 try await Task.sleep(for: .milliseconds(400 * attempt))
