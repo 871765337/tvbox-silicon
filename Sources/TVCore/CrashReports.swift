@@ -7,16 +7,65 @@ import MetricKit
 /// (tvOS has no MetricKit; ErrorReports notices an exit while on screen there instead.) Each becomes one
 /// error for ErrorReports: what happened, then the crashed thread's frames as binary+offset, which
 /// `atos` turns into code lines with that release's dSYM (build/release-*/<version>/dSYMs).
+/// An uncaught Objective-C exception reaches MetricKit only as the run loop rethrowing it, with no reason,
+/// so on every platform its name, reason and the frames that threw it are also kept for the next launch.
 public final class CrashReports: NSObject, @unchecked Sendable {
     public static let shared = CrashReports()
     private var started = false
 
     func start() {
-        #if canImport(MetricKit) && !os(tvOS)
         guard !started else { return }
         started = true
+        if let message = try? String(contentsOf: Self.exceptionFile, encoding: .utf8) {
+            try? FileManager.default.removeItem(at: Self.exceptionFile)
+            Diagnostics.shared.record(.error, "crash", message)
+        }
+        Self.exceptionPath = Self.exceptionFile.path
+        Self.previousHandler = NSGetUncaughtExceptionHandler()
+        NSSetUncaughtExceptionHandler { exception in
+            CrashReports.keep(exception)
+            CrashReports.previousHandler?(exception)
+        }
+        #if canImport(MetricKit) && !os(tvOS)
         MXMetricManager.shared.add(self)
         #endif
+    }
+
+    private static var exceptionFile: URL { Diagnostics.shared.directory.appendingPathComponent("uncaught-exception.txt") }
+    // Set once in start(), before the handler that reads them.
+    nonisolated(unsafe) private static var exceptionPath: String?
+    nonisolated(unsafe) private static var previousHandler: (@convention(c) (NSException) -> Void)?
+
+    /// Runs just before the app aborts, so it only writes a file; the next launch reports it.
+    private static func keep(_ exception: NSException) {
+        guard let exceptionPath else { return }
+        let message = uncaught(name: exception.name.rawValue, reason: exception.reason,
+                               frames: frames(exception.callStackReturnAddresses.map(\.uintValue)),
+                               executable: Bundle.main.infoDictionary?["CFBundleExecutable"] as? String ?? "",
+                               origin: "app=\(ErrorReports.bundleValue("CFBundleShortVersionString")) (\(ErrorReports.bundleValue("CFBundleVersion")))")
+        let file = URL(fileURLWithPath: exceptionPath)
+        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? Data(message.utf8).write(to: file, options: .atomic)
+    }
+
+    /// An uncaught exception, in the shape of a MetricKit crash: named by where the app's code threw it.
+    static func uncaught(name: String, reason: String?, frames: [String], executable: String, origin: String) -> String {
+        var lines = ["crash uncaught \(name) in \(place(frames, executable: executable))"]
+        if let reason { lines.append("reason: " + reason) }
+        lines.append(origin)
+        lines.append(contentsOf: frames.prefix(16))
+        return lines.joined(separator: "\n")
+    }
+
+    /// Return addresses as "binary+0xoffset" from the binary's load address, like MetricKit's frames.
+    static func frames(_ addresses: [UInt]) -> [String] {
+        addresses.map { address in
+            var info = Dl_info()
+            guard dladdr(UnsafeRawPointer(bitPattern: address), &info) != 0, let base = info.dli_fbase, let path = info.dli_fname else {
+                return "?+0x\(String(address, radix: 16))"
+            }
+            return "\(URL(fileURLWithPath: String(cString: path)).lastPathComponent)+0x\(String(address - UInt(bitPattern: base), radix: 16))"
+        }
     }
 
     /// One (category, message) per crash or hang in a MetricKit diagnostic payload's JSON.

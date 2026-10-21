@@ -8,7 +8,7 @@ import os
 /// Only error-level diagnostics go out, after Diagnostics' credential redaction, with every URL cut to
 /// its scheme and host, home folders and private IP addresses removed. Repeats are summed on the device
 /// and sent at most every six hours, so an install costs about a request a day. The ID is random.
-/// Crashes come from MetricKit on iPhone, iPad and Mac (CrashReports); on iPhone, iPad and Apple TV an
+/// Crashes come from MetricKit on iPhone, iPad and Mac, and uncaught exceptions on every platform (CrashReports); on iPhone, iPad and Apple TV an
 /// exit while on screen (a crash, or the system ending the app for memory) is noticed on the next launch,
 /// with what that launch was doing (QuitContext).
 public final class ErrorReports: @unchecked Sendable {
@@ -76,9 +76,7 @@ public final class ErrorReports: @unchecked Sendable {
             }
         }
         #endif
-        #if canImport(MetricKit) && !os(tvOS)
         CrashReports.shared.start()
-        #endif
         await sendIfDue()
     }
 

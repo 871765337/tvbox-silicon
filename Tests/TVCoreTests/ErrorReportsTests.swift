@@ -80,6 +80,27 @@ import Testing
     #expect(CrashReports.summaries(Data("{}".utf8)).isEmpty)
 }
 
+/// MetricKit only sees the run loop rethrow an uncaught exception, so the app keeps where it was thrown.
+@Test func uncaughtExceptionsReportWhereTheyWereThrown() {
+    let message = CrashReports.uncaught(name: "NSInternalInconsistencyException", reason: "Invalid update",
+                                        frames: ["CoreFoundation+0x10", "libobjc.A.dylib+0x20", "UIKitCore+0x30", "Yingxia+0x40"],
+                                        executable: "Yingxia", origin: "app=1.7.6 (23)")
+    #expect(message == """
+        crash uncaught NSInternalInconsistencyException in Yingxia+0x40
+        reason: Invalid update
+        app=1.7.6 (23)
+        CoreFoundation+0x10
+        libobjc.A.dylib+0x20
+        UIKitCore+0x30
+        Yingxia+0x40
+        """)
+    #expect(ErrorReports.groupKey("crash", message) == "crash\ncrash uncaught NSInternalInconsistencyException in Yingxia+0x40")
+
+    let frames = CrashReports.frames(Thread.callStackReturnAddresses.map(\.uintValue))
+    #expect(!frames.isEmpty)
+    #expect(frames.allSatisfy { $0.wholeMatch(of: /[^?+\s][^+\s]*\+0x[0-9a-f]+/) != nil })
+}
+
 /// The server's `normalize` (Services/error-reports/src/index.ts) gives these same lines: it groups
 /// reports from every install by them.
 @Test func errorReportsGroupLikeTheServer() {
