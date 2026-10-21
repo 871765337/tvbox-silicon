@@ -128,6 +128,35 @@ public final class RequestStopTest {
         check(waited >= 1400 && waited < 3000, "Ended after " + waited + " ms");
         var notice = new JSONObject(java.nio.file.Files.readString(folder.resolve("login-prompt.json")));
         check(notice.optBoolean("signedIn") && "BDUSS=bd".equals(notice.optString("baiduCookie")), "The app was not told: " + notice);
+
+        // Or the viewer signs in on the drive's own page in the app: the waiting spider ends, once.
+        var marker = folder.resolve("app-signed-in");
+        java.nio.file.Files.writeString(marker, "");
+        check(new PluginSession(new QuickSpider()).request(new JSONObject().put("ids", "1").put("_folder", folder.toString())).contains("vod_id"),
+            "A request that showed no code was stopped by the app's sign-in");
+        java.nio.file.Files.deleteIfExists(marker);
+        new Thread(() -> { sleep(300); try { java.nio.file.Files.writeString(marker, ""); } catch (java.io.IOException error) { throw new RuntimeException(error); } }).start();
+        started = System.nanoTime();
+        thrown = null;
+        try { new PluginSession(new PromptedSpider()).request(new JSONObject().put("play", "x").put("flag", "line").put("_folder", folder.toString())); }
+        catch (Throwable error) { thrown = error; }
+        waited = (System.nanoTime() - started) / 1_000_000;
+        check(thrown instanceof HttpDiagnostics.SignedIn, "The app's sign-in did not end the waiting spider: " + thrown);
+        check(waited >= 250 && waited < 1500, "Ended " + waited + " ms after the app's sign-in");
+        check(!java.nio.file.Files.exists(marker), "The app's sign-in was not used up");
+    }
+
+    /** Shows the app a code (as the host does for Baidu and Aliyun), then waits for the sign-in. */
+    public static final class PromptedSpider extends com.github.catvod.crawler.Spider {
+        @Override public String playerContent(String flag, String id, List<String> flags) throws Exception {
+            Method state = HttpDiagnostics.class.getDeclaredMethod("loginState"); state.setAccessible(true);
+            Object current = state.invoke(null);
+            var prompted = current.getClass().getDeclaredField("prompted"); prompted.setAccessible(true);
+            prompted.setBoolean(current, true);
+            while (true) {
+                try { android.os.SystemClock.sleep(200); } catch (Exception ignored) { }
+            }
+        }
     }
 
     /** Signs in (as the host sees Baidu's BDUSS login), then keeps waiting like FTY's dialog-bound loop. */

@@ -486,11 +486,16 @@ struct VideoDetailView: View {
                 }
             }
         }
+        #elseif os(iOS)
+        // The drive's own sign-in page; the code is for signing in with another phone.
+        .sheet(item: $signingIn) { drive in
+            WebSignInView(service: drive.webSignIn, signedIn: retryAfterSignIn) {
+                CloudQRLoginView(drive: drive.qrDrive) { retryAfterSignIn() }
+            }
+        }
         #else
         .fullScreenCover(item: $signingIn) { drive in
-            CloudQRLoginView(drive: drive.qrDrive) {
-                if let episode = playbackIssue?.episode { startRequest { await play(episode) } }
-            }
+            CloudQRLoginView(drive: drive.qrDrive) { retryAfterSignIn() }
         }
         #endif
         .downloadPicker(isPresented: $choosingDownloads) {
@@ -884,6 +889,11 @@ struct VideoDetailView: View {
             store.playing = store.catalogChannel(resolved, video: detail ?? video, episode: episode, client: client)
         } catch { fail(episode, error) }
     }
+    #if !os(macOS)
+    private func retryAfterSignIn() {
+        if let episode = playbackIssue?.episode { startRequest { await play(episode) } }
+    }
+    #endif
     private func fail(_ episode: Episode, _ error: Error) {
         guard !Task.isCancelled, !(error is CancellationError) else { return }
         // A drive that needs signing in is expected, not a failure to report.
@@ -946,6 +956,7 @@ private enum CloudDrive: String, Identifiable {
     var provider: CloudProvider { self == .quark ? .quark : .uc }
     #else
     var qrDrive: CloudDriveQRLogin.Drive { self == .quark ? .quark : .uc }
+    var webSignIn: WebSignIn { self == .quark ? .quark : .uc }
     #endif
     var loginHint: String { L10n.text("This source plays from %@ and needs you to sign in first.", name) }
     var expiredHint: String { L10n.text("Your %@ sign-in is missing or has expired. Sign in again to play this episode.", name) }

@@ -860,3 +860,19 @@
 "Download a song, album or playlist from its menu to listen without a connection." = "曲、アルバム、プレイリストのメニューからダウンロードすると、オフラインでも聴けます。";
 "Delete all downloaded songs?" = "ダウンロードした曲をすべて削除しますか？";
 "%lld downloading" = "%lld 曲をダウンロード中";
+
+// Signing in on the service's own page (iPhone, iPad).
+"Sign In Here" = "ここでサインイン";
+"Scan a Code with Another Phone" = "別のスマートフォンでコードをスキャン";
+"Signing In…" = "サインインしています…";
+"Saved to Photos" = "写真に保存しました";
+"Save Code to Photos" = "コードを写真に保存";
+"In the %@ app, tap Scan, then choose this photo." = "%@アプリで「スキャン」をタップし、この写真を選んでください。";
+"Allow Yingxia to add photos in Settings, then try again." = "「設定」で映匣に写真の追加を許可してから、もう一度お試しください。";
+"Sign in on Bilibili's page with a text-message code or your password, or scan a code with the Bilibili app on another phone. Without signing in, videos play at up to 1080P and anime and films at 480P." = "ビリビリのページでSMS認証コードまたはパスワードを使うか、別のスマートフォンのビリビリアプリでコードをスキャンしてサインインします。ログインしない場合、動画は最大 1080P、アニメと映画は 480P で再生されます。";
+"Sign in for your feed, favorites and higher quality." = "サインインすると、フォロー中のフィード、お気に入り、より高い画質を利用できます。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "ドライブの公式ページでサインインするか、別のスマートフォンのドライブアプリでコードをスキャンします。映匣はログイン情報をこのデバイスに保存し、実行するプラグインに渡します。";
+"Open the %@ app on another phone, scan this code, and confirm the sign-in." = "別のスマートフォンで%@アプリを開き、このコードをスキャンしてログインを確認してください。";
+"Or scan this code with the %@ app on another phone." = "または、別のスマートフォンの%@アプリでこのコードをスキャンします。";
+"Sign In on This iPhone" = "このiPhoneでサインイン";
+"Sign In on This iPad" = "このiPadでサインイン";

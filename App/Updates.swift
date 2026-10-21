@@ -449,11 +449,18 @@ extension View {
 }
 
 enum QRCode {
-    static func image(_ text: String) -> CGImage? {
+    /// One pixel per module unless `scale` is given; a scaled code gets the white margin scanners
+    /// need when it's read from a photo.
+    static func image(_ text: String, scale: CGFloat = 1) -> CGImage? {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(text.utf8)
         filter.correctionLevel = "M"
-        guard let output = filter.outputImage else { return nil }
+        guard var output = filter.outputImage else { return nil }
+        if scale != 1 {
+            output = output.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            let margin = output.extent.insetBy(dx: -4 * scale, dy: -4 * scale)
+            output = output.composited(over: CIImage(color: .white).cropped(to: margin))
+        }
         return CIContext().createCGImage(output, from: output.extent)
     }
 }

@@ -860,3 +860,19 @@
 "Download a song, album or playlist from its menu to listen without a connection." = "Download a song, album or playlist from its menu to listen without a connection.";
 "Delete all downloaded songs?" = "Delete all downloaded songs?";
 "%lld downloading" = "%lld downloading";
+
+// Signing in on the service's own page (iPhone, iPad).
+"Sign In Here" = "Sign In Here";
+"Scan a Code with Another Phone" = "Scan a Code with Another Phone";
+"Signing In…" = "Signing In…";
+"Saved to Photos" = "Saved to Photos";
+"Save Code to Photos" = "Save Code to Photos";
+"In the %@ app, tap Scan, then choose this photo." = "In the %@ app, tap Scan, then choose this photo.";
+"Allow Yingxia to add photos in Settings, then try again." = "Allow Yingxia to add photos in Settings, then try again.";
+"Sign in on Bilibili's page with a text-message code or your password, or scan a code with the Bilibili app on another phone. Without signing in, videos play at up to 1080P and anime and films at 480P." = "Sign in on Bilibili's page with a text-message code or your password, or scan a code with the Bilibili app on another phone. Without signing in, videos play at up to 1080P and anime and films at 480P.";
+"Sign in for your feed, favorites and higher quality." = "Sign in for your feed, favorites and higher quality.";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.";
+"Open the %@ app on another phone, scan this code, and confirm the sign-in." = "Open the %@ app on another phone, scan this code, and confirm the sign-in.";
+"Or scan this code with the %@ app on another phone." = "Or scan this code with the %@ app on another phone.";
+"Sign In on This iPhone" = "Sign In on This iPhone";
+"Sign In on This iPad" = "Sign In on This iPad";

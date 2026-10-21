@@ -18,6 +18,8 @@ import org.json.JSONObject;
 final class LoginPrompt {
     static final long SIGN_IN_MILLIS = 180_000;
     static final String FILE = "login-prompt.json";
+    /** Left by the app when the viewer signed in on the drive's own page instead of scanning the code. */
+    static final String APP_FILE = "app-signed-in";
 
     private LoginPrompt() {}
 
@@ -92,6 +94,16 @@ final class LoginPrompt {
         Files.writeString(temporary, notice.toString(), StandardCharsets.UTF_8);
         Files.move(temporary, folder.resolve(FILE), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         System.err.println("PLUGIN_SIGNED_IN " + java.time.LocalTime.now().withNano(0) + " " + drive);
+    }
+
+    /**
+     * Whether the app signed in for the request waiting in this folder. The app has saved the account,
+     * which the fresh spider reads; the marker is used once.
+     */
+    static boolean signedInByApp(String folder) {
+        if (folder == null || folder.isBlank()) return false;
+        try { return Files.deleteIfExists(Path.of(folder, APP_FILE)); }
+        catch (java.io.IOException | RuntimeException unreadable) { return false; }
     }
 
     /** Whether a request for this drive and path creates the QR code (rather than polling it). */

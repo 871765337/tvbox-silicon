@@ -170,15 +170,17 @@ private struct CloudLoginBrowser: NSViewRepresentable {
     }
 }
 #else
-/// Cloud drive sign-ins on iPhone, iPad and Apple TV, which have no browser to sign in with:
-/// a code to scan with the drive's phone app. Plugins read the saved sign-in on their next request.
+/// Cloud drive sign-ins on iPhone, iPad and Apple TV. Apple TV has no browser: it shows a code to
+/// scan with the drive's phone app. iPhone and iPad can't scan their own screen, so they open the
+/// drive's own sign-in page, with the code for another phone as the alternative. Plugins read the
+/// saved sign-in on their next request.
 struct CloudDriveView: View {
     @State private var accounts = CloudDriveAccounts()
     @State private var login: CloudProvider?
     @State private var error: String?
     var body: some View {
         SettingsPage(title: L10n.text("Cloud Drive Accounts"), symbol: "externaldrive") {
-            SettingsGroup(footer: L10n.text("Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")) {
+            SettingsGroup(footer: footer) {
                 ForEach(CloudProvider.allCases) { provider in
                     let signedIn = provider.isSignedIn(accounts)
                     SettingsRow(symbol: provider.symbol, tint: provider.tint, title: provider.name,
@@ -194,9 +196,24 @@ struct CloudDriveView: View {
             if let error { Label(error, systemImage: "exclamationmark.triangle.fill").font(.callout).foregroundStyle(Brand.rose) }
         }
         .task { reload() }
+        #if os(iOS)
+        .sheet(item: $login) { provider in
+            WebSignInView(service: provider.webSignIn, signedIn: reload) {
+                CloudQRLoginView(drive: provider.qrDrive) { reload() }
+            }
+        }
+        #else
         .fullScreenCover(item: $login) { provider in
             CloudQRLoginView(drive: provider.qrDrive) { reload() }
         }
+        #endif
+    }
+    private var footer: String {
+        #if os(iOS)
+        L10n.text("Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")
+        #else
+        L10n.text("Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")
+        #endif
     }
     private func reload() {
         do { accounts = try CloudDriveAccounts.load(); error = nil } catch { self.error = error.localizedDescription }
@@ -242,6 +259,7 @@ enum CloudProvider: String, Identifiable, CaseIterable {
     var signsInOnWeb: Bool { self == .quark || self == .uc }
     var domain: String { self == .quark ? "quark.cn" : "uc.cn" }
     var qrDrive: CloudDriveQRLogin.Drive { CloudDriveQRLogin.Drive(rawValue: rawValue)! }
+    var webSignIn: WebSignIn { WebSignIn(rawValue: rawValue)! }
     var url: URL { URL(string: self == .quark ? "https://pan.quark.cn/" : "https://drive.uc.cn/")! }
     /// Where FTY plugins keep their own copy of the sign-in.
     var pluginFiles: [String] {

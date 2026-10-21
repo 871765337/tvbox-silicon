@@ -2,26 +2,33 @@ import SwiftUI
 import TVCore
 
 /// The QR code a source's plugin made for a Baidu Netdisk or Aliyun Drive sign-in. The plugin signs
-/// in by itself once the code is scanned and confirmed, then the video it was opening plays.
+/// in by itself once the code is scanned and confirmed, then the video it was opening plays. iPhone
+/// and iPad can't scan their own screen: they sign in on the drive's page first, and the waiting
+/// plugin starts over with that account; the code stays for signing in with another phone.
 struct PluginSignInView: View {
     let prompt: PluginSignIn.Prompt
     @State private var now = Date()
+    #if os(iOS)
+    @State private var signingIn = false
+    #endif
 
     private var name: String { L10n.text(prompt.drive == "baidu" ? "Baidu Netdisk" : "Aliyun Drive") }
     private var expired: Bool { now >= prompt.expires }
 
     var body: some View {
-        // Side by side on a TV, iPad or Mac; stacked on a phone.
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: spacing) { code; details }
-            ScrollView { VStack(alignment: .leading, spacing: spacing) { code; details } }
-        }
-        .padding(spacing)
+        content
         #if os(macOS)
         .frame(minWidth: 640, minHeight: 360)
         #else
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .screenBackdrop()
+        #endif
+        #if os(iOS)
+        .sheet(isPresented: $signingIn) {
+            if let service = WebSignIn(rawValue: prompt.drive) {
+                WebSignInView(service: service) { PluginSignIn.shared.signedInHere(prompt) }
+            }
+        }
         #endif
         .task {
             while !Task.isCancelled && !expired {
@@ -29,6 +36,47 @@ struct PluginSignInView: View {
                 now = Date()
             }
         }
+    }
+
+    #if os(iOS)
+    private var content: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(L10n.text("Sign In to %@", name)).font(.title2.weight(.bold))
+                    Text(L10n.text("%@ needs this account for the line you chose. The video plays once you confirm.", prompt.source))
+                        .font(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                if expired {
+                    Label(L10n.text("This code has expired."), systemImage: "clock.badge.exclamationmark").foregroundStyle(.secondary)
+                } else {
+                    Button(L10n.text(UIDevice.current.userInterfaceIdiom == .pad ? "Sign In on This iPad" : "Sign In on This iPhone")) { signingIn = true }
+                        .settingsButton(prominent: true)
+                        .accessibilityIdentifier("pluginSignIn.web")
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text(L10n.text("Or scan this code with the %@ app on another phone.", name))
+                            .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        code
+                        SaveCodeButton(text: prompt.content, image: prompt.content == nil ? prompt.image : nil, app: name)
+                    }
+                }
+                Button(L10n.text(expired ? "Close" : "Cancel")) { PluginSignIn.shared.dismiss() }
+                    .settingsButton()
+                    .accessibilityIdentifier("pluginSignIn.cancel")
+            }
+            .frame(maxWidth: 620, alignment: .leading)
+            .padding(spacing)
+            .frame(maxWidth: .infinity)
+        }
+    }
+    #else
+    private var content: some View {
+        // Side by side on a TV or Mac.
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: spacing) { code; details }
+            ScrollView { VStack(alignment: .leading, spacing: spacing) { code; details } }
+        }
+        .padding(spacing)
     }
 
     private var details: some View {
@@ -54,6 +102,7 @@ struct PluginSignInView: View {
         }
         .frame(maxWidth: 620, alignment: .leading)
     }
+    #endif
 
     @ViewBuilder private var code: some View {
         ZStack {
@@ -70,7 +119,7 @@ struct PluginSignInView: View {
                     .accessibilityLabel(L10n.text("Sign-in code"))
                 }
             }
-            .padding(28).opacity(expired ? 0.15 : 1)
+            .padding(inset).opacity(expired ? 0.15 : 1)
         }
         .frame(width: size, height: size)
     }
@@ -78,8 +127,18 @@ struct PluginSignInView: View {
     private var size: CGFloat {
         #if os(tvOS)
         440
+        #elseif os(iOS)
+        // The second way to sign in here.
+        180
         #else
         240
+        #endif
+    }
+    private var inset: CGFloat {
+        #if os(iOS)
+        20
+        #else
+        28
         #endif
     }
     private var spacing: CGFloat {

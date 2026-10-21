@@ -81,18 +81,7 @@ public struct CloudDriveQRLogin: Sendable {
         components.queryItems = [URLQueryItem(name: "st", value: ticket), URLQueryItem(name: "lw", value: "scan")]
         let (_, response) = try await session.data(for: request(components.url!, drive))
         try check(response)
-        var serviceTicket: String?
-        if drive == .quark {
-            var mobile = URLComponents(string: "https://pan.quark.cn/account/mobileinfo")!
-            mobile.queryItems = [URLQueryItem(name: "pr", value: "ucpro"), URLQueryItem(name: "fr", value: "h5"), URLQueryItem(name: "st", value: ticket)]
-            let (data, response) = try await session.data(for: request(mobile.url!, drive))
-            try check(response)
-            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            serviceTicket = (object?["data"] as? [String: Any])?["serviceTicket"] as? String
-            guard object?["success"] as? Bool == true, serviceTicket?.isEmpty == false else {
-                throw TVError.unsupported(L10n.text("Sign-in was approved, but the drive didn't return a login. Try again."))
-            }
-        }
+        let serviceTicket = drive == .quark ? try await quarkMobileTicket(ticket, session: session) : nil
         var fields: [String: String] = [:]
         for cookie in session.configuration.httpCookieStorage?.cookies ?? [] {
             let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
@@ -100,6 +89,21 @@ public struct CloudDriveQRLogin: Sendable {
         }
         guard fields["__pus"]?.isEmpty == false else { throw TVError.unsupported(L10n.text("Sign-in was approved, but the drive didn't return a login. Try again.")) }
         return Credentials(cookie: fields.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "; "), serviceTicket: serviceTicket)
+    }
+
+    /// Quark's mobile service ticket for an approved sign-in ticket, from a scanned code or the web page.
+    public static func quarkMobileTicket(_ ticket: String, session: URLSession = .shared, cookie: String? = nil) async throws -> String {
+        var mobile = URLComponents(string: "https://pan.quark.cn/account/mobileinfo")!
+        mobile.queryItems = [URLQueryItem(name: "pr", value: "ucpro"), URLQueryItem(name: "fr", value: "h5"), URLQueryItem(name: "st", value: ticket)]
+        var info = request(mobile.url!, .quark)
+        if let cookie { info.setValue(cookie, forHTTPHeaderField: "Cookie") }
+        let (data, response) = try await session.data(for: info)
+        try check(response)
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        guard object?["success"] as? Bool == true, let serviceTicket = (object?["data"] as? [String: Any])?["serviceTicket"] as? String, !serviceTicket.isEmpty else {
+            throw TVError.unsupported(L10n.text("Sign-in was approved, but the drive didn't return a login. Try again."))
+        }
+        return serviceTicket
     }
 
     // MARK: Baidu Netdisk
