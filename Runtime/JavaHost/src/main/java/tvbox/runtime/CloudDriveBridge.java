@@ -383,9 +383,10 @@ public final class CloudDriveBridge implements AutoCloseable {
         try {
             if (!pan.getField("yq").getType().getName().equals("com.github.catvod.spider.Cloud_quark")) return false;
         } catch (NoSuchFieldException absent) { return false; }
-        // Inspected FTY releases rename this helper, while retaining this complete contract.
+        // Inspected FTY releases rename this helper, while retaining this complete contract
+        // (N0 since the 2026-10-21 release, whose xU is an unrelated class the checks below skip).
         // Never alter verification methods or success flags: the plugin validates the cookie.
-        for (String name : List.of("xU", "Z")) {
+        for (String name : List.of("xU", "Z", "N0")) {
             try {
                 Class<?> type = Class.forName("com.github.catvod.spider.merge." + name, false, spiderClass.getClassLoader());
                 var singleton = type.getMethod("Zm");

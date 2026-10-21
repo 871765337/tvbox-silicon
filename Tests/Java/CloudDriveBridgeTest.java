@@ -253,7 +253,7 @@ public class CloudDriveBridgeTest {
                 return defineClass(name.replace('/', '.'), bytes, 0, bytes.length);
             }
         }
-        for (String helper : List.of("xU", "Z")) {
+        for (String helper : List.of("xU", "Z", "N0")) {
             var loader = new Loader();
             loader.define("com/github/catvod/spider/Cloud_quark", "java/lang/Object", 0);
             loader.define("com/github/catvod/spider/Pan", "java/lang/Object", 1);

@@ -383,6 +383,23 @@ import TVCore
         return item
     }
 
+    /// The video's codec and size, for reports of sound without a picture (a codec the decoder
+    /// refuses, such as HEVC tagged `hev1` in MP4, plays its audio only).
+    private static func recordVideoFormat(_ item: AVPlayerItem) async {
+        guard let tracks = try? await item.asset.loadTracks(withMediaType: .video) else { return }
+        if tracks.isEmpty { Diagnostics.shared.record(.info, "player", "video none"); return }
+        for track in tracks {
+            let formats = (try? await track.load(.formatDescriptions)) ?? []
+            let size = (try? await track.load(.naturalSize)) ?? .zero
+            let playable = (try? await track.load(.isPlayable)) ?? false
+            let codecs = formats.map { format -> String in
+                let code = CMFormatDescriptionGetMediaSubType(format)
+                return String(decoding: [24, 16, 8, 0].map { UInt8((code >> $0) & 0xff) }, as: UTF8.self)
+            }
+            Diagnostics.shared.record(.info, "player", "video codec=\(codecs.joined(separator: ",")) size=\(Int(size.width))x\(Int(size.height)) playable=\(playable)")
+        }
+    }
+
     /// Follows the episode's item (ready, failed, ended), the player's state, and the transfer, for this playback.
     private func watch(_ item: AVPlayerItem, channel: Channel, url: URL, generation activeGeneration: UUID) {
         self.item = item
@@ -402,6 +419,7 @@ import TVCore
                     self.restorePositionIfNeeded(item)
                     self.loading = self.pendingResume != nil || self.restoringPosition
                     Diagnostics.shared.record(.info, "player", "ready host=\(self.transfer.host ?? channel.url.host() ?? "-")")
+                    Task { await Self.recordVideoFormat(item) }
                 }
                 if status == .failed {
                     if self.retryRange(after: failure, channel: channel, url: url, generation: activeGeneration) { return }
