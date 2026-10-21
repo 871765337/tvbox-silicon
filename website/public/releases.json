@@ -1,6 +1,81 @@
 {
   "releases": [
     {
+      "version": "1.7.6",
+      "date": "2026-10-22",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.6/Yingxia-1.7.6-macos-arm64.dmg",
+        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.6/Yingxia-1.7.6-macos-x86_64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "list.bullet.rectangle",
+          "title": {
+            "en": "Add M3U and TXT live playlists as subscriptions",
+            "zh-Hans": "可以把 M3U 和 TXT 直播列表添加为订阅",
+            "zh-Hant": "可以把 M3U 和 TXT 直播清單加入為訂閱",
+            "ja": "M3U と TXT のライブ再生リストを配信設定として追加"
+          },
+          "detail": {
+            "en": "Paste the address of an M3U or TXT live playlist where you add a subscription, and its channels show up with your other live channels. Before, only TVBox JSON subscriptions could be added there.",
+            "zh-Hans": "在添加订阅的地方粘贴 M3U 或 TXT 直播列表的地址，其中的频道就会和其他直播频道一起显示。以前这里只能添加 TVBox JSON 订阅。",
+            "zh-Hant": "在加入訂閱的地方貼上 M3U 或 TXT 直播清單的網址，其中的頻道就會和其他直播頻道一起顯示。以前這裡只能加入 TVBox JSON 訂閱。",
+            "ja": "配信設定を追加する欄に M3U または TXT のライブ再生リストのアドレスを貼り付けると、そのチャンネルがほかのライブチャンネルと一緒に表示されます。これまでは TVBox JSON の配信設定しか追加できませんでした。"
+          }
+        },
+        {
+          "symbol": "play.circle",
+          "title": {
+            "en": "Episodes that failed on the first try now play",
+            "zh-Hans": "首次播放失败的剧集现在可以直接播放",
+            "zh-Hant": "第一次播放失敗的劇集現在可以直接播放",
+            "ja": "最初の再生で失敗していたエピソードが再生できるように"
+          },
+          "detail": {
+            "en": "Some sources, 立播 among them, send the whole video file when the player asks for only its first bytes, so a new episode stopped with an error and played only after you pressed Retry. Yingxia now tries again by itself.",
+            "zh-Hans": "部分站点（例如立播）在播放器只请求开头几个字节时返回了整个视频文件，导致新剧集报错停止，必须按“重试”才能播放。现在映匣会自动再试一次。",
+            "zh-Hant": "部分來源（例如立播）在播放器只要求開頭幾個位元組時傳回了整個影片檔案，導致新劇集出錯停止，必須按「重試」才能播放。現在映匣會自動再試一次。",
+            "ja": "一部のサイト（立播など）は、プレーヤーが最初の数バイトだけを求めたときにビデオファイル全体を返すため、新しいエピソードがエラーで止まり、「再試行」を押すまで再生できませんでした。今は映匣が自動でもう一度試します。"
+          }
+        },
+        {
+          "symbol": "puzzlepiece.extension",
+          "title": {
+            "en": "More JAR sources start",
+            "zh-Hans": "更多 JAR 站点能启动",
+            "zh-Hant": "更多 JAR 來源能啟動",
+            "ja": "起動する JAR のサイトが増えました"
+          },
+          "detail": {
+            "en": "Some JAR sources, such as 多多, 动漫直链 and 动漫巴士, stopped while starting because they needed a part of Android that Yingxia didn’t provide, or brought their own logging library. They start now.",
+            "zh-Hans": "部分 JAR 站点（例如多多、动漫直链和动漫巴士）因为需要映匣尚未提供的 Android 功能，或自带日志库，而在启动时出错。现在可以正常启动了。",
+            "zh-Hant": "部分 JAR 來源（例如多多、动漫直链和动漫巴士）因為需要映匣尚未提供的 Android 功能，或自帶記錄程式庫，而在啟動時出錯。現在可以正常啟動了。",
+            "ja": "一部の JAR のサイト（多多、动漫直链、动漫巴士など）は、映匣が用意していない Android の機能を必要としたり、独自のログライブラリを持っていたりしたため、起動中に止まっていました。今は起動します。"
+          }
+        },
+        {
+          "symbol": "macwindow",
+          "title": {
+            "en": "No empty bar in the Mac player",
+            "zh-Hans": "Mac 播放器不再出现空白控制条",
+            "zh-Hant": "Mac 播放器不再出現空白控制列",
+            "ja": "Mac のプレーヤーに空のバーが出なくなりました"
+          },
+          "detail": {
+            "en": "On macOS 27, an empty glass bar could appear in the lower middle of the player while an episode loaded, or behind an error message. It no longer does.",
+            "zh-Hans": "在 macOS 27 上，剧集加载时或错误信息后面，播放器下方中间可能出现一条空白的玻璃控制条。现在已修正。",
+            "zh-Hant": "在 macOS 27 上，劇集載入時或錯誤訊息後面，播放器下方中間可能出現一條空白的玻璃控制列。現在已修正。",
+            "ja": "macOS 27 では、エピソードの読み込み中やエラーメッセージの後ろで、プレーヤーの下中央に空のガラスのバーが出ることがありました。表示されなくなりました。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.5",
       "date": "2026-10-20",
       "links": {
