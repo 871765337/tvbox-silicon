@@ -10,7 +10,8 @@ public final class BytecodeCompatibility {
     // v11: frames no longer reference the nonexistent java/util/Object; re-convert cached classes.
     // v12: objects that R8 initializes through Object.<init> are allocated directly.
     // v13: HttpURLConnection range requests are observed too (cloud-drive CDN addresses).
-    public static final String VERSION = "host-v13";
+    // v14: large constant arrays (fill-array-data) are copied into the array, not out of it (IR2JConverter).
+    public static final String VERSION = "host-v14";
     private static final java.util.Set<String> connections = java.util.Set.of("java/net/URLConnection", "java/net/HttpURLConnection", "javax/net/ssl/HttpsURLConnection");
 
     private static final String BRIDGES = "tvbox/runtime/generated/InterfaceCalls";

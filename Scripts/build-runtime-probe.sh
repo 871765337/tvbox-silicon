@@ -6,8 +6,10 @@ cd "$(dirname "$0")/.."
 TVBOX_JDK="${TVBOX_JDK:-$(/usr/libexec/java_home)}"
 TVBOX_D8="${TVBOX_D8:-build/tools/r8lib.jar}"
 mkdir -p build/probe/classes build/probe/dex
-"$TVBOX_JDK/bin/javac" --release 8 -d build/probe/classes Tests/Java/RuntimeProbe.java
+mkdir -p build/probe/array-dex
+"$TVBOX_JDK/bin/javac" --release 8 -d build/probe/classes Tests/Java/RuntimeProbe.java Tests/Java/ArrayProbe.java
 "$TVBOX_JDK/bin/java" -cp "$TVBOX_D8" com.android.tools.r8.D8 --release --min-api 21 --output build/probe/dex build/probe/classes/tvbox/RuntimeProbe.class
+"$TVBOX_JDK/bin/java" -cp "$TVBOX_D8" com.android.tools.r8.D8 --release --min-api 21 --output build/probe/array-dex build/probe/classes/tvbox/ArrayProbe.class
 python3 - <<'PY'
 from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
@@ -17,4 +19,8 @@ for target in ['Tests/TVCoreTests/Fixtures/runtime-probe.jar', 'App/Resources/ru
         entry = ZipInfo('classes.dex', (2026, 1, 1, 0, 0, 0))
         entry.compress_type = ZIP_DEFLATED
         archive.writestr(entry, raw)
+with ZipFile('Tests/TVCoreTests/Fixtures/array-probe.jar', 'w', ZIP_DEFLATED) as archive:
+    entry = ZipInfo('classes.dex', (2026, 1, 1, 0, 0, 0))
+    entry.compress_type = ZIP_DEFLATED
+    archive.writestr(entry, Path('build/probe/array-dex/classes.dex').read_bytes())
 PY
