@@ -920,6 +920,16 @@ private struct DesktopPlaybackView: View {
                         barButton("gobackward.10", L10n.text("Back 10 seconds (←)")) { session.skip(-10) }
                         barButton("goforward.10", L10n.text("Forward 10 seconds (→)")) { session.skip(10) }
                     }
+                    if let previous = store.previousEpisode(before: channel) {
+                        barButton("backward.end.fill", L10n.text("Previous Episode"), help: previous.name) { store.selectEpisode(previous, from: channel) }
+                            .disabled(store.resolvingEpisode != nil)
+                    }
+                    if let next = store.nextEpisode(after: channel) {
+                        barButton("forward.end.fill", L10n.text("Next Episode"), help: next.name) {
+                            if !session.playUpcoming() { store.selectEpisode(next, from: channel) }
+                        }
+                        .disabled(store.resolvingEpisode != nil)
+                    }
                     CatalogPlaybackActions(channel: channel, session: session)
                     optionsMenu
                     barButton("arrow.up.left.and.arrow.down.right", L10n.text("Enter / Exit Full Screen")) { window.toggleFullScreen(nil) }
@@ -933,12 +943,12 @@ private struct DesktopPlaybackView: View {
         }
     }
 
-    private func barButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
+    private func barButton(_ symbol: String, _ label: String, help: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .medium)) }
             .buttonStyle(.plain)
             .frame(width: 34, height: 34)
             .glassSurface(.regular.interactive(), in: Circle())
-            .help(label)
+            .help(help ?? label)
             .accessibilityLabel(label)
     }
 
