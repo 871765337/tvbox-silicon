@@ -201,6 +201,24 @@ enum QALaunch {
             // `-qaPage cloud-login:<quark|uc|baidu|aliyun>`; `cloud-accounts` shows the accounts page.
             case "cloud-login": CloudQRLoginView(drive: parts.dropFirst().first.flatMap(CloudDriveQRLogin.Drive.init(rawValue:)) ?? .quark) {}
             case "cloud-accounts": CloudDriveView()
+            #if os(iOS)
+            // `-qaPage web-sign-in:<bilibili|quark|uc|baidu|aliyun>`: the service's sign-in sheet; with
+            // `-qaShowCode 1` it opens on the code for another phone.
+            case "web-sign-in":
+                if let service = parts.dropFirst().first.flatMap(WebSignIn.init(rawValue:)) {
+                    QASheet {
+                        WebSignInView(service: service, showingCode: UserDefaults.standard.bool(forKey: "qaShowCode"), signedIn: {}) {
+                            if let drive = CloudDriveQRLogin.Drive(rawValue: service.rawValue) { CloudQRLoginView(drive: drive) {} }
+                            else { ScrollView { BilibiliCodeSignIn { _ in }.padding(24) }.screenBackdrop() }
+                        }
+                    }
+                }
+            #endif
+            #if DEBUG
+            // `-qaPage plugin-sign-in:<baidu|aliyun>`: a source's sign-in prompt with a made-up code.
+            case "plugin-sign-in":
+                if let prompt = PluginSignIn.Prompt.sample(drive: parts.dropFirst().first ?? "baidu") { QASheet { PluginSignInView(prompt: prompt) } }
+            #endif
             default: EmptyView()
             }
         }
@@ -208,7 +226,16 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "feedback", "cache", "licenses", "cloud-login", "cloud-accounts", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "feedback", "cache", "licenses", "cloud-login", "cloud-accounts", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list", "web-sign-in", "plugin-sign-in"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+    }
+}
+
+/// Shows a page the app presents as a sheet the same way, over an empty page.
+private struct QASheet<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    @State private var shown = false
+    var body: some View {
+        Color.clear.task { shown = true }.sheet(isPresented: $shown) { content() }
     }
 }
 

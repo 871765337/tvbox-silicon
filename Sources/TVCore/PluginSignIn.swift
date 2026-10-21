@@ -8,6 +8,8 @@ import Observation
 @MainActor @Observable public final class PluginSignIn {
     public static let shared = PluginSignIn()
     nonisolated static let fileName = "login-prompt.json"
+    /// Left for the plugin runtime when the viewer signed in on the drive's own page instead (LoginPrompt.java).
+    nonisolated static let appFileName = "app-signed-in"
 
     public struct Prompt: Identifiable, Equatable, Sendable {
         public let id: String
@@ -36,6 +38,15 @@ import Observation
             id = file.path + "#" + String(Int(time))
             expires = Date(timeIntervalSince1970: time / 1000 + ((json["seconds"] as? Double) ?? 180))
         }
+
+        #if DEBUG
+        /// A made-up prompt for QA screenshots.
+        public static func sample(drive: String) -> Prompt? {
+            let json: [String: Any] = ["drive": drive, "time": Date().timeIntervalSince1970 * 1000, "content": "https://passport.aliyundrive.com/qrcodeCheck.htm?lgToken=qa-sample"]
+            guard let data = try? JSONSerialization.data(withJSONObject: json) else { return nil }
+            return Prompt(data: data, file: FileManager.default.temporaryDirectory.appendingPathComponent("qa-sign-in/" + PluginSignIn.fileName), source: "QA Source")
+        }
+        #endif
     }
 
     public private(set) var prompt: Prompt?
@@ -45,6 +56,17 @@ import Observation
     public func dismiss() {
         if let prompt { dismissed.insert(prompt.id) }
         prompt = nil
+    }
+
+    /// The viewer signed in to the prompt's drive on its own page in the app (iPhone, iPad), and the
+    /// account is saved: the waiting request starts over and reads it.
+    public func signedInHere(_ prompt: Prompt) {
+        // A request that already ended has nothing waiting; the next one reads the saved account anyway.
+        guard self.prompt?.id == prompt.id else { return }
+        let marker = prompt.file.deletingLastPathComponent().appendingPathComponent(Self.appFileName)
+        try? Data().write(to: marker, options: .atomic)
+        Diagnostics.shared.record(.info, "cloud.signin", "source=\(prompt.source) drive=\(prompt.drive) signed in on the page")
+        dismiss()
     }
 
     private func show(_ value: Prompt) {
@@ -63,6 +85,7 @@ import Observation
         func end() async {
             task.cancel()
             try? FileManager.default.removeItem(at: file)
+            try? FileManager.default.removeItem(at: file.deletingLastPathComponent().appendingPathComponent(PluginSignIn.appFileName))
             await PluginSignIn.shared.finish(file)
         }
     }

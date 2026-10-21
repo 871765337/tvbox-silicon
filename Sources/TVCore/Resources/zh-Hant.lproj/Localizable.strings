@@ -860,3 +860,19 @@
 "Download a song, album or playlist from its menu to listen without a connection." = "在歌曲、專輯或播放清單的選單中選擇「下載」，沒有網路時也能收聽。";
 "Delete all downloaded songs?" = "刪除所有已下載的歌曲？";
 "%lld downloading" = "%lld 首正在下載";
+
+// Signing in on the service's own page (iPhone, iPad).
+"Sign In Here" = "在此登入";
+"Scan a Code with Another Phone" = "用另一支手機掃碼";
+"Signing In…" = "正在登入…";
+"Saved to Photos" = "已儲存到照片";
+"Save Code to Photos" = "將 QR 碼儲存到照片";
+"In the %@ app, tap Scan, then choose this photo." = "在%@ App 中點一下「掃一掃」，然後選擇這張照片。";
+"Allow Yingxia to add photos in Settings, then try again." = "請在「設定」中允許映匣加入照片，然後再試一次。";
+"Sign in on Bilibili's page with a text-message code or your password, or scan a code with the Bilibili app on another phone. Without signing in, videos play at up to 1080P and anime and films at 480P." = "在嗶哩嗶哩官方頁面用簡訊驗證碼或密碼登入，或用另一支手機上的嗶哩嗶哩 App 掃碼登入。未登入時，影片最高 1080P，番劇和影視最高 480P。";
+"Sign in for your feed, favorites and higher quality." = "登入後可查看關注動態、收藏，並取得更高畫質。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "在網盤官方頁面登入，或用另一支手機上的網盤 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上，並提供給你執行的外掛。";
+"Open the %@ app on another phone, scan this code, and confirm the sign-in." = "在另一支手機上開啟%@ App，掃描此 QR 碼並確認登入。";
+"Or scan this code with the %@ app on another phone." = "也可以用另一支手機上的%@ App 掃描此 QR 碼。";
+"Sign In on This iPhone" = "在這支 iPhone 上登入";
+"Sign In on This iPad" = "在這台 iPad 上登入";

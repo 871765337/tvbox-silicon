@@ -2,8 +2,8 @@ import SwiftUI
 import TVCore
 
 /// Sign in to a cloud drive by scanning a code with the drive's phone app; there is no browser
-/// on Apple TV. (The Mac uses it for Baidu and Aliyun.) The saved sign-in reaches the plugins on
-/// their next request.
+/// on Apple TV. (The Mac uses it for Baidu and Aliyun; iPhone and iPad, to sign in with another
+/// phone.) The saved sign-in reaches the plugins on their next request.
 struct CloudQRLoginView: View {
     let drive: CloudDriveQRLogin.Drive
     let signedIn: () -> Void
@@ -28,6 +28,13 @@ struct CloudQRLoginView: View {
         case .baidu, .aliyun: L10n.text("Sign In to %@", name)
         }
     }
+    private var scanPrompt: String {
+        #if os(iOS)
+        "Open the %@ app on another phone, scan this code, and confirm the sign-in."
+        #else
+        "Open the %@ app on your phone, scan this code, and confirm the sign-in."
+        #endif
+    }
     var body: some View {
         // Side by side on a TV, iPad or Mac; stacked on a phone.
         ViewThatFits(in: .horizontal) {
@@ -46,22 +53,30 @@ struct CloudQRLoginView: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: 28) {
             VStack(alignment: .leading, spacing: 10) {
+                #if !os(iOS)
+                // iPhone and iPad show this in the sign-in sheet, under its title.
                 Text(title).font(.title2.weight(.bold))
-                Text(L10n.text("Open the %@ app on your phone, scan this code, and confirm the sign-in.", name))
+                #endif
+                Text(L10n.text(scanPrompt, name))
                     .font(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             status
-            HStack(spacing: 16) {
-                #if os(iOS)
-                if let login, !login.code.isEmpty, let url = URL(string: login.code) {
-                    Link(L10n.text("Open %@", name), destination: url).settingsButton(prominent: true)
+            #if os(iOS)
+            // Inside the web sign-in sheet, which has its own Cancel.
+            VStack(alignment: .leading, spacing: 14) {
+                if let login, !expired { SaveCodeButton(text: login.code.isEmpty ? nil : login.code, image: login.image, app: name).id(login.code + (login.image?.absoluteString ?? "")) }
+                if expired || error != nil {
+                    Button(L10n.text("Get New Code")) { attempt += 1 }.settingsButton(prominent: true)
                 }
-                #endif
+            }
+            #else
+            HStack(spacing: 16) {
                 if expired || error != nil {
                     Button(L10n.text("Get New Code")) { attempt += 1 }.settingsButton(prominent: true)
                 }
                 Button(L10n.text("Cancel")) { dismiss() }.settingsButton()
             }
+            #endif
         }
         .frame(maxWidth: 620, alignment: .leading)
     }

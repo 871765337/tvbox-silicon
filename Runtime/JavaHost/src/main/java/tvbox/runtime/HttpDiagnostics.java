@@ -18,6 +18,8 @@ public final class HttpDiagnostics {
         volatile String folder;
         /** When a sign-in through the plugin's code completed and the request should start over (epoch ms); 0 = no. */
         volatile long signedInAt;
+        /** The app was shown a sign-in code for this request, so it may sign in on the drive's page instead. */
+        volatile boolean prompted;
     }
     private static final ThreadLocal<State> state = ThreadLocal.withInitial(State::new);
 
@@ -147,6 +149,7 @@ public final class HttpDiagnostics {
                 Response kept = LoginPrompt.capture(drive, response, folder);
                 if (kept == null) { response.close(); throw handBack(drive, call); }
                 response = kept;
+                loginState().prompted = true;
             }
             if (local) return response;
             System.err.println("SOURCE_HTTP " + response.request().url().host() + response.request().url().encodedPath() + " " + response.code());
@@ -227,6 +230,11 @@ public final class HttpDiagnostics {
     public static void throwIfStopped() {
         State current = loginState();
         long signedIn = current.signedInAt;
+        // The viewer signed in on the drive's own page in the app (iPhone, iPad) instead of scanning.
+        if (current.active && current.prompted && signedIn == 0 && LoginPrompt.signedInByApp(current.folder)) {
+            current.signedInAt = signedIn = System.currentTimeMillis();
+            System.err.println("PLUGIN_SIGNED_IN_BY_APP " + java.time.LocalTime.now().withNano(0));
+        }
         if (current.active && signedIn > 0 && System.currentTimeMillis() >= signedIn) throw new SignedIn();
         var stop = current.stopAt;
         if (!current.active || stop == null) return;
