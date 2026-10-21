@@ -14,7 +14,7 @@ import TVCore
 
     func start(_ store: Store) {
         self.store = store
-        guard Self.enabled, ticker == nil else { return }
+        guard Self.enabled, store.extrasUnlocked, ticker == nil else { return }
         let receiver = BilibiliCastReceiver.shared
         #if os(tvOS)
         receiver.name = L10n.text("Yingxia") + " · Apple TV"

@@ -910,3 +910,6 @@
 "Password (Optional)" = "密碼（選填）";
 "No AList server answered at this address." = "此網址上沒有回應的 AList 伺服器。";
 "This server doesn't let guests browse. Enter a user name and password." = "此伺服器不允許訪客瀏覽，請輸入使用者名稱和密碼。";
+"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "夸克和 UC 在官方頁面登入。映匣會將登入資訊儲存在這台 Mac 上。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "在網盤官方頁面登入，或用另一支手機上的網盤 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "用網盤的手機 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上。";

@@ -910,3 +910,6 @@
 "Password (Optional)" = "パスワード（省略可）";
 "No AList server answered at this address." = "このアドレスで応答する AList サーバがありません。";
 "This server doesn't let guests browse. Enter a user name and password." = "このサーバはゲストの閲覧を許可していません。ユーザ名とパスワードを入力してください。";
+"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "Quark と UC は公式ページでサインインします。映匣はログイン情報をこの Mac に保存します。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "ドライブの公式ページでサインインするか、別のスマートフォンのドライブアプリでコードをスキャンします。映匣はログイン情報をこのデバイスに保存します。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "ドライブのスマートフォンアプリでコードをスキャンしてサインインします。映匣はログイン情報をこのデバイスに保存します。";

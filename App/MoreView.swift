@@ -28,6 +28,14 @@ struct PhoneTabs: Equatable {
     }
 
     var stored: String { bar.map(\.rawValue).joined(separator: ",") + "|" + more.map(\.rawValue).joined(separator: ",") }
+
+    /// Without the sections `hidden`; the first in More take their places in the bar.
+    func hiding(_ hidden: [AppSection]) -> PhoneTabs {
+        guard !hidden.isEmpty else { return self }
+        let bar = self.bar.filter { !hidden.contains($0) }, more = self.more.filter { !hidden.contains($0) }
+        let moved = Self.barSlots - bar.count
+        return PhoneTabs(bar: bar + more.prefix(moved), more: Array(more.dropFirst(moved)))
+    }
 }
 
 extension AppSection {
@@ -94,7 +102,7 @@ struct MoreView: View {
     @State private var editing = false
 
     var body: some View {
-        let tabs = PhoneTabs(stored: storedTabs)
+        let tabs = PhoneTabs(stored: storedTabs).hiding(store.hiddenSections)
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(spacing: 12) {

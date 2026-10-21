@@ -910,3 +910,6 @@
 "Password (Optional)" = "Password (Optional)";
 "No AList server answered at this address." = "No AList server answered at this address.";
 "This server doesn't let guests browse. Enter a user name and password." = "This server doesn't let guests browse. Enter a user name and password.";
+"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac.";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device.";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device.";

@@ -58,7 +58,7 @@ enum QALaunch {
             }
             await store.importSubscription(address: subscription)
         }
-        else if store.subscription == nil { await store.importSubscription() }
+        else if store.subscription == nil, !Distribution.isAppStore { await store.importSubscription() }
         if QASweep.enabled, let config = store.subscription { Task.detached(priority: .utility) { await QASweep.run(config) } }
         if let section { store.section = section }
         if let page, page.hasPrefix("search:") {
@@ -176,7 +176,10 @@ enum QALaunch {
 
     /// The pushed page to show as the section's root, so detail screens can be captured without taps.
     @MainActor @ViewBuilder static func page(for section: AppSection, store: Store) -> some View {
-        if section == self.section, let page, let config = store.subscription {
+        // Pages that need no subscription, so an App Store build (`-qaAppStore 1`) can show them before one is added.
+        if section == self.section, store.subscription == nil, page == "cloud-accounts" {
+            CloudDriveView()
+        } else if section == self.section, let page, let config = store.subscription {
             let parts = page.split(separator: ":", maxSplits: 2).map(String.init)
             switch parts.first {
             case "site":

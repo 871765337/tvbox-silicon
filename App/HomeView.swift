@@ -78,17 +78,21 @@ struct HomeView: View {
                 .frame(maxWidth: Layout.heroTitle * 10, alignment: .leading)
                 .padding(.bottom, 40)
             HStack(spacing: 16) {
-                Button { Task { await store.importSubscription() } } label: {
-                    Label(store.importing ? L10n.text("Importing…") : L10n.text("Import Subscription"), systemImage: "plus.circle.fill")
+                // App Store builds have no default subscription: the address is added in Settings.
+                Button { if Distribution.isAppStore { store.section = .settings } else { Task { await store.importSubscription() } } } label: {
+                    Label(store.importing ? L10n.text("Importing…") : L10n.text(Distribution.isAppStore ? "Add Subscription" : "Import Subscription"),
+                          systemImage: "plus.circle.fill")
                 }
                 .controlButton(prominent: true).tint(Brand.accent).disabled(store.importing)
                 #if os(tvOS)
                 .focused($importFocused)
                 #endif
-                Button { store.section = .settings } label: {
-                    Label(L10n.text("Use Another URL"), systemImage: "link")
+                if !Distribution.isAppStore {
+                    Button { store.section = .settings } label: {
+                        Label(L10n.text("Use Another URL"), systemImage: "link")
+                    }
+                    .controlButton()
                 }
-                .controlButton()
             }
             .controlSize(.large)
             if store.importing {

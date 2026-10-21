@@ -46,9 +46,10 @@ struct RootView: View {
     #endif
     private var tabs: [AppSection] {
         #if os(iOS)
-        if sizeClass == .compact { return PhoneTabs(stored: storedTabs).bar + [.more] }
+        if sizeClass == .compact { return PhoneTabs(stored: storedTabs).hiding(store.hiddenSections).bar + [.more] }
         #endif
-        let sections: [AppSection] = [.home, .live, .music, .search, .sites, .files, .history, .favorites, .downloads, .settings]
+        let sections = [AppSection.home, .live, .music, .search, .sites, .files, .history, .favorites, .downloads, .settings]
+            .filter { !store.hiddenSections.contains($0) }
         #if os(tvOS)
         // Where the remote already goes to change section, so the song is one move away from anywhere.
         // Before tvOS 27 the sidebar has no header for the Now Playing card.
@@ -114,7 +115,7 @@ struct RootView: View {
     #if !os(macOS)
     #if os(iOS)
     /// Sections a phone reaches through More, as arranged in the tab bar editor.
-    private var inMore: [AppSection] { PhoneTabs(stored: storedTabs).more }
+    private var inMore: [AppSection] { PhoneTabs(stored: storedTabs).hiding(store.hiddenSections).more }
     #endif
     private var platformTabs: some View {
         @Bindable var store = store
@@ -253,7 +254,9 @@ private struct MacSidebar: View {
     @Environment(Store.self) private var store
     @Environment(Updates.self) private var updates
     private var groups: [(title: String, items: [AppSection])] {
-        [(L10n.text("Browse"), [.home, .search, .live, .music, .sites, .files]), (L10n.text("Library"), [.history, .favorites, .downloads, .settings])]
+        let groups: [(title: String, items: [AppSection])] = [(L10n.text("Browse"), [.home, .search, .live, .music, .sites, .files]),
+                                                             (L10n.text("Library"), [.history, .favorites, .downloads, .settings])]
+        return groups.map { (title: $0.title, items: $0.items.filter { !store.hiddenSections.contains($0) }) }
     }
 
     var body: some View {

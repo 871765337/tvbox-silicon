@@ -45,6 +45,11 @@ import TVCore
     private var episodeRequest = UUID()
     private var episodeTask: Task<Void, Never>?
     var section: AppSection = .home
+    /// App Store and TestFlight builds show the built-in services, the default subscription and the
+    /// plugin pages only once a subscription has been added; other builds always show them.
+    var extrasUnlocked: Bool { !Distribution.isAppStore || !subscriptions.isEmpty }
+    /// Sections kept out of the tab bar and sidebar until then.
+    var hiddenSections: [AppSection] { extrasUnlocked ? [] : [.music] }
     private let defaults: UserDefaults
     private let http = HTTPClient()
     private var persistsChanges: Bool {
@@ -82,7 +87,7 @@ import TVCore
         }
         subscriptions = entries
         documents = copies
-        subscriptionAddress = entries.isEmpty ? Self.defaultURL : ""
+        subscriptionAddress = entries.isEmpty && !Distribution.isAppStore ? Self.defaultURL : ""
         if persistsChanges, let legacyAddress {
             if let legacy, copies[legacyAddress] != nil { try? Self.save(legacy, to: Self.file(for: entries[0])) }
             saveSubscriptionList()
@@ -157,7 +162,7 @@ import TVCore
         defer { importing = false }
         let typed = (address ?? subscriptionAddress).trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            let url = try WebAddress.resolve(typed.isEmpty ? Self.defaultURL : typed)
+            let url = try WebAddress.resolve(typed.isEmpty && !Distribution.isAppStore ? Self.defaultURL : typed)
             switch try await http.subscriptionImport(url) {
             case .subscription(let value):
                 let entry = SubscriptionEntry(address: url.absoluteString)
@@ -439,6 +444,21 @@ import TVCore
             Diagnostics.shared.failure("catalog", "resume source=\(entry.context.sourceKey)", error)
             self.error = L10n.text("Unable to resume playback: %@", error.localizedDescription)
         }
+    }
+}
+
+/// How this build reaches people. App Store and TestFlight builds are archived with
+/// `SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) APPSTORE'`; direct downloads and sideloaded
+/// builds leave it out. `-qaAppStore 1` makes a debug build act as one.
+enum Distribution {
+    static var isAppStore: Bool {
+        #if APPSTORE
+        return true
+        #elseif DEBUG
+        return UserDefaults.standard.bool(forKey: "qaAppStore")
+        #else
+        return false
+        #endif
     }
 }
 
