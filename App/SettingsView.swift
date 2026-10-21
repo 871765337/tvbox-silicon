@@ -649,7 +649,7 @@ private struct AddSubscriptionSheet: View {
                         .onSubmit(add)
                 } footer: {
                     if let error = store.error { Text(error).foregroundStyle(Brand.amber) }
-                    else { Text(L10n.text("Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist.")) }
+                    else { Text(L10n.text("Paste the address of a TVBox JSON subscription, an M3U or TXT live playlist, or an AList server.")) }
                 }
                 Section {
                     Button { store.subscriptionAddress = Store.defaultURL } label: {

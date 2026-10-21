@@ -129,16 +129,24 @@ public struct SubscriptionEntry: Codable, Hashable, Identifiable, Sendable {
     public var cacheName: String { PluginChecksum.sha256(Data(address.utf8)) + ".json" }
 }
 
-/// What an added address holds: one subscription, or a directory that lists several.
+/// What an added address holds: one subscription, a directory that lists several, or AList servers
+/// (the server itself, or a TVBox AList configuration that lists them) for Cloud Files.
 public enum SubscriptionImport: Sendable {
     case subscription(Subscription)
     case directory([SubscriptionEntry])
+    case alist([AListServer])
 }
 
 extension HTTPClient {
     public func subscriptionImport(_ url: URL) async throws -> SubscriptionImport {
         let (data, finalURL) = try await get(url, headers: ["User-Agent": Self.subscriptionUserAgent])
+        if let servers = AListServer.list(from: data) { return .alist(servers) }
         if let entries = Subscription.directory(data, origin: finalURL) { return .directory(entries) }
-        return .subscription(try Subscription.parse(data, origin: finalURL))
+        do { return .subscription(try Subscription.parse(data, origin: finalURL)) }
+        catch {
+            // An AList server answers its address with its web page.
+            if let server = await AList.probe(url, session: session) { return .alist([server]) }
+            throw error
+        }
     }
 }

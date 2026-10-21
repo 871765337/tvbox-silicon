@@ -637,7 +637,9 @@ import TVCore
         skipPass = EpisodeSkipPass(); seekingSegment = false
         position = 0; duration = 0
         upcomingAttempted = false
-        if !DanmakuSource.has(channel.url), channel.historyContext?.sourceKey != Bilibili.siteKey {
+        // A drive's folder and file names don't name a show to find comments for.
+        let source = channel.historyContext?.sourceKey
+        if !DanmakuSource.has(channel.url), source != Bilibili.siteKey, source != CloudFiles.sourceKey {
             catalogDanmaku.startAutomatic(channel.historyContext)
         }
     }
@@ -686,6 +688,15 @@ extension PlaybackSession {
             throw error
         }
         var prepared = Prepared(url: address)
+        // A file from Cloud Files streams from its drive.
+        if CloudFiles.isFile(address) {
+            do { address = try await CloudFiles.prepare(address) }
+            catch {
+                if !Task.isCancelled { Diagnostics.shared.failure("player", "cloud file \(channel.historyContext?.episodeFlag ?? "-")", error) }
+                throw error
+            }
+            prepared.url = address
+        }
         // A cloud-drive file streams straight from its CDN: the plugin's proxy only reveals the
         // address. Otherwise every range AVPlayer opens costs the plugin a set of threads.
         if let media = await EmbeddedJarHost.shared.directMedia(address) {

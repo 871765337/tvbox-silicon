@@ -35,6 +35,8 @@ import TVCore
     var notice: String?
     var playing: Channel?
     var playbackCatalog: PlaybackCatalog?
+    /// The Cloud Files folder the playing file came from; its next file plays after it.
+    var filesFolder: CloudFilesFolder?
     var resolvingEpisode: Episode?
     var episodeError: String?
     var autoPlayNext: Bool {
@@ -168,6 +170,11 @@ import TVCore
                 let added = entries.filter { entry in !subscriptions.contains { $0.address == entry.address } }
                 subscriptions += added
                 notice = L10n.text("This address lists %lld subscriptions. They were added switched off; turn on the ones you want.", added.count)
+            case .alist(let servers):
+                // AList servers are browsed in Cloud Files, not merged as sources.
+                let saved = try AListServers.add(servers)
+                notice = saved.count == 1 ? L10n.text("Added the AList server %@. Browse it in Cloud Files.", saved[0].name)
+                    : L10n.text("Added %lld AList servers. Browse them in Cloud Files.", saved.count)
             }
             if address == nil { subscriptionAddress = "" }
             saveSubscriptionList()
@@ -230,6 +237,8 @@ import TVCore
                 guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { continue }
                 let known = Set(subscriptions.map(\.address))
                 subscriptions.replaceSubrange(index...index, with: listed.filter { !known.contains($0.address) })
+            case .success(.alist):
+                subscriptionErrors[entry.address] = L10n.text("This address is now an AList server. Add it again to browse it in Cloud Files.")
             case .failure(let error):
                 Diagnostics.shared.failure("subscription", "refresh host=\(URL(string: entry.address)?.host() ?? "-")", error)
                 subscriptionErrors[entry.address] = error.localizedDescription
@@ -305,6 +314,8 @@ import TVCore
     /// The next episode's stream, resolved ahead so the player can queue it behind this one; nil when
     /// auto-play is off, there is no next episode, or the source can't resolve it now.
     func upcomingEpisode(after channel: Channel) async -> Channel? {
+        // Only while `channel` still plays: once the queue moves on, this was asked about the one before.
+        if CloudFiles.isFile(channel.url) { return autoPlayNext && playing == channel ? nextFile(after: channel) : nil }
         guard autoPlayNext, let catalog = catalog(for: channel), let next = nextEpisode(after: channel) else { return nil }
         do {
             let resolved = try await catalog.client.playback(next)
@@ -318,6 +329,7 @@ import TVCore
 
     /// The queued episode started playing by itself: it becomes the one playing, as if it had been chosen.
     func advance(to next: Channel, from channel: Channel) {
+        if CloudFiles.isFile(next.url), playing == channel { playing = next; return }
         guard playing == channel, let catalog = catalog(for: channel) else { return }
         cancelEpisodeSelection()
         remember(catalog.video, client: catalog.client, for: next)
@@ -395,6 +407,7 @@ import TVCore
     func resumeHistory(_ entry: PlaybackHistoryEntry) async {
         resumingHistoryID = entry.id
         defer { if resumingHistoryID == entry.id, !Task.isCancelled { resumingHistoryID = nil } }
+        if entry.context.sourceKey == CloudFiles.sourceKey { return resumeFile(entry) }
         // Any enabled subscription can hold the source: it is found by its own origin and original key.
         guard let config = subscription,
               let site = config.sites.first(where: { $0.origin(or: config.origin) == entry.context.origin && $0.sourceKey == entry.context.sourceKey }) else {
@@ -425,6 +438,58 @@ import TVCore
             guard !(error is CancellationError), !Task.isCancelled else { return }
             Diagnostics.shared.failure("catalog", "resume source=\(entry.context.sourceKey)", error)
             self.error = L10n.text("Unable to resume playback: %@", error.localizedDescription)
+        }
+    }
+}
+
+// MARK: Cloud Files
+
+/// A Cloud Files folder being played through: its files of the kind chosen, in order.
+struct CloudFilesFolder {
+    let drive: CloudFilesDrive
+    let id: String
+    let name: String
+    let files: [CloudFile]
+}
+
+extension Store {
+    /// Plays a file from Cloud Files, where it was left if it was being watched; the folder's other
+    /// files follow it.
+    func playFile(_ file: CloudFile, in folder: CloudFilesFolder) {
+        let channel = CloudFiles.channel(file, in: folder.drive, folder: folder.id, folderName: folder.name)
+        let saved = playbackHistory.entries.first { $0.id == channel.historyContext?.id && $0.context.episodeID == file.id && !$0.completed }
+        filesFolder = folder
+        playing = saved.map { CloudFiles.channel(file, in: folder.drive, folder: folder.id, folderName: folder.name, resumePosition: $0.resumePosition) } ?? channel
+    }
+
+    func nextFile(after channel: Channel) -> Channel? { file(1, from: channel) }
+    func previousFile(before channel: Channel) -> Channel? { file(-1, from: channel) }
+
+    /// The file `offset` places from the playing one in its folder, for the player's Previous and Next.
+    private func file(_ offset: Int, from channel: Channel) -> Channel? {
+        guard let context = channel.historyContext, context.sourceKey == CloudFiles.sourceKey, let folder = filesFolder,
+              folder.drive.key == context.episodeFlag, folder.id == context.videoID,
+              let index = folder.files.firstIndex(where: { $0.id == context.episodeID }),
+              folder.files.indices.contains(index + offset) else { return nil }
+        return CloudFiles.channel(folder.files[index + offset], in: folder.drive, folder: folder.id, folderName: folder.name)
+    }
+
+    /// Continue Watching on a Cloud Files folder: the file plays at once, and the folder is listed
+    /// again meanwhile so the files after it still follow.
+    fileprivate func resumeFile(_ entry: PlaybackHistoryEntry) {
+        let context = entry.context
+        guard let drive = CloudFiles.drive(key: context.episodeFlag) else {
+            error = L10n.text("This file's drive is no longer in Cloud Files.")
+            return
+        }
+        filesFolder = nil
+        let channel = CloudFiles.channel(context, resumePosition: entry.resumePosition)
+        playing = channel
+        Task { [weak self] in
+            guard let files = try? await CloudFiles.list(drive, folder: context.videoID), let self, self.playing == channel else { return }
+            let kind = CloudFile.kind(of: context.episodeName)
+            self.filesFolder = CloudFilesFolder(drive: drive, id: context.videoID, name: context.videoName,
+                                                files: files.filter { $0.kind == kind && drive.plays($0) })
         }
     }
 }

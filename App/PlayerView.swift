@@ -29,8 +29,8 @@ struct PlaybackView: View {
             if session.error == nil {
                 NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
                                  qualities: session.qualities, quality: session.quality, choose: { session.choose(quality: $0) },
-                                 live: session.isLive, previous: episodeAction(store.previousEpisode(before: channel)),
-                                 next: episodeAction(store.nextEpisode(after: channel), queued: true), waiting: waitContent,
+                                 live: session.isLive, previous: episodeAction(store.step(back: true, from: channel, session: session)),
+                                 next: episodeAction(store.step(back: false, from: channel, session: session)), waiting: waitContent,
                                  enhancer: session.enhancer, upscale: $upscalesVideo, smooth: $smoothsVideo).ignoresSafeArea()
             }
             // Until the picture starts, AVKit's player keeps the Back press to itself, so a stream that never
@@ -114,13 +114,8 @@ struct PlaybackView: View {
     #endif
 
     #if os(tvOS)
-    /// `queued`: the next episode, which plays straight from the queue once it is waiting there.
-    private func episodeAction(_ episode: Episode?, queued: Bool = false) -> EpisodeAction? {
-        episode.map { episode in
-            EpisodeAction(name: episode.name, busy: store.resolvingEpisode != nil) {
-                if !(queued && session.playUpcoming()) { store.selectEpisode(episode, from: channel) }
-            }
-        }
+    private func episodeAction(_ step: PlayerStep?) -> EpisodeAction? {
+        step.map { EpisodeAction(name: $0.name, busy: $0.busy, play: $0.go) }
     }
     #endif
 
@@ -166,20 +161,20 @@ struct PlaybackView: View {
 
     private var chromeButtons: some View {
         HStack(spacing: 10) {
-            if let previous = store.previousEpisode(before: channel) {
-                Button { store.selectEpisode(previous, from: channel) } label: {
+            if let previous = store.step(back: true, from: channel, session: session) {
+                Button { previous.go() } label: {
                     Image(systemName: "backward.end.fill").font(.headline).frame(width: 22, height: 22)
                 }
                 .chromeButton()
-                .disabled(store.resolvingEpisode != nil)
+                .disabled(previous.busy)
                 .accessibilityLabel(L10n.text("Previous Episode")).help(previous.name)
             }
-            if let next = store.nextEpisode(after: channel) {
-                Button { if !session.playUpcoming() { store.selectEpisode(next, from: channel) } } label: {
+            if let next = store.step(back: false, from: channel, session: session) {
+                Button { next.go() } label: {
                     Image(systemName: "forward.end.fill").font(.headline).frame(width: 22, height: 22)
                 }
                 .chromeButton()
-                .disabled(store.resolvingEpisode != nil)
+                .disabled(next.busy)
                 .accessibilityLabel(L10n.text("Next Episode")).help(next.name)
             }
             CatalogPlaybackActions(channel: channel, session: session)
@@ -920,15 +915,13 @@ private struct DesktopPlaybackView: View {
                         barButton("gobackward.10", L10n.text("Back 10 seconds (←)")) { session.skip(-10) }
                         barButton("goforward.10", L10n.text("Forward 10 seconds (→)")) { session.skip(10) }
                     }
-                    if let previous = store.previousEpisode(before: channel) {
-                        barButton("backward.end.fill", L10n.text("Previous Episode"), help: previous.name) { store.selectEpisode(previous, from: channel) }
-                            .disabled(store.resolvingEpisode != nil)
+                    if let previous = store.step(back: true, from: channel, session: session) {
+                        barButton("backward.end.fill", L10n.text("Previous Episode"), help: previous.name) { previous.go() }
+                            .disabled(previous.busy)
                     }
-                    if let next = store.nextEpisode(after: channel) {
-                        barButton("forward.end.fill", L10n.text("Next Episode"), help: next.name) {
-                            if !session.playUpcoming() { store.selectEpisode(next, from: channel) }
-                        }
-                        .disabled(store.resolvingEpisode != nil)
+                    if let next = store.step(back: false, from: channel, session: session) {
+                        barButton("forward.end.fill", L10n.text("Next Episode"), help: next.name) { next.go() }
+                            .disabled(next.busy)
                     }
                     CatalogPlaybackActions(channel: channel, session: session)
                     optionsMenu
@@ -1064,6 +1057,30 @@ private struct QualityPicker: View {
 }
 #endif
 
+/// What the player's Previous and Next buttons do: an episode of the video playing, or the file
+/// beside the playing one in its Cloud Files folder. Next plays from the queue once it waits there.
+struct PlayerStep {
+    let name: String
+    let busy: Bool
+    let go: @MainActor () -> Void
+}
+
+extension Store {
+    func step(back: Bool, from channel: Channel, session: PlaybackSession) -> PlayerStep? {
+        if let episode = back ? previousEpisode(before: channel) : nextEpisode(after: channel) {
+            return PlayerStep(name: episode.name, busy: resolvingEpisode != nil) { [weak self] in
+                if back || !session.playUpcoming() { self?.selectEpisode(episode, from: channel) }
+            }
+        }
+        if let file = back ? previousFile(before: channel) : nextFile(after: channel) {
+            return PlayerStep(name: file.name, busy: false) { [weak self] in
+                if back || !session.playUpcoming() { self?.playing = file }
+            }
+        }
+        return nil
+    }
+}
+
 /// Shared setup leaves the native AVKit controls and Bilibili resolution intact.
 @MainActor private func startCatalogPlayback(_ session: PlaybackSession, channel: Channel, store: Store) {
     session.history = store.playbackHistory
@@ -1072,8 +1089,9 @@ private struct QualityPicker: View {
         || UserDefaults.standard.bool(forKey: DanmakuPreference.key)
     session.start(channel)
     session.onPlaybackEnded = { [weak store] in
-        guard let store, store.autoPlayNext, let next = store.nextEpisode(after: channel) else { return }
-        store.selectEpisode(next, from: channel)
+        guard let store, store.autoPlayNext else { return }
+        if let file = store.nextFile(after: channel) { store.playing = file }
+        else if let next = store.nextEpisode(after: channel) { store.selectEpisode(next, from: channel) }
     }
     // Near the end the next episode is resolved and queued, so it plays on without stopping to load.
     session.playsOn = { [weak store] in store?.autoPlayNext == true }

@@ -17,6 +17,7 @@ enum QALaunch {
         case "sites": .sites
         case "favorites": .favorites
         case "downloads": .downloads
+        case "files": .files
         case "history": .history
         case "settings": .settings
         case "more": .more
@@ -28,6 +29,10 @@ enum QALaunch {
     static var scrollTarget: String? { UserDefaults.standard.string(forKey: "qaScroll") }
 
     @MainActor static func start(_ store: Store) async {
+        // `-qaAListServer <address>` adds that AList server to Cloud Files, as the Add form would.
+        if let address = UserDefaults.standard.string(forKey: "qaAListServer"), let url = try? WebAddress.resolve(address) {
+            if let server = await AList.probe(url) { _ = try? AListServers.add([server]) }
+        }
         guard section != nil || page != nil || UserDefaults.standard.string(forKey: "qaPlay") != nil
                 || UserDefaults.standard.string(forKey: "qaDownload") != nil
                 || UserDefaults.standard.string(forKey: "qaPlayLive") != nil else { return }
@@ -131,6 +136,20 @@ enum QALaunch {
                 try? JSONSerialization.data(withJSONObject: ["source": key, "stage": "resolve", "error": error.localizedDescription]).write(to: file, options: .atomic)
             }
         }
+        // `-qaPage play-file:<quark|uc|alist|drive key>:<folder>` plays the folder's first video, or with
+        // `-qaFileName <text>` the first whose name contains it, as choosing it in Cloud Files does.
+        if let page, page.hasPrefix("play-file:") {
+            let parts = page.split(separator: ":", maxSplits: 2).map(String.init)
+            if parts.count == 3, let drive = filesDrive(parts[1]) {
+                do {
+                    let files = try await CloudFiles.list(drive, folder: parts[2])
+                    let wanted = UserDefaults.standard.string(forKey: "qaFileName")
+                    guard let file = files.first(where: { drive.plays($0) && (wanted == nil || $0.name.contains(wanted!)) }) else { throw QASweep.Failure(message: "No file") }
+                    store.playFile(file, in: CloudFilesFolder(drive: drive, id: parts[2], name: folderName(parts[2], drive),
+                                                              files: files.filter { $0.kind == file.kind && drive.plays($0) }))
+                } catch { store.error = error.localizedDescription }
+            }
+        }
         if page == "resume-last", let entry = store.playbackHistory.entries.first {
             await store.resumeHistory(entry)
         }
@@ -144,6 +163,15 @@ enum QALaunch {
         if page == "player-stall", let url = URL(string: "http://127.0.0.1:8776/stall.m3u8") {
             store.playing = Channel(name: "卡住的直播", url: url)
         }
+    }
+
+    /// "quark", "uc", "alist" (the first AList server) or a drive's key.
+    static func filesDrive(_ spec: String) -> CloudFilesDrive? {
+        spec == "alist" ? CloudFiles.drives().first { if case .alist = $0 { true } else { false } } : CloudFiles.drive(key: spec)
+    }
+
+    static func folderName(_ folder: String, _ drive: CloudFilesDrive) -> String {
+        folder == drive.root ? drive.name : (folder as NSString).lastPathComponent
     }
 
     /// The pushed page to show as the section's root, so detail screens can be captured without taps.
@@ -174,6 +202,12 @@ enum QALaunch {
                 if let index = Int(parts.dropFirst().first ?? ""), config.lives.indices.contains(index) {
                     ChannelListView(source: config.lives[index])
                 }
+            // `-qaPage folder:<quark|uc|alist|drive key>:<folder>` opens that Cloud Files folder.
+            case "folder":
+                if parts.count == 3, let drive = filesDrive(parts[1]) {
+                    CloudFolderView(drive: drive, folder: parts[2], name: folderName(parts[2], drive))
+                }
+            case "alist-add": QASheet { AListServerForm(server: AListServer(name: "", address: "")) {} }
             case "runtime": RuntimeView()
             case "logs": DiagnosticsView()
             case "feedback": FeedbackView()
@@ -226,7 +260,7 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "feedback", "cache", "licenses", "cloud-login", "cloud-accounts", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list", "web-sign-in", "plugin-sign-in"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "detail", "open-detail", "channels", "runtime", "logs", "feedback", "cache", "licenses", "cloud-login", "cloud-accounts", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list", "web-sign-in", "plugin-sign-in", "folder", "alist-add"].contains(page.split(separator: ":").first.map(String.init) ?? "")
     }
 }
 

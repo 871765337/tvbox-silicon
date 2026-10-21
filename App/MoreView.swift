@@ -7,7 +7,7 @@ import TVCore
 struct PhoneTabs: Equatable {
     static let storageKey = "phoneTabOrder"
     static let barSlots = 4
-    static let standard = PhoneTabs(bar: [.home, .live, .music, .search], more: [.sites, .history, .favorites, .downloads, .settings])
+    static let standard = PhoneTabs(bar: [.home, .live, .music, .search], more: [.sites, .files, .history, .favorites, .downloads, .settings])
     var bar: [AppSection]
     var more: [AppSection]
 
@@ -42,6 +42,7 @@ extension AppSection {
         case .history: Brand.amber
         case .favorites: Brand.rose
         case .downloads: Brand.teal
+        case .files: Color(red: 0.25, green: 0.62, blue: 0.98)
         case .settings, .more: Color(white: 0.56)
         }
     }

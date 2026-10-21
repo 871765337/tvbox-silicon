@@ -780,7 +780,7 @@
 "Choose your tabs and their order." = "表示するタブとその順番を選べます。";
 "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "ドラッグして並べ替えます。タブバーには4つまで置けて、残りは「その他」に入ります。";
 "Add" = "追加";
-"Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist." = "TVBox JSON 配信設定、または M3U / TXT ライブ再生リストのアドレスを貼り付けます。";
+"Paste the address of a TVBox JSON subscription, an M3U or TXT live playlist, or an AList server." = "TVBox JSON 配信設定、M3U / TXT ライブ再生リスト、または AList サーバのアドレスを貼り付けます。";
 "Up to Date" = "最新";
 "Migu Music" = "咪咕音楽";
 "Kuwo Music" = "酷我音楽";
@@ -876,3 +876,37 @@
 "Or scan this code with the %@ app on another phone." = "または、別のスマートフォンの%@アプリでこのコードをスキャンします。";
 "Sign In on This iPhone" = "このiPhoneでサインイン";
 "Sign In on This iPad" = "このiPadでサインイン";
+
+/* Cloud Files */
+"Cloud Files" = "クラウドファイル";
+"Cloud Drives" = "クラウドドライブ";
+"Sign in to %@ to browse its files." = "%@ にサインインするとファイルを閲覧できます。";
+"This folder is protected by a password." = "このフォルダはパスワードで保護されています。";
+"Apple devices can't play %@ files." = "Apple デバイスでは %@ ファイルを再生できません。";
+"This file's drive is no longer in Cloud Files." = "このファイルのドライブはクラウドファイルにもうありません。";
+"%@ didn't return a link for this file. Try again." = "%@ からこのファイルのリンクが返されませんでした。もう一度お試しください。";
+"%@ hasn't prepared a version of this video that Apple devices can play." = "%@ はこのビデオの Apple デバイスで再生できる版をまだ用意していません。";
+"%@ says: %@" = "%@：%@";
+"%@ didn't accept the user name and password." = "%@ はこのユーザ名とパスワードを受け付けませんでした。";
+"Added the AList server %@. Browse it in Cloud Files." = "AList サーバ %@ を追加しました。クラウドファイルで閲覧できます。";
+"Added %lld AList servers. Browse them in Cloud Files." = "AList サーバを %lld 台追加しました。クラウドファイルで閲覧できます。";
+"This address is now an AList server. Add it again to browse it in Cloud Files." = "このアドレスは現在 AList サーバです。追加し直すとクラウドファイルで閲覧できます。";
+"Sign in to Quark or UC under Cloud Drive Accounts to browse their files here." = "クラウドドライブのアカウントで Quark または UC にサインインすると、ここでファイルを閲覧できます。";
+"Add an AList or OpenList server by the address you open it at. Pasting that address, or a TVBox AList configuration, in Add Subscription adds servers too." = "AList または OpenList サーバは、開くときのアドレスで追加します。そのアドレスや TVBox の AList 設定を「配信設定を追加」に貼り付けても追加できます。";
+"Edit Server" = "サーバを編集";
+"Remove Server" = "サーバを削除";
+"Add AList Server" = "AList サーバを追加";
+"Remove %@ from Cloud Files?" = "%@ をクラウドファイルから削除しますか？";
+"This Folder Is Empty" = "このフォルダは空です";
+"Couldn't Open This Folder" = "このフォルダを開けませんでした";
+"Folder Password" = "フォルダのパスワード";
+"Password" = "パスワード";
+"Open" = "開く";
+"Enter the password for %@." = "「%@」のパスワードを入力してください。";
+"The address you open the server at in a browser, such as http://192.168.1.10:5244. Add a folder after it to start there. The user name and password are only for servers that don't let guests browse." = "ブラウザでサーバを開くときのアドレスです（例：http://192.168.1.10:5244）。後ろにフォルダを付けると、そこから閲覧を始めます。ユーザ名とパスワードは、ゲストに閲覧を許可していないサーバの場合のみ必要です。";
+"Address" = "アドレス";
+"Name (Optional)" = "名前（省略可）";
+"User Name (Optional)" = "ユーザ名（省略可）";
+"Password (Optional)" = "パスワード（省略可）";
+"No AList server answered at this address." = "このアドレスで応答する AList サーバがありません。";
+"This server doesn't let guests browse. Enter a user name and password." = "このサーバはゲストの閲覧を許可していません。ユーザ名とパスワードを入力してください。";

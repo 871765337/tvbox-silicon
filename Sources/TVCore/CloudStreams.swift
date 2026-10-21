@@ -85,12 +85,25 @@ public enum CloudStreams {
             throw TVError.unsupported(L10n.text("This video is an MKV file, which Apple devices can't play."))
         }
         if bytes.first == 0x47 { return "public.mpeg-2-transport-stream" }
+        // Songs played from Cloud Files, known by their signature too.
+        if let audio = audioType(bytes) { return audio }
         switch (name as NSString).pathExtension.lowercased() {
         case "mov": return AVFileType.mov.rawValue
         case "m4v": return AVFileType.m4v.rawValue
         case "ts": return "public.mpeg-2-transport-stream"
         default: return AVFileType.mp4.rawValue
         }
+    }
+
+    private static func audioType(_ bytes: [UInt8]) -> String? {
+        guard bytes.count >= 12 else { return nil }
+        func text(_ range: Range<Int>) -> String { String(decoding: bytes[range], as: UTF8.self) }
+        if text(0..<4) == "fLaC" { return "org.xiph.flac" }
+        if text(0..<4) == "RIFF", text(8..<12) == "WAVE" { return AVFileType.wav.rawValue }
+        if text(0..<4) == "FORM", text(8..<12) == "AIFF" { return AVFileType.aiff.rawValue }
+        if bytes[0] == 0xFF, bytes[1] & 0xF6 == 0xF0 { return "public.aac-audio" }      // ADTS
+        if text(0..<3) == "ID3" || (bytes[0] == 0xFF && bytes[1] & 0xE0 == 0xE0) { return AVFileType.mp3.rawValue }
+        return nil
     }
 }
 
