@@ -4,7 +4,7 @@ import type { TextKey } from "../i18n/strings";
 import { Headline } from "./Headline";
 import { Reveal } from "./Reveal";
 
-const QUESTIONS = [1, 2, 3, 4, 5, 6, 7].map((n) => ({ q: `q${n}.q` as TextKey, a: `q${n}.a` as TextKey }));
+const QUESTIONS = [1, 2, 3, 4, 5, 6].map((n) => ({ q: `q${n}.q` as TextKey, a: `q${n}.a` as TextKey }));
 
 export function Faq() {
   const { t } = useI18n();

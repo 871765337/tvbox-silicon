@@ -14,11 +14,8 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   { shot: "live", title: "c.live.t", body: "c.live.b" },
-  { shot: "lives", title: "c.lives.t", body: "c.lives.b", eyebrow: "new" },
   { shot: "search", title: "c.search.t", body: "c.search.b" },
   { shot: "site", title: "c.site.t", body: "c.site.b" },
-  { shot: "bili-danmaku", title: "c.bili.t", body: "c.bili.b" },
-  { shot: "hongguo", title: "c.hongguo.t", body: "c.hongguo.b" },
 ];
 
 export function Features() {
