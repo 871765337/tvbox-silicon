@@ -9,14 +9,11 @@ const tile = (name: string) => () => (
 );
 
 export const SubscriptionIcon = tile("link.badge.plus");
-export const CodeIcon = tile("puzzlepiece.extension");
 export const PlayIcon = tile("play.rectangle");
 export const LockIcon = tile("lock");
 export const GlobeIcon = tile("globe");
 export const DevicesIcon = tile("laptopcomputer.and.iphone");
-export const CastIcon = tile("tv.and.mediabox");
-export const QualityIcon = tile("4k.tv");
-export const QrIcon = tile("qrcode");
 export const SearchIcon = tile("magnifyingglass");
 export const ListIcon = tile("list.bullet");
 export const UpdateIcon = tile("arrow.down.circle");
+export const DownloadIcon = UpdateIcon;

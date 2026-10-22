@@ -15,7 +15,6 @@ const T: Record<string, Row> = {
   "Settings": ["設定", "설정", "設定"],
   "Subscriptions": ["配信設定", "구독", "訂閱"],
   "Sources": ["ソース", "소스", "片源"],
-  "Runtime": ["ランタイム", "런타임", "執行環境"],
   "Language": ["言語", "언어", "語言"],
   "About": ["情報", "정보", "關於"],
   "Add Subscription": ["配信設定を追加", "구독 추가", "新增訂閱"],
@@ -24,16 +23,12 @@ const T: Record<string, Row> = {
   "sites": ["サイト", "사이트", "站點"],
   "live channels": ["ライブチャンネル", "실시간 채널", "直播頻道"],
   "parsers": ["パーサー", "파서", "解析器"],
-  "JAR spider": ["JAR スパイダー", "JAR 스파이더", "JAR 爬蟲"],
+  "Yingxia loads every site and live channel in it: JSON APIs, M3U and TXT.": ["映匣はその中のすべてのサイトとライブチャンネルを読み込みます。JSON API も M3U も TXT も。", "Yingxia는 그 안의 모든 사이트와 실시간 채널을 불러옵니다. JSON API, M3U, TXT 모두.", "映匣會載入其中所有站點與直播頻道：JSON API、M3U 與 TXT。"],
   "Add a TVBox subscription once, by URL.": ["TVBox の配信設定は URL で一度追加するだけ。", "TVBox 구독은 URL로 한 번만 추가하세요.", "TVBox 訂閱只要用網址加入一次。"],
-  "Yingxia runs every site in it on the device: JSON, JavaScript and JAR.": ["映匣はその中のすべてのサイトをデバイス上で動かします。JSON も JavaScript も JAR も。", "Yingxia는 그 안의 모든 사이트를 기기에서 실행합니다. JSON, JavaScript, JAR 모두.", "映匣在裝置上執行其中每個站點：JSON、JavaScript、JAR 都行。"],
 
   // Sources grid and a source's shelf
   "Find a source": ["ソースを検索", "소스 찾기", "尋找片源"],
-  "Built-in": ["内蔵", "내장", "內建"],
-  "Bilibili": ["ビリビリ", "빌리빌리", "嗶哩嗶哩"],
-  "Hongguo": ["Hongguo", "Hongguo", "紅果短劇"],
-  "Sources sit in a grid like apps. Bilibili and Hongguo come built in.": ["ソースはアプリのように並びます。ビリビリと Hongguo は内蔵。", "소스가 앱처럼 격자로 놓입니다. 빌리빌리와 Hongguo는 내장되어 있습니다.", "片源像 App 一樣排成格狀，並內建嗶哩嗶哩與紅果短劇。"],
+  "Sources sit in a grid like apps.": ["ソースはアプリのように並びます。", "소스가 앱처럼 격자로 놓입니다.", "片源像 App 一樣排成格狀。"],
   "Search videos": ["動画を検索", "동영상 검색", "搜尋影片"],
   "Recommendations": ["おすすめ", "추천", "推薦"],
   "Page 1 of 50": ["1 / 50 ページ", "1 / 50 페이지", "第 1 頁，共 50 頁"],
@@ -49,18 +44,7 @@ const T: Record<string, Row> = {
   "Results appear as each source answers.": ["結果はソースが応答した順に表示されます。", "결과는 소스가 응답하는 대로 표시됩니다.", "結果隨各片源回應陸續出現。"],
 
   // Player
-  "Bilibili ·": ["ビリビリ ·", "빌리빌리 ·", "嗶哩嗶哩 ·"],
-  "Quality": ["画質", "화질", "畫質"],
-  "Auto": ["自動", "자동", "自動"],
-  "Danmaku fly over the video, in step with playback.": ["弾幕が映像の上を流れ、再生とぴったり同期します。", "탄막이 재생에 맞춰 영상 위로 흐릅니다.", "彈幕在畫面上飛過，與播放精準同步。"],
-  "Choose the quality, up to 4K, right from the player.": ["画質は最大 4K まで、プレーヤーからすぐに選べます。", "최대 4K까지, 플레이어에서 바로 화질을 고르세요.", "直接在播放器裡選擇畫質，最高 4K。"],
-
-  // Hongguo
-  "Episode 4 · 1080×1920": ["第 4 話 · 1080×1920", "4화 · 1080×1920", "第 4 集 · 1080×1920"],
-  "Episodes": ["エピソード", "에피소드", "選集"],
-  "69 episodes": ["全 69 話", "총 69화", "共 69 集"],
-  "New": ["新機能", "새로운 기능", "新功能"],
-  "Hongguo short dramas come built in. Every episode streams as you watch.": ["Hongguo のショートドラマも内蔵。どのエピソードも、観ながらストリーミング。", "Hongguo 숏드라마도 내장. 모든 에피소드를 보는 동안 스트리밍합니다.", "也內建紅果短劇，每一集都邊看邊串流。"],
+  "Every video plays natively, through Apple’s own player.": ["どの動画も Apple 純正のプレーヤーでネイティブ再生。", "모든 영상을 Apple의 기본 플레이어로 네이티브 재생합니다.", "每部影片都以 Apple 原生播放器播放。"],
 
   // Live TV
   "Live TV": ["ライブ TV", "실시간 TV", "直播電視"],
@@ -68,13 +52,6 @@ const T: Record<string, Row> = {
   "All": ["すべて", "전체", "全部"],
   "Channels: 188": ["チャンネル：188", "채널: 188", "頻道：188"],
   "Live TV from M3U or TXT playlists, laid out like a TV guide.": ["M3U・TXT プレイリストのライブ TV を、番組ガイドのように。", "M3U·TXT 재생 목록의 실시간 TV를 편성표처럼.", "M3U、TXT 播放清單的直播電視，像節目表一樣排好。"],
-
-  // Cast
-  "Cast": ["キャスト", "캐스트", "投放"],
-  "Living Room Speaker": ["リビングのスピーカー", "거실 스피커", "客廳音箱"],
-  "Danmaku": ["弾幕", "탄막", "彈幕"],
-  "Pause · Seek · Stop": ["一時停止 · シーク · 停止", "일시정지 · 탐색 · 정지", "暫停 · 拖動 · 停止"],
-  "Cast from the Bilibili app on your phone. Apple TV plays the HD stream.": ["スマートフォンのビリビリアプリからキャスト。Apple TV が HD で再生します。", "휴대폰의 빌리빌리 앱에서 캐스트하면 Apple TV가 HD로 재생합니다.", "從手機的嗶哩嗶哩 App 投放，Apple TV 播放高畫質串流。"],
 
   // Every screen
   "Every screen": ["すべての画面で", "모든 화면", "所有螢幕"],

@@ -21,7 +21,6 @@
             <div class="panel zoomwin" style="--d:.1;left:4cqw;top:8cqw;width:26cqw;height:37cqw;padding:1cqw">
               <div class="li focus">Subscriptions <small><i class="sf" data-sf="chevron.right"></i></small></div>
               <div class="li">Sources <small><i class="sf" data-sf="chevron.right"></i></small></div>
-              <div class="li">Runtime <small><i class="sf" data-sf="chevron.right"></i></small></div>
               <div class="li">Language <small><i class="sf" data-sf="chevron.right"></i></small></div>
               <div class="li">About <small><i class="sf" data-sf="chevron.right"></i></small></div>
               <div class="abs muted" style="left:2.4cqw;bottom:1.8cqw;display:flex;align-items:center;gap:.8cqw;font-size:1.2cqw"><img src="/assets/icon-192.png" alt="" style="width:2.4cqw;border-radius:22%">Yingxia · tvOS</div>
@@ -40,13 +39,12 @@
               </div>
               <div class="rt-row">
                 <div class="row up" style="--d:3.9"><i class="cb flip" style="--d:4.2"></i>JSON API</div>
-                <div class="row up" style="--d:4"><i class="cb flip" style="--d:4.4"></i>JavaScript</div>
-                <div class="row up" style="--d:4.1"><i class="cb flip" style="--d:4.6"></i>JAR spider</div>
-                <div class="row up" style="--d:4.2"><i class="cb flip" style="--d:4.8"></i>M3U</div>
+                <div class="row up" style="--d:4"><i class="cb flip" style="--d:4.4"></i>M3U</div>
+                <div class="row up" style="--d:4.1"><i class="cb flip" style="--d:4.6"></i>TXT</div>
               </div>
             </div>
             <div class="subs" style="animation:gone .3s ease 3s both"><span class="up" style="--d:.3">Add a TVBox subscription once, by URL.</span></div>
-            <div class="subs"><span class="up" style="--d:3.2">Yingxia runs every site in it on the device: JSON, JavaScript and JAR.</span></div>
+            <div class="subs"><span class="up" style="--d:3.2">Yingxia loads every site and live channel in it: JSON APIs, M3U and TXT.</span></div>
           </section>
 
           <!-- 3 · the sources grid -->
@@ -55,10 +53,10 @@
             <div class="m-keys up" style="--d:.2"><span class="k">123</span><b>a</b>b c d e f g h i j k l m n o p q r s t u v w x y z</div>
             <div class="m-rule"></div>
             <div class="m-grid">
-              <div class="m-src up" style="--d:.3"><span class="m-ico" style="background:#18a9e6"><i class="sf" data-sf="tv"></i></span><span><b>Bilibili</b><small>Built-in</small></span></div>
-              <div class="m-src up" style="--d:.35"><span class="m-ico" style="background:#c99a3e"><i class="sf" data-sf="play.fill"></i></span><span><b>Hongguo</b><small>Built-in</small></span></div>
+              <div class="m-src up" style="--d:.3"><span class="m-ico" style="background:#d0a23a">🧀</span><span><b>奶酪</b><small>秒播</small></span></div>
+              <div class="m-src up" style="--d:.35"><span class="m-ico" style="background:#3f7fd0">📺</span><span><b>热播</b><small>多线</small></span></div>
               <div class="m-src up" style="--d:.4"><span class="m-ico" style="background:#5b7bd5">🚀</span><span><b>荐影</b><small>预告片</small></span></div>
-              <div class="m-src up" style="--d:.45"><span class="m-ico" style="background:#c25b4a">🎧</span><span><b>易听</b><small>音乐</small></span></div>
+              <div class="m-src up" style="--d:.45"><span class="m-ico" style="background:#c25b4a">🚌</span><span><b>巴士</b><small>动漫</small></span></div>
               <div class="m-src up" style="--d:.5"><span class="m-ico" style="background:#8e6ad8">🌞</span><span><b>光影</b><small>不卡</small></span></div>
               <div class="m-src up" style="--d:.55"><span class="m-ico" style="background:#4f77d1">🌟</span><span><b>立播</b><small>不卡</small></span></div>
               <div class="m-src up" style="--d:.6"><span class="m-ico" style="background:#2f8f86">👀</span><span><b>瓜子</b><small>不卡</small></span></div>
@@ -66,7 +64,7 @@
               <div class="m-src up" style="--d:.7"><span class="m-ico" style="background:#4f6fd8">🍓</span><span><b>糯米</b><small>秒播</small></span></div>
               <i class="cur" style="width:26.33cqw;height:6.6cqw;animation:curgrid 5s linear both,tapS .3s ease 3.6s"></i>
             </div>
-            <div class="subs"><span class="up" style="--d:.4">Sources sit in a grid like apps. Bilibili and Hongguo come built in.</span></div>
+            <div class="subs"><span class="up" style="--d:.4">Sources sit in a grid like apps.</span></div>
           </section>
 
           <!-- 4 · browse a source -->
@@ -114,54 +112,18 @@
             <div class="subs"><span class="up" style="--d:3.4">Results appear as each source answers.</span></div>
           </section>
 
-          <!-- 6 · player, danmaku and quality -->
-          <section class="scene black" data-len="9" data-keys="4.3 down, 5.6 down, 6.2 down, 6.8 select" data-ch="">
-            <div class="full fade" style="--d:.1"><div class="kb" style="--ox:50%;--oy:45%;--z:1.12;--kd:.2;animation-duration:9s"><img src="/film/lake.webp" alt=""></div></div>
+          <!-- 6 · player -->
+          <section class="scene black" data-len="5" data-ch="">
+            <div class="full fade" style="--d:.1"><div class="kb" style="--ox:50%;--oy:45%;--z:1.12;--kd:.2;animation-duration:5s"><img src="/film/lake.webp" alt=""></div></div>
             <div class="vshade"></div>
-            <div class="dm" style="top:6cqw;--d:.6">前排！</div>
-            <div class="dm" style="top:9.5cqw;--d:1.2;color:#ffd166">这蓝色绝了</div>
-            <div class="dm" style="top:13cqw;--d:1.8">湖面像镜子一样</div>
-            <div class="dm" style="top:6cqw;--d:2.8;color:#8fe3ff">想去旅行了</div>
-            <div class="dm" style="top:16.5cqw;--d:2.4">4K 看得好清楚</div>
-            <div class="dm" style="top:9.5cqw;--d:3.6">背景音乐是什么？</div>
-            <div class="abs up" style="--d:.6;left:5cqw;bottom:16.5cqw"><div style="font-size:3cqw;font-weight:700">高原上的湖</div><div class="muted" style="font-size:1.4cqw;margin-top:.3cqw">Bilibili · <span class="chip sm">4K</span></div></div>
+            <div class="abs up" style="--d:.6;left:5cqw;bottom:16.5cqw"><div style="font-size:3cqw;font-weight:700">高原上的湖</div><div class="muted" style="font-size:1.4cqw;margin-top:.3cqw">🌞 光影 · <span class="chip sm">4K</span></div></div>
             <div class="transport up" style="--d:.7"><i style="animation:fill 60s linear 0s both;--to:1"></i></div>
             <div class="abs muted up" style="--d:.7;left:5cqw;bottom:10.4cqw;font-size:1.2cqw">2:15</div>
             <div class="abs muted up" style="--d:.7;right:5cqw;bottom:10.4cqw;font-size:1.2cqw">−8:24</div>
-            <div class="panel qmenu" style="right:5cqw;top:6cqw;width:24cqw;padding:1.2cqw;animation:zw .4s ease 4.4s both">
-              <h4 style="padding:0 .8cqw">Quality</h4>
-              <div class="qrows">
-              <i class="qsel"></i>
-              <div class="li">Auto <small class="qmark" style="animation:gone .2s ease 6.8s both"><i class="sf" data-sf="checkmark"></i></small></div>
-              <div class="li">4K</div>
-              <div class="li">1080P60 <small class="qmark" style="animation:fade .2s ease 6.9s both"><i class="sf" data-sf="checkmark"></i></small></div>
-              <div class="li">1080P+</div>
-              <div class="li">1080P</div>
-              <div class="li">720P</div>
-              </div>
-            </div>
-            <div class="abs up" style="--d:7.1;left:5cqw;top:2.4cqw"><span class="toast dark">1080P60 · HEVC</span></div>
-            <div class="subs" style="animation:gone .3s ease 4.3s both"><span class="up" style="--d:.4">Danmaku fly over the video, in step with playback.</span></div>
-            <div class="subs"><span class="up" style="--d:4.6">Choose the quality, up to 4K, right from the player.</span></div>
+            <div class="subs"><span class="up" style="--d:.4">Every video plays natively, through Apple’s own player.</span></div>
           </section>
 
-          <!-- 7 · hongguo short dramas -->
-          <section class="scene black" data-len="5" data-keys="2.6 right" data-ch="">
-            <div class="vframe fade" style="--d:.1"><div class="kb" style="--ox:50%;--oy:70%;--z:1.08;--kd:.1;animation-duration:5s"><img src="/film/drama.webp" alt=""></div></div>
-            <div class="abs up" style="--d:.6;left:5cqw;top:20cqw;width:26cqw">
-              <div style="font-size:2.8cqw;font-weight:700">Hongguo</div>
-              <div class="muted" style="font-size:1.4cqw;margin-top:.4cqw">Episode 4 · 1080×1920</div>
-            </div>
-            <div class="panel col" style="right:5cqw;top:9cqw;width:24cqw;height:auto;padding-bottom:1.6cqw;animation:zw .4s ease 1.2s both">
-              <h4>Episodes</h4>
-              <div class="eps"><i>1</i><i>2</i><i>3</i><i class="on" style="animation:epoff .15s ease 2.6s forwards">4</i><i style="animation:epon .15s ease 2.6s forwards">5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i><i>11</i><i>12</i></div>
-              <div class="muted" style="font-size:1.2cqw;margin-top:1cqw">69 episodes</div>
-            </div>
-            <div class="abs" style="right:3cqw;top:2.6cqw;animation:up .5s ease .8s both"><span class="chip acc">New</span></div>
-            <div class="subs"><span class="up" style="--d:.4">Hongguo short dramas come built in. Every episode streams as you watch.</span></div>
-          </section>
-
-          <!-- 8 · live tv -->
+          <!-- 7 · live tv -->
           <section class="scene" data-len="5" data-keys="2.2 down, 3.2 down" data-ch="Live TV">
             <div class="abs up" style="--d:.1;left:7.5cqw;top:6.4cqw;font-size:1.6cqw;font-weight:600">综合直播</div>
             <div class="abs up" style="--d:.1;right:7.5cqw;top:5.6cqw"><span class="btn focus sm"><i class="sf" data-sf="magnifyingglass"></i> Search channels</span></div>
@@ -190,30 +152,7 @@
             <div class="subs"><span class="up" style="--d:.4">Live TV from M3U or TXT playlists, laid out like a TV guide.</span></div>
           </section>
 
-          <!-- 9 · cast from a phone -->
-          <section class="scene" data-len="5" data-ch="Cast">
-            <div class="phone zoomwin" style="--d:.1;left:14cqw;top:4.5cqw">
-              <div class="scr">
-                <div class="ph-video"><img src="/film/lake.webp" alt=""></div>
-                <div class="ph-meta"><b>高原上的湖 · 4K</b><i></i><i style="width:62%"></i><span><i></i><i></i><i></i><i></i></span></div>
-                <div class="sheet up" style="--d:.7">
-                  <b class="sheet-h">投屏</b>
-                  <div class="dev-row" style="animation:pick .3s ease 1.7s both"><i class="sf" data-sf="tv"></i>映匣 · Apple TV</div>
-                  <div class="dev-row dim"><i class="sf" data-sf="hifispeaker.fill"></i>Living Room Speaker</div>
-                </div>
-              </div>
-            </div>
-            <div class="abs draw" style="--d:2;left:37cqw;top:24cqw;width:10cqw;border-top:.25cqw dashed rgba(255,255,255,.4)"></div>
-            <div class="shot zoomwin" style="--d:2.4;left:49cqw;top:10cqw;width:42cqw">
-              <img src="/film/lake.webp" alt="">
-              <div class="dm sm" style="top:2cqw;--d:2.8;--t:5">投屏成功！</div>
-              <div class="dm sm" style="top:5cqw;--d:3.3;--t:5;color:#ffd166">大屏看太爽了</div>
-            </div>
-            <div class="abs up" style="--d:3;left:49cqw;top:35.5cqw;display:flex;gap:.8cqw"><span class="chip acc">HD</span><span class="chip">Danmaku</span><span class="chip">Pause · Seek · Stop</span></div>
-            <div class="subs"><span class="up" style="--d:.4">Cast from the Bilibili app on your phone. Apple TV plays the HD stream.</span></div>
-          </section>
-
-          <!-- 10 · devices & privacy -->
+          <!-- 8 · devices & privacy -->
           <section class="scene" data-len="5" data-ch="Every screen">
             <div class="devices" style="top:9cqw">
               <div class="dev pop" style="--d:.2"><div class="d-tv"></div><span>Apple TV</span></div>
@@ -230,7 +169,7 @@
             <div class="subs"><span class="up" style="--d:.4">One app for Apple TV, iPhone, iPad and Mac. No account, no tracking.</span></div>
           </section>
 
-          <!-- 11 · outro -->
+          <!-- 9 · outro -->
           <section class="scene black" data-len="5" data-ch="">
             <img class="abs app-icon pop" src="/assets/icon-512.png" alt="" style="--d:.2;left:43cqw;top:6cqw;width:14cqw">
             <div class="abs big center up" style="--d:.6;top:22cqw;font-size:5.6cqw">Yingxia <span class="muted" style="font-weight:500">映匣</span></div>

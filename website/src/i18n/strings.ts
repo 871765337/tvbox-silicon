@@ -9,16 +9,10 @@ export type TextKey =
   | "brand"
   | "c.live.b"
   | "c.live.t"
-  | "c.lives.b"
-  | "c.lives.t"
   | "c.search.b"
   | "c.search.t"
   | "c.site.b"
   | "c.site.t"
-  | "c.bili.b"
-  | "c.bili.t"
-  | "c.hongguo.b"
-  | "c.hongguo.t"
   | "cta.l1"
   | "cta.l2"
   | "cta.sub"
@@ -29,14 +23,14 @@ export type TextKey =
   | "footer.source"
   | "g.devices.b"
   | "g.devices.t"
+  | "g.dl.b"
+  | "g.dl.t"
   | "g.lang.b"
   | "g.lang.t"
   | "g.play.b"
   | "g.play.t"
   | "g.private.b"
   | "g.private.t"
-  | "g.runtime.b"
-  | "g.runtime.t"
   | "g.sub.b"
   | "g.sub.t"
   | "hero.film"
@@ -70,14 +64,6 @@ export type TextKey =
   | "soon"
   | "new"
   | "dl.mac"
-  | "g.cast.t"
-  | "g.cast.b"
-  | "g.hd.t"
-  | "g.hd.b"
-  | "g.qr.t"
-  | "g.qr.b"
-  | "q7.q"
-  | "q7.a"
   | "dl.req";
 
 export interface Locale {
@@ -91,21 +77,15 @@ export const LOCALES: Record<Lang, Locale> = {
   "en": {
     name: "English",
     shots: "en",
-    chips: ["Watch Now","Live TV guide","Global search","Favorites","JSON sources","JavaScript plugins","JAR plugins","M3U & TXT playlists","HLS","Picture in Picture on Mac","No account"],
+    chips: ["Watch Now","Live TV guide","Global search","Favorites","JSON sources","M3U & TXT playlists","HLS","Picture in Picture on Mac","No account"],
     text: {
       "brand": "Yingxia",
       "c.live.b": "Bring M3U or TXT playlists. Browse by group, search channels, and keep your favorites close.",
       "c.live.t": "Live TV, laid out like a guide.",
-      "c.lives.t": "Douyu, Huya and Douyin, built in.",
-      "c.lives.b": "Browse each platform’s categories next to Bilibili Live, switch the quality in the player, and search live rooms on every platform at once. No subscription needed.",
       "c.search.b": "One query runs across every source in your subscription. Results appear as they arrive.",
       "c.search.t": "Search everything at once.",
       "c.site.b": "Browse the categories and pages of any source with nothing but the Siri Remote.",
       "c.site.t": "Every source gets its own shelf.",
-      "c.bili.t": "Bilibili, built in.",
-      "c.bili.b": "Recommendations, rankings, anime and live rooms in Bilibili’s own HD streams, with danmaku flying over the video. No subscription needed.",
-      "c.hongguo.t": "Hongguo short dramas, built in.",
-      "c.hongguo.b": "Live-action, animated and AI dramas, plus the trending charts, with every episode of each series. Episodes stream as you watch. No subscription needed.",
       "cta.l1": "Ready",
       "cta.l2": "for every screen.",
       "cta.sub": "Yingxia for Mac is available now. The Apple TV, iPhone and iPad versions are in preview, ready to sideload.",
@@ -116,14 +96,14 @@ export const LOCALES: Record<Lang, Locale> = {
       "footer.source": "Open source on GitHub",
       "g.devices.b": "Apple TV, iPhone, iPad and Mac share the same subscriptions and favorites.",
       "g.devices.t": "Every Apple screen",
+      "g.dl.t": "Watch offline",
+      "g.dl.b": "Download episodes and movies to watch without a connection, on Apple TV, iPhone, iPad and Mac.",
       "g.lang.b": "English, Japanese, Traditional and Simplified Chinese, following your system setting.",
       "g.lang.t": "Speaks your language",
       "g.play.b": "AVPlayer with HLS, clear error screens with Retry, and Picture in Picture on Mac.",
       "g.play.t": "Native playback",
       "g.private.b": "No account and no tracking. Subscriptions and history stay on your device; only anonymous error reports are sent, and you can turn them off.",
       "g.private.t": "Private by design",
-      "g.runtime.b": "Runs JSON, JavaScript and JAR sources, plus Python on Mac. Lightweight ports first, the original plugin as fallback.",
-      "g.runtime.t": "Plugins on device",
       "g.sub.b": "Import TVBox JSON subscriptions by URL, several at once, merged into one list of sources. A failed refresh never wipes the last working copy.",
       "g.sub.t": "Your subscriptions, kept safe",
       "hero.film": "Watch the intro film",
@@ -142,9 +122,9 @@ export const LOCALES: Record<Lang, Locale> = {
       "q1.q": "What is Yingxia?",
       "q2.a": "No. Yingxia is a player and shows only what the subscriptions you add provide. You are responsible for using sources you have the right to access.",
       "q2.q": "Does it come with any videos or channels?",
-      "q3.a": "Apple TV with tvOS 26 or later, iPhone and iPad with iOS 18 or later, and Mac with macOS 15 or later. The Mac version has the widest plugin support and a separate player window with Picture in Picture.",
+      "q3.a": "Apple TV with tvOS 26 or later, iPhone and iPad with iOS 18 or later, and Mac with macOS 15 or later. The Mac version also has a separate player window with Picture in Picture.",
       "q3.q": "Which devices does it run on?",
-      "q4.a": "Standard JSON APIs, M3U and TXT playlists, and many JavaScript and JAR plugins. Support varies by source and platform, and upstream servers sometimes change or go offline.",
+      "q4.a": "TVBox JSON subscriptions with standard JSON APIs, and M3U and TXT live playlists. Support varies by source, and upstream servers sometimes change or go offline.",
       "q4.q": "Which sources work?",
       "q5.a": "Only anonymous error reports, so bugs get fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. You can turn them off in Settings. There is no account, and subscriptions, favorites and history stay on your device.",
       "q5.q": "Does it collect my data?",
@@ -153,14 +133,6 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "Everything TVBox does.",
       "sec.l2": "Rebuilt natively.",
       "sec.sub": "Written in SwiftUI and played through AVKit. No web views, no ported Android screens.",
-      "g.cast.t": "Cast from your phone",
-      "g.cast.b": "Tap 投屏 in the Bilibili app and pick Yingxia. Your Apple TV plays the HD stream, with danmaku.",
-      "g.hd.t": "Pick the quality",
-      "g.hd.b": "1080P60, 1080P+, 720P and more, right from the player menu. Live rooms too.",
-      "g.qr.t": "Sign in with a QR code",
-      "g.qr.b": "Scan with the Bilibili app for your feed, history and favorites, or with Quark or UC so cloud-drive sources can play.",
-      "q7.q": "Do I need a Bilibili account?",
-      "q7.a": "No. Bilibili works without signing in, with videos up to 1080P. Signing in with a QR code adds your own lists and the higher qualities your account allows. The sign-in stays on your device.",
       "shots.note": "",
       "dl.mac": "Download",
       "dl.req": "For Mac, iPhone, iPad and Apple TV · Free",
@@ -171,21 +143,15 @@ export const LOCALES: Record<Lang, Locale> = {
   "ja": {
     name: "日本語",
     shots: "ja",
-    chips: ["今すぐ観る","ライブ番組ガイド","横断検索","お気に入り","JSON ソース","JavaScript プラグイン","JAR プラグイン","M3U・TXT プレイリスト","HLS","Mac でピクチャ・イン・ピクチャ","アカウント不要"],
+    chips: ["今すぐ観る","ライブ番組ガイド","横断検索","お気に入り","JSON ソース","M3U・TXT プレイリスト","HLS","Mac でピクチャ・イン・ピクチャ","アカウント不要"],
     text: {
       "brand": "映匣",
       "c.live.b": "M3U や TXT のプレイリストを読み込み、グループで絞り込み、チャンネルを検索し、お気に入りを手元に。",
       "c.live.t": "ライブ TV を、番組ガイドのように。",
-      "c.lives.t": "Douyu、Huya、Douyin を内蔵。",
-      "c.lives.b": "ビリビリ生配信と並んで、各プラットフォームのカテゴリを見て回り、プレーヤーで画質を切り替え、すべてのプラットフォームの配信をまとめて検索できます。サブスクリプションは不要です。",
       "c.search.b": "ひとつのキーワードで、配信設定内のすべてのソースを検索。結果は届いた順に表示されます。",
       "c.search.t": "すべてを一度に検索。",
       "c.site.b": "どのソースのカテゴリーやページも、Siri Remote だけで閲覧できます。",
       "c.site.t": "ソースごとに、専用の棚を。",
-      "c.bili.t": "ビリビリを内蔵。",
-      "c.bili.b": "おすすめ、ランキング、アニメ、生配信を、ビリビリ本来の HD ストリームで。映像の上を弾幕が流れます。サブスクリプションは不要です。",
-      "c.hongguo.t": "Hongguo のショートドラマを内蔵。",
-      "c.hongguo.b": "実写、アニメ、AI ドラマに人気ランキングも。各シリーズの全エピソードがそろい、観ながらストリーミングします。サブスクリプションは不要です。",
       "cta.l1": "どの画面でも、",
       "cta.l2": "すぐに。",
       "cta.sub": "映匣の Mac 版を公開しました。Apple TV、iPhone、iPad 版はプレビューとしてサイドロードできます。",
@@ -196,14 +162,14 @@ export const LOCALES: Record<Lang, Locale> = {
       "footer.source": "GitHub でオープンソース公開中",
       "g.devices.b": "Apple TV、iPhone、iPad、Mac で同じ配信設定とお気に入りを使えます。",
       "g.devices.t": "すべての Apple の画面で",
+      "g.dl.t": "オフラインで観る",
+      "g.dl.b": "エピソードや映画をダウンロードして、接続なしで観られます。Apple TV、iPhone、iPad、Mac で。",
       "g.lang.b": "英語、日本語、繁体字・簡体字中国語に対応し、システム設定に従います。",
       "g.lang.t": "あなたの言語で",
       "g.play.b": "HLS 対応の AVPlayer、再試行できるわかりやすいエラー画面、Mac ではピクチャ・イン・ピクチャ。",
       "g.play.t": "ネイティブ再生",
       "g.private.b": "アカウント不要、トラッキングなし。配信設定や履歴はデバイス内に保存され、送信されるのは匿名のエラーレポートだけで、オフにもできます。",
       "g.private.t": "プライバシー重視",
-      "g.runtime.b": "JSON・JavaScript・JAR ソースを実行し、Mac では Python にも対応。軽量版を優先し、元のプラグインをフォールバックに。",
-      "g.runtime.t": "プラグインをデバイス上で",
       "g.sub.b": "TVBox の JSON 配信設定を URL から読み込み。複数をまとめて 1 つのソース一覧に。更新に失敗しても、最後に動いていた内容は消えません。",
       "g.sub.t": "配信設定を安全に保持",
       "hero.film": "紹介動画を見る",
@@ -222,9 +188,9 @@ export const LOCALES: Record<Lang, Locale> = {
       "q1.q": "映匣とは？",
       "q2.a": "いいえ。映匣はプレーヤーで、追加した配信設定が提供する内容だけを表示します。利用する権利のあるソースを使うのはユーザーの責任です。",
       "q2.q": "動画やチャンネルは含まれていますか？",
-      "q3.a": "tvOS 26 以降の Apple TV、iOS 18 以降の iPhone と iPad、macOS 15 以降の Mac です。Mac 版はプラグイン対応が最も広く、ピクチャ・イン・ピクチャ対応の独立したプレーヤーウインドウを備えています。",
+      "q3.a": "tvOS 26 以降の Apple TV、iOS 18 以降の iPhone と iPad、macOS 15 以降の Mac です。Mac 版にはピクチャ・イン・ピクチャ対応の独立したプレーヤーウインドウもあります。",
       "q3.q": "どのデバイスで使えますか？",
-      "q4.a": "標準の JSON API、M3U と TXT のプレイリスト、そして多くの JavaScript・JAR プラグインです。対応状況はソースやプラットフォームによって異なり、上流のサーバーが変更・停止することもあります。",
+      "q4.a": "標準の JSON API を使う TVBox の配信設定と、M3U・TXT のライブプレイリストです。対応状況はソースによって異なり、上流のサーバーが変更・停止することもあります。",
       "q4.q": "どのソースが使えますか？",
       "q5.a": "不具合修正のための匿名エラーレポートだけです。内容はエラー文（URL はサーバー名のみ）、アプリと OS のバージョン、ランダムな ID で、設定でオフにできます。アカウントはなく、配信設定、お気に入り、履歴はデバイス内にのみ保存されます。",
       "q5.q": "データは収集されますか？",
@@ -233,14 +199,6 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox のすべてを、",
       "sec.l2": "ネイティブに。",
       "sec.sub": "SwiftUI で書かれ、AVKit で再生。Web ビューも、Android 画面の移植もありません。",
-      "g.cast.t": "スマホからキャスト",
-      "g.cast.b": "ビリビリアプリで「投屏」をタップして映匣を選ぶだけ。Apple TV が HD ストリームを弾幕付きで再生します。",
-      "g.hd.t": "画質を選べる",
-      "g.hd.b": "1080P60、1080P+、720P などをプレーヤーのメニューから。生配信にも対応。",
-      "g.qr.t": "QR コードでログイン",
-      "g.qr.b": "ビリビリアプリで読み取ればフォロー中の投稿、視聴履歴、お気に入りが、Quark や UC で読み取ればクラウドドライブのソースが使えます。",
-      "q7.q": "ビリビリのアカウントは必要ですか？",
-      "q7.a": "いいえ。ログインしなくても最大 1080P で視聴できます。QR コードでログインすると、自分のリストと、アカウントで利用できる高画質が加わります。ログイン情報はデバイス内にのみ保存されます。",
       "shots.note": "",
       "dl.mac": "ダウンロード",
       "dl.req": "Mac・iPhone・iPad・Apple TV 対応 · 無料",
@@ -251,21 +209,15 @@ export const LOCALES: Record<Lang, Locale> = {
   "ko": {
     name: "한국어",
     shots: "en",
-    chips: ["지금 보기","실시간 TV 가이드","통합 검색","즐겨찾기","JSON 소스","JavaScript 플러그인","JAR 플러그인","M3U·TXT 재생 목록","HLS","Mac에서 PIP","계정 불필요"],
+    chips: ["지금 보기","실시간 TV 가이드","통합 검색","즐겨찾기","JSON 소스","M3U·TXT 재생 목록","HLS","Mac에서 PIP","계정 불필요"],
     text: {
       "brand": "Yingxia",
       "c.live.b": "M3U 또는 TXT 재생 목록을 불러와 그룹별로 탐색하고, 채널을 검색하고, 즐겨찾기를 가까이 두세요.",
       "c.live.t": "실시간 TV를 편성표처럼.",
-      "c.lives.t": "Douyu, Huya, Douyin 내장.",
-      "c.lives.b": "빌리빌리 라이브와 함께 각 플랫폼의 카테고리를 둘러보고, 플레이어에서 화질을 바꾸고, 모든 플랫폼의 라이브 방송을 한 번에 검색하세요. 구독은 필요 없습니다.",
       "c.search.b": "검색어 하나로 구독의 모든 소스를 검색합니다. 결과는 도착하는 대로 표시됩니다.",
       "c.search.t": "모든 소스를 한 번에 검색.",
       "c.site.b": "어떤 소스든 카테고리와 페이지를 Siri Remote만으로 둘러볼 수 있습니다.",
       "c.site.t": "소스마다 자신만의 진열대.",
-      "c.bili.t": "빌리빌리 내장.",
-      "c.bili.b": "추천, 랭킹, 애니메이션, 라이브 방송을 빌리빌리의 HD 스트림으로. 영상 위로 탄막이 흐릅니다. 구독은 필요 없습니다.",
-      "c.hongguo.t": "Hongguo 숏드라마 내장.",
-      "c.hongguo.b": "실사, 애니메이션, AI 드라마와 인기 차트까지. 시리즈의 모든 에피소드를 보는 동안 스트리밍합니다. 구독은 필요 없습니다.",
       "cta.l1": "모든 화면에서",
       "cta.l2": "지금 바로.",
       "cta.sub": "Yingxia Mac 버전이 출시되었습니다. Apple TV, iPhone, iPad 버전은 프리뷰로 사이드로드할 수 있습니다.",
@@ -276,14 +228,14 @@ export const LOCALES: Record<Lang, Locale> = {
       "footer.source": "GitHub에서 오픈 소스로 공개",
       "g.devices.b": "Apple TV, iPhone, iPad, Mac에서 같은 구독과 즐겨찾기를 사용합니다.",
       "g.devices.t": "모든 Apple 화면에서",
+      "g.dl.t": "오프라인 시청",
+      "g.dl.b": "에피소드와 영화를 다운로드해 연결 없이 볼 수 있습니다. Apple TV, iPhone, iPad, Mac 모두에서.",
       "g.lang.b": "영어, 일본어, 번체·간체 중국어를 지원하며 시스템 설정을 따릅니다.",
       "g.lang.t": "여러 언어 지원",
       "g.play.b": "HLS를 지원하는 AVPlayer, 재시도할 수 있는 명확한 오류 화면, Mac의 PIP.",
       "g.play.t": "네이티브 재생",
       "g.private.b": "계정도 추적도 없습니다. 구독과 기록은 기기에 남고, 익명 오류 보고서만 전송되며 끌 수도 있습니다.",
       "g.private.t": "프라이버시 중심 설계",
-      "g.runtime.b": "JSON, JavaScript, JAR 소스를 실행하며 Mac에서는 Python도 지원합니다. 가벼운 포트를 먼저, 원래 플러그인은 대체 수단으로.",
-      "g.runtime.t": "기기에서 실행되는 플러그인",
       "g.sub.b": "TVBox JSON 구독을 URL로 가져오세요. 여러 개를 하나의 소스 목록으로 합칩니다. 새로 고침에 실패해도 마지막으로 작동한 내용은 사라지지 않습니다.",
       "g.sub.t": "구독을 안전하게",
       "hero.film": "소개 영상 보기",
@@ -302,9 +254,9 @@ export const LOCALES: Record<Lang, Locale> = {
       "q1.q": "Yingxia는 무엇인가요?",
       "q2.a": "아니요. Yingxia는 플레이어이며, 직접 추가한 구독이 제공하는 내용만 보여 줍니다. 이용 권한이 있는 소스를 사용하는 것은 사용자의 책임입니다.",
       "q2.q": "동영상이나 채널이 포함되어 있나요?",
-      "q3.a": "tvOS 26 이상의 Apple TV, iOS 18 이상의 iPhone과 iPad, macOS 15 이상의 Mac입니다. Mac 버전은 플러그인 지원 범위가 가장 넓고, PIP를 지원하는 별도의 플레이어 창을 제공합니다.",
+      "q3.a": "tvOS 26 이상의 Apple TV, iOS 18 이상의 iPhone과 iPad, macOS 15 이상의 Mac입니다. Mac 버전에는 PIP를 지원하는 별도의 플레이어 창도 있습니다.",
       "q3.q": "어떤 기기에서 사용할 수 있나요?",
-      "q4.a": "표준 JSON API, M3U·TXT 재생 목록, 그리고 다수의 JavaScript·JAR 플러그인입니다. 지원 여부는 소스와 플랫폼에 따라 다르며, 원본 서버가 바뀌거나 중단될 수도 있습니다.",
+      "q4.a": "표준 JSON API를 쓰는 TVBox 구독과 M3U·TXT 실시간 재생 목록입니다. 지원 여부는 소스에 따라 다르며, 원본 서버가 바뀌거나 중단될 수도 있습니다.",
       "q4.q": "어떤 소스를 쓸 수 있나요?",
       "q5.a": "버그 수정을 위한 익명 오류 보고서만 보냅니다. 오류 내용(웹 주소는 서버 이름만), 앱과 시스템 버전, 임의의 ID가 포함되며 설정에서 끌 수 있습니다. 계정은 없고 구독, 즐겨찾기, 기록은 기기에만 저장됩니다.",
       "q5.q": "내 데이터를 수집하나요?",
@@ -313,14 +265,6 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox의 모든 것을,",
       "sec.l2": "네이티브로.",
       "sec.sub": "SwiftUI로 작성하고 AVKit으로 재생합니다. 웹 뷰도, Android 화면 이식도 없습니다.",
-      "g.cast.t": "휴대폰에서 캐스트",
-      "g.cast.b": "빌리빌리 앱에서 投屏을 누르고 Yingxia를 선택하세요. Apple TV가 HD 스트림을 탄막과 함께 재생합니다.",
-      "g.hd.t": "화질 선택",
-      "g.hd.b": "1080P60, 1080P+, 720P 등을 플레이어 메뉴에서 바로. 라이브 방송도 지원합니다.",
-      "g.qr.t": "QR 코드로 로그인",
-      "g.qr.b": "빌리빌리 앱으로 스캔하면 피드, 시청 기록, 즐겨찾기를, Quark나 UC로 스캔하면 클라우드 드라이브 소스를 쓸 수 있습니다.",
-      "q7.q": "빌리빌리 계정이 필요한가요?",
-      "q7.a": "아니요. 로그인하지 않아도 최대 1080P로 볼 수 있습니다. QR 코드로 로그인하면 내 목록과 계정에서 허용하는 더 높은 화질이 추가됩니다. 로그인 정보는 기기에만 저장됩니다.",
       "shots.note": "앱은 아직 한국어를 지원하지 않아 스크린샷은 영어 화면입니다.",
       "dl.mac": "다운로드",
       "dl.req": "Mac·iPhone·iPad·Apple TV 지원 · 무료",
@@ -331,21 +275,15 @@ export const LOCALES: Record<Lang, Locale> = {
   "zh-Hant": {
     name: "繁體中文",
     shots: "zh-Hant",
-    chips: ["立即觀看","直播頻道指南","全域搜尋","收藏","JSON 片源","JavaScript 外掛","JAR 外掛","M3U、TXT 播放清單","HLS","Mac 子母畫面","免帳號"],
+    chips: ["立即觀看","直播頻道指南","全域搜尋","收藏","JSON 片源","M3U、TXT 播放清單","HLS","Mac 子母畫面","免帳號"],
     text: {
       "brand": "映匣",
       "c.live.b": "匯入 M3U 或 TXT 播放清單，依分組瀏覽、搜尋頻道，常看的加入收藏。",
       "c.live.t": "直播電視，像節目表一樣清楚。",
-      "c.lives.t": "內建鬥魚、虎牙和抖音。",
-      "c.lives.b": "與嗶哩嗶哩直播並列，可依各平台分區瀏覽、在播放器切換畫質，還能一次搜尋所有平台的直播間，不需要訂閱。",
       "c.search.b": "一個關鍵字就能搜尋訂閱中的所有片源，結果隨到隨顯示。",
       "c.search.t": "一次搜尋所有片源。",
       "c.site.b": "只用 Siri Remote 就能瀏覽任何片源的分類與頁面。",
       "c.site.t": "每個片源，都有自己的片架。",
-      "c.bili.t": "內建嗶哩嗶哩。",
-      "c.bili.b": "推薦、排行榜、番劇和直播，全是嗶哩嗶哩原生高畫質串流，彈幕隨影片飛過畫面，不需要訂閱。",
-      "c.hongguo.t": "內建紅果短劇。",
-      "c.hongguo.b": "真人劇、漫劇、AI 劇和熱播榜，每部劇集數齊全，邊看邊串流，免訂閱。",
       "cta.l1": "每一塊螢幕，",
       "cta.l2": "現在就能用。",
       "cta.sub": "映匣 Mac 版現已推出，Apple TV、iPhone 與 iPad 版則以預覽形式開放側載。",
@@ -356,14 +294,14 @@ export const LOCALES: Record<Lang, Locale> = {
       "footer.source": "在 GitHub 開放原始碼",
       "g.devices.b": "Apple TV、iPhone、iPad 與 Mac 共用同樣的訂閱與收藏。",
       "g.devices.t": "所有 Apple 螢幕",
+      "g.dl.t": "離線觀看",
+      "g.dl.b": "下載劇集與電影，沒有網路也能看。Apple TV、iPhone、iPad 與 Mac 都支援。",
       "g.lang.b": "支援英文、日文、繁體與簡體中文，跟隨系統語言設定。",
       "g.lang.t": "說你的語言",
       "g.play.b": "支援 HLS 的 AVPlayer、可一鍵重試的清楚錯誤畫面，Mac 上還有子母畫面。",
       "g.play.t": "原生播放",
       "g.private.b": "無需帳號、不追蹤。訂閱與紀錄都留在你的裝置上，只會傳送匿名錯誤報告，也可以關閉。",
       "g.private.t": "隱私至上",
-      "g.runtime.b": "執行 JSON、JavaScript 與 JAR 片源，Mac 上另支援 Python。優先使用輕量版，原始外掛作為備援。",
-      "g.runtime.t": "外掛在裝置上執行",
       "g.sub.b": "透過網址匯入 TVBox JSON 訂閱，可同時使用多個，片源合併成一個清單。更新失敗也不會清除最後一次可用的內容。",
       "g.sub.t": "訂閱妥善保存",
       "hero.film": "觀看介紹影片",
@@ -382,9 +320,9 @@ export const LOCALES: Record<Lang, Locale> = {
       "q1.q": "映匣是什麼？",
       "q2.a": "沒有。映匣是一款播放器，只會顯示你加入的訂閱所提供的內容。請確保你有權使用所選的片源。",
       "q2.q": "有內建任何影片或頻道嗎？",
-      "q3.a": "tvOS 26 以上的 Apple TV、iOS 18 以上的 iPhone 與 iPad，以及 macOS 15 以上的 Mac。Mac 版的外掛支援最完整，並有支援子母畫面的獨立播放視窗。",
+      "q3.a": "tvOS 26 以上的 Apple TV、iOS 18 以上的 iPhone 與 iPad，以及 macOS 15 以上的 Mac。Mac 版另有支援子母畫面的獨立播放視窗。",
       "q3.q": "支援哪些裝置？",
-      "q4.a": "標準 JSON API、M3U 與 TXT 播放清單，以及許多 JavaScript 與 JAR 外掛。支援程度依片源與平台而異，上游伺服器也可能變動或下線。",
+      "q4.a": "使用標準 JSON API 的 TVBox 訂閱，以及 M3U 與 TXT 直播清單。支援程度依片源而異，上游伺服器也可能變動或下線。",
       "q4.q": "支援哪些片源？",
       "q5.a": "只會傳送匿名錯誤報告，用來修正問題：錯誤內容（網址只保留伺服器名稱）、App 與系統版本，以及一組隨機 ID，可在設定中關閉。沒有帳號，訂閱、收藏與紀錄只存在你的裝置上。",
       "q5.q": "會收集我的資料嗎？",
@@ -393,14 +331,6 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox 的一切，",
       "sec.l2": "原生重建。",
       "sec.sub": "以 SwiftUI 撰寫、透過 AVKit 播放。沒有網頁視圖，也不是移植的 Android 畫面。",
-      "g.cast.t": "從手機投放",
-      "g.cast.b": "在嗶哩嗶哩 App 點「投屏」並選擇映匣，Apple TV 就會以高畫質串流連同彈幕播放。",
-      "g.hd.t": "自選畫質",
-      "g.hd.b": "1080P60、1080P+、720P 等，直接在播放器選單切換，直播也適用。",
-      "g.qr.t": "掃描 QR 碼登入",
-      "g.qr.b": "用嗶哩嗶哩 App 掃描，帶來關注動態、觀看紀錄和收藏；用夸克或 UC 掃描，雲端硬碟片源就能播放。",
-      "q7.q": "需要嗶哩嗶哩帳號嗎？",
-      "q7.a": "不需要。未登入也能觀看最高 1080P 的影片。用 QR 碼登入後，可使用自己的清單以及帳號可用的更高畫質。登入資訊只保存在你的裝置上。",
       "shots.note": "",
       "dl.mac": "下載",
       "dl.req": "支援 Mac、iPhone、iPad 與 Apple TV · 免費",

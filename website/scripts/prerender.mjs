@@ -148,7 +148,7 @@ ${["mac", "ios", "tv"].map((p) => `- [${install.title[p]}](${DOWNLOADS[p]}): ${i
 
 ## Optional
 
-- [Intro film](${SITE_URL}/intro/): a three-minute animated tour of the app: subscriptions, plugin runtimes, the built-in Bilibili and Hongguo sources, search, playback, danmaku, live TV and casting.
+- [Intro film](${SITE_URL}/intro/): a short animated tour of the app: subscriptions, sources, search, playback, live TV and every screen.
 ${LANGS.filter((l) => l !== "en").map((l) => `- [${LOCALES[l].name}](${pageUrl(l)}): the website in ${LANG_NAME_EN[l]}.`).join("\n")}
 `;
 await writeFile(join(dist, "llms.txt"), llms);
