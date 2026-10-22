@@ -49,12 +49,13 @@ struct HomeView: View {
     /// First run: one clear action, a way to bring your own URL, and artwork so the empty
     /// screen reads as an invitation rather than a missing page.
     private var welcome: some View {
-        HStack(alignment: .center, spacing: Layout.gutter) {
+        HStack(alignment: .center, spacing: welcomeInset > 0 ? 40 : Layout.gutter) {
             welcomeCopy.frame(maxWidth: .infinity, alignment: .leading)
             if showsPosterWall {
                 PosterWall().frame(maxWidth: .infinity).accessibilityHidden(true)
             }
         }
+        .padding(.horizontal, welcomeInset)
         .containerRelativeFrame(.vertical, alignment: .center) { height, _ in height * 0.82 }
         #if os(tvOS)
         // Moving right out of the sidebar lands on the primary action, not the secondary one.
@@ -62,43 +63,74 @@ struct HomeView: View {
         #endif
     }
 
+    /// The welcome's title size. On an iPad or iPhone Duo's inner display (regular width) a phone's 34 pt title and
+    /// the page's 16 pt margin left the copy small and pressed against the edge of a large, empty screen.
+    private var heroTitle: CGFloat {
+        #if os(iOS)
+        sizeClass == .regular ? 52 : Layout.heroTitle
+        #else
+        Layout.heroTitle
+        #endif
+    }
+
+    private var welcomeInset: CGFloat {
+        #if os(iOS)
+        sizeClass == .regular ? 48 : 0
+        #else
+        0
+        #endif
+    }
+
     private var welcomeCopy: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 16) {
-                AppMark(size: Layout.heroTitle * 1.4)
+                AppMark(size: heroTitle * 1.4)
                 Text(L10n.text("Yingxia")).font(.title3.weight(.semibold)).foregroundStyle(.secondary)
             }
             .padding(.bottom, 32)
             Text(L10n.text("Your cinema,\non every screen."))
-                .font(.system(size: Layout.heroTitle, weight: .bold, design: .rounded))
+                .font(.system(size: heroTitle, weight: .bold, design: .rounded))
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 18)
             Text(L10n.text("Connect your subscription to watch on Mac, iPhone, iPad, and Apple TV."))
                 .font(.title3).foregroundStyle(.secondary)
-                .frame(maxWidth: Layout.heroTitle * 10, alignment: .leading)
+                .frame(maxWidth: heroTitle * 10, alignment: .leading)
                 .padding(.bottom, 40)
-            HStack(spacing: 16) {
-                // There is no default subscription. A cloud drive works without one (Cloud Files), and a
-                // subscription address is added in Settings.
-                RouteLink { CloudDriveView() } label: {
-                    Label(L10n.text("Sign In to Cloud Drive"), systemImage: "externaldrive.fill.badge.person.crop")
-                }
-                .controlButton(prominent: true).tint(Brand.accent)
+            Group {
                 #if os(tvOS)
-                .focused($primaryFocused)
-                #endif
-                Button { store.section = .settings } label: {
-                    Label(L10n.text("Add Subscription"), systemImage: "plus.circle.fill")
+                HStack(spacing: 16) { welcomeButtons }
+                #else
+                // Side by side when both fit on one line each, else stacked: on an iPad in portrait the copy
+                // column is about 430 pt and "Sign In to Cloud Drive" wrapped onto two lines.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 16) { welcomeButtons }
+                    VStack(alignment: .leading, spacing: 12) { welcomeButtons }
                 }
-                .controlButton().disabled(store.importing)
+                #endif
             }
             .controlSize(.large)
             if store.importing {
                 LoadingCard { .server(URL(string: store.subscriptionAddress)?.host(), title: L10n.text("Importing…")) }
-                    .frame(maxWidth: Layout.heroTitle * 9)
+                    .frame(maxWidth: heroTitle * 9)
                     .padding(.top, 24)
             }
         }
+    }
+
+    @ViewBuilder private var welcomeButtons: some View {
+        // There is no default subscription. A cloud drive works without one (Cloud Files), and a
+        // subscription address is added in Settings.
+        RouteLink { CloudDriveView() } label: {
+            Label(L10n.text("Sign In to Cloud Drive"), systemImage: "externaldrive.fill.badge.person.crop").lineLimit(1)
+        }
+        .controlButton(prominent: true).tint(Brand.accent)
+        #if os(tvOS)
+        .focused($primaryFocused)
+        #endif
+        Button { store.section = .settings } label: {
+            Label(L10n.text("Add Subscription"), systemImage: "plus.circle.fill").lineLimit(1)
+        }
+        .controlButton().disabled(store.importing)
     }
 
     private var showsPosterWall: Bool {

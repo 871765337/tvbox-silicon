@@ -217,6 +217,11 @@ struct GlobalSearchView: View {
                         searchActions(config)
                     }
                 }
+                #if os(tvOS)
+                // Stop and the unavailable sources sit at the row's far end, out of line with the suggestions above and
+                // the source chips below, so the remote passed them by. As a section, moving onto the row lands on them.
+                .focusSection()
+                #endif
                 if model.busy {
                     SearchActivityList(origin: config.origin, completed: model.completed, total: model.total, runStart: model.runStart)
                 }

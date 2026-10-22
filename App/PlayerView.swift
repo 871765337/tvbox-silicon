@@ -14,6 +14,7 @@ struct PlaybackView: View {
     @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
     @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     /// Where our buttons are, so a tap on them keeps the controls up wherever the row sits.
     @State private var buttonsFrame = CGRect.zero
@@ -97,6 +98,13 @@ struct PlaybackView: View {
             PlayerOrientation.release()
             #endif
         }
+        #if os(iOS)
+        // Opening iPhone Duo moves the app to the inner display, which ignores orientations: drop a
+        // landscape lock so the outer display isn't left in landscape when it closes again.
+        .onChange(of: horizontalSizeClass == .regular && verticalSizeClass == .regular) { _, large in
+            if large { PlayerOrientation.release() }
+        }
+        #endif
     }
 
     #if DEBUG
@@ -135,7 +143,7 @@ struct PlaybackView: View {
             .padding(16)
             #if os(iOS)
             // Below VideoPlayer's own top row (Picture in Picture, volume), which would sit under the title.
-            .padding(.top, 44)
+            .padding(.top, avKitTopRow)
             #endif
             .frame(maxHeight: .infinity, alignment: .top)
         .sheet(isPresented: $showsDanmakuList) {
@@ -210,7 +218,8 @@ struct PlaybackView: View {
             }
             #if os(iOS)
             // Turns the picture even with Portrait Orientation Lock on, the way the system's own rotation can't.
-            if PlayerOrientation.available {
+            // Only on a phone-sized screen: iPhone Duo's inner display (regular both ways) ignores orientations.
+            if PlayerOrientation.available, horizontalSizeClass == .compact || verticalSizeClass == .compact {
                 let landscape = verticalSizeClass == .compact
                 Button { PlayerOrientation.set(landscape: !landscape) } label: {
                     Image(systemName: landscape ? "rectangle.portrait.rotate" : "rectangle.landscape.rotate").font(.headline).frame(width: 22, height: 22)
@@ -259,13 +268,18 @@ struct PlaybackView: View {
     }
 
     #if os(iOS)
+    /// The room AVKit's own top row (AirPlay, Picture in Picture, volume) takes above our bar. Where the screen is
+    /// regular both ways (iPad, iPhone Duo's inner display) its buttons are bigger and sit lower: on iPhone Duo they
+    /// reach 71 pt from the top, past the 60 pt where our bar began, and the mute button covered Close.
+    private var avKitTopRow: CGFloat { horizontalSizeClass == .regular && verticalSizeClass == .regular ? 64 : 44 }
+
     /// Our bar can't read whether AVKit's controls are showing (iOS has no API for it), so it follows their
     /// rules: a tap on the picture shows both or hides both, and a tap on a control (AVKit's top row, the
     /// centre play and skip buttons, the scrubber, or our own bar) keeps both up.
     private func tapped(at point: CGPoint) {
         guard let window = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.keyWindow else { return poke() }
         let size = window.bounds.size, insets = window.safeAreaInsets
-        let onControl = point.y < insets.top + 115
+        let onControl = point.y < insets.top + 71 + avKitTopRow
             || point.y > size.height - insets.bottom - 80
             || (abs(point.y - size.height / 2) < 44 && abs(point.x - size.width / 2) < 130)
             || buttonsFrame.insetBy(dx: -8, dy: -8).contains(point)
