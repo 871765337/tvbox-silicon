@@ -83,14 +83,15 @@ extension View {
 
 // Content-first surfaces: neutral backgrounds, quiet controls, and strong selection contrast.
 
-/// The icon's navy canvases with the icon's blue for selection and prominent actions.
+/// The icon's navy canvases with neutral controls: the active state is light on dark (dark on light),
+/// never a hue, so it reads the same on Liquid Glass.
 enum Brand {
-    /// Selection, prominent actions and progress: the icon's blue. Not white or near-white, which
-    /// matched the white focus on Apple TV and the hover highlight, so the focused control was
-    /// hard to tell from a prominent one. Brighter in dark mode to stand out on the navy.
-    static let accent = Color(light: Color(red: 0.0, green: 0.45, blue: 0.80), dark: Color(red: 0.12, green: 0.54, blue: 0.90))
+    /// Selection, prominent actions and progress. A fixed grey rather than `.primary`: as a tint,
+    /// `.primary` turned prominent buttons white-on-white. On Apple TV no button is filled with it,
+    /// so it never sits beside the white focus.
+    static let accent = Color(light: Color(white: 0.12), dark: Color(white: 0.92))
     /// Label colour on an accent fill.
-    static let onAccent = Color.white
+    static let onAccent = Color(light: .white, dark: Color(white: 0.06))
     /// The icon's cyan, for decoration only (icon tiles, charts, artwork placeholders), not for state.
     static let cyan = Color(red: 0.30, green: 0.78, blue: 1.0)
     static let indigo = Color(red: 0.42, green: 0.50, blue: 1.0)
