@@ -26,6 +26,10 @@ import TVCore
     var sheet: Sheet?
     /// Result of a check someone asked for.
     var message: String?
+    #if os(macOS)
+    /// Installs Mac updates in place and relaunches; nil where Get the Update opens the download instead.
+    let installer = MacUpdater.make()
+    #endif
     private(set) var checking = false
     private(set) var lastChecked: Date?
     private var feed: ReleaseFeed
@@ -49,6 +53,9 @@ import TVCore
         let cached = defaults.data(forKey: Keys.feed).flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: $0) }
         feed = cached.map(bundled.merged(with:)) ?? bundled
         lastChecked = defaults.object(forKey: Keys.checked) as? Date
+        #if os(macOS)
+        installer?.closeSheet = { [weak self] in self?.sheet = nil }
+        #endif
     }
 
     /// The current release's notes, for "What's New in This Version".
@@ -124,6 +131,9 @@ import TVCore
 /// pill buttons, and a shelf of artwork cards, one per feature.
 struct ReleaseNotesView: View {
     let sheet: Updates.Sheet
+    #if os(macOS)
+    @Environment(Updates.self) private var updates
+    #endif
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -280,8 +290,23 @@ struct ReleaseNotesView: View {
         Button(L10n.text(update == nil ? "Continue" : "OK")) { dismiss() }.controlButton(prominent: true)
         #else
         let primary = update?.link()
+        #if os(macOS)
+        if update != nil, let installer = updates.installer {
+            MacInstallActions(installer: installer, link: primary)
+        } else {
+            linkActions(primary)
+        }
+        #else
+        linkActions(primary)
+        #endif
+        #endif
+    }
+
+    #if !os(tvOS)
+    /// Get the Update opens the download page or file.
+    private func linkActions(_ primary: URL?) -> some View {
         let layout = Self.stackedButtons ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 12))
-        layout {
+        return layout {
             Button { if let primary { openURL(primary) }; dismiss() } label: {
                 Label(L10n.text(primary == nil ? "Continue" : "Get the Update"), systemImage: primary == nil ? "play.fill" : "arrow.down.circle.fill")
                     .frame(maxWidth: Self.stackedButtons ? .infinity : nil)
@@ -292,8 +317,8 @@ struct ReleaseNotesView: View {
                     .buttonStyle(PillButtonStyle(prominent: false)).keyboardShortcut(.cancelAction)
             }
         }
-        #endif
     }
+    #endif
 
     #if os(tvOS)
     /// Apple TV can't open web pages, so the install page goes to a phone as a QR code.
@@ -421,6 +446,81 @@ private struct PillButtonStyle: ButtonStyle {
 }
 #endif
 
+#if os(macOS)
+/// Install and Relaunch on the Mac, with the download's progress in place of the buttons while it runs.
+private struct MacInstallActions: View {
+    let installer: MacUpdater
+    /// The DMG, for when the update can't be installed in place.
+    let link: URL?
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        switch installer.phase {
+        case .idle, .ready:
+            HStack(spacing: 12) {
+                let ready = installer.phase == .ready
+                Button(action: installer.install) {
+                    Label(L10n.text(ready ? "Relaunch to Update" : "Install and Relaunch"),
+                          systemImage: ready ? "arrow.clockwise.circle.fill" : "arrow.down.circle.fill")
+                }
+                .buttonStyle(PillButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
+                notNow
+            }
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: 14) {
+                Text(message).font(.system(size: 13)).foregroundStyle(.white.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 12) {
+                    if let link {
+                        Button { installer.clearFailure(); openURL(link); dismiss() } label: {
+                            Label(L10n.text("Download Manually"), systemImage: "arrow.down.circle.fill")
+                        }
+                        .buttonStyle(PillButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
+                    }
+                    notNow
+                }
+            }
+        case .checking, .downloading, .preparing, .installing:
+            HStack(spacing: 18) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(status).font(.system(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.75)).monospacedDigit()
+                    Group {
+                        if let fraction { ProgressView(value: fraction) } else { ProgressView() }
+                    }
+                    .progressViewStyle(.linear).tint(.white)
+                }
+                .frame(width: 300, alignment: .leading)
+                if installer.canCancel {
+                    Button(action: installer.cancel) { Text(L10n.text("Cancel")) }
+                        .buttonStyle(PillButtonStyle(prominent: false)).keyboardShortcut(.cancelAction)
+                }
+            }
+            .frame(minHeight: PillButtonStyle.height)
+        }
+    }
+
+    private var notNow: some View {
+        Button { installer.clearFailure(); dismiss() } label: { Text(L10n.text("Not Now")) }
+            .buttonStyle(PillButtonStyle(prominent: false)).keyboardShortcut(.cancelAction)
+    }
+
+    private var fraction: Double? {
+        if case .downloading(let received, let expected) = installer.phase, expected > 0 { min(1, Double(received) / Double(expected)) } else { nil }
+    }
+
+    private var status: String {
+        switch installer.phase {
+        case .downloading:
+            L10n.text("Downloading…") + (fraction.map { "  " + $0.formatted(.percent.precision(.fractionLength(0))) } ?? "")
+        case .preparing: L10n.text("Preparing the update…")
+        case .installing: L10n.text("Relaunching…")
+        default: L10n.text("Checking for the update…")
+        }
+    }
+}
+#endif
+
 // MARK: Settings
 
 /// The small "New" capsule on the Settings entry while an update waits.
@@ -439,7 +539,7 @@ extension View {
         @Bindable var updates = updates
         let item = Binding(get: { playing ? nil : updates.sheet }, set: { updates.sheet = $0 })
         #if os(macOS)
-        let presented = sheet(item: item) { ReleaseNotesView(sheet: $0) }
+        let presented = sheet(item: item) { ReleaseNotesView(sheet: $0).environment(updates) }
         #else
         let presented = fullScreenCover(item: item) { ReleaseNotesView(sheet: $0) }
         #endif

@@ -423,6 +423,17 @@
 "Yingxia %@ is ready with new features." = "Yingxia %@ is ready with new features.";
 "Get the Update" = "Get the Update";
 "Not Now" = "Not Now";
+"Install and Relaunch" = "Install and Relaunch";
+"Relaunch to Update" = "Relaunch to Update";
+"Checking for the update…" = "Checking for the update…";
+"Downloading…" = "Downloading…";
+"Preparing the update…" = "Preparing the update…";
+"Relaunching…" = "Relaunching…";
+"Download Manually" = "Download Manually";
+"The update couldn't be installed: %@" = "The update couldn't be installed: %@";
+"This update can't be installed from within Yingxia yet. Download it instead." = "This update can't be installed from within Yingxia yet. Download it instead.";
+"Install Updates Automatically" = "Install Updates Automatically";
+"Yingxia downloads updates in the background and installs them the next time it quits." = "Yingxia downloads updates in the background and installs them the next time it quits.";
 "Continue" = "Continue";
 "New" = "New";
 "Scan with your iPhone to get the update." = "Scan with your iPhone to get the update.";
