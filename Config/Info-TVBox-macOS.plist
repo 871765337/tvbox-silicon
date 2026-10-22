@@ -34,6 +34,18 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connect to the local media and subscription services you configure.</string>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUPublicEDKey</key>
+	<string>GH90e0snzIFHgk1wn+91KyrD6jbOnOu7sC7GJPWdG6c=</string>
+	<key>SURequireSignedFeed</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>21600</integer>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

@@ -423,6 +423,17 @@
 "Yingxia %@ is ready with new features." = "映匣 %@ 已就绪，带来了新功能。";
 "Get the Update" = "获取更新";
 "Not Now" = "以后再说";
+"Install and Relaunch" = "安装并重新打开";
+"Relaunch to Update" = "重新打开以完成更新";
+"Checking for the update…" = "正在检查更新…";
+"Downloading…" = "正在下载…";
+"Preparing the update…" = "正在准备更新…";
+"Relaunching…" = "正在重新打开…";
+"Download Manually" = "手动下载";
+"The update couldn't be installed: %@" = "无法安装更新：%@";
+"This update can't be installed from within Yingxia yet. Download it instead." = "暂时无法在映匣内安装此更新，请手动下载。";
+"Install Updates Automatically" = "自动安装更新";
+"Yingxia downloads updates in the background and installs them the next time it quits." = "映匣会在后台下载更新，并在下次退出时安装。";
 "Continue" = "继续";
 "New" = "新";
 "Scan with your iPhone to get the update." = "用 iPhone 扫码获取更新。";

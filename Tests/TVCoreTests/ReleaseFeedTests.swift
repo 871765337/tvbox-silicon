@@ -57,6 +57,17 @@ private func release(_ version: String, platforms: [String] = ["macos", "ios", "
     #expect(try JSONDecoder().decode(LocalizedText.self, from: Data(#""Plain""#.utf8)).text(language: "ja") == "Plain")
 }
 
+/// Sparkle reads one appcast per Mac package; Scripts/make-appcast.sh writes them where the website publishes them.
+@Test func eachMacPackageHasItsOwnPublishedAppcast() throws {
+    let site = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../website/public")
+    for intel in [false, true] {
+        let address = ReleaseFeed.appcastAddress(intelMac: intel)
+        #expect(address.lastPathComponent == (intel ? "macos-x86_64.xml" : "macos-arm64.xml"))
+        let appcast = try String(contentsOf: site.appending(path: String(address.path.dropFirst())), encoding: .utf8)
+        #expect(appcast.contains("<channel>"))
+    }
+}
+
 /// The feed the website publishes and the apps bundle.
 @Test func publishedFeedIsValidAndTranslated() throws {
     let file = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../website/public/releases.json")

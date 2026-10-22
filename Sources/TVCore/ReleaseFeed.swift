@@ -51,6 +51,13 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
         #endif
     }
 
+    /// The Mac's Sparkle appcast, published with the website by Scripts/make-appcast.sh. One per package:
+    /// a feed's entry has a single download, so Apple silicon and Intel Macs read different files.
+    public static var appcastAddress: URL { appcastAddress(intelMac: isIntelMac) }
+    public static func appcastAddress(intelMac: Bool) -> URL {
+        URL(string: "https://yingxia.getmegaportal.com/appcast/macos-\(intelMac ? "x86_64" : "arm64").xml")!
+    }
+
     /// The key of the Intel Mac package in `Release.links` (from 1.7.3 on).
     public static let intelMacKey = "macos-x86_64"
 

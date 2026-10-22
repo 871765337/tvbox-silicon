@@ -517,6 +517,15 @@ struct FormSettingsView: View {
                                   subtitle: updates.lastChecked.map { L10n.text("Last checked %@", $0.formatted(date: .abbreviated, time: .shortened)) })
                     }
                 }
+                #if os(macOS)
+                if let installer = updates.installer {
+                    Toggle(isOn: Binding(get: { installer.automaticallyInstalls }, set: { installer.automaticallyInstalls = $0 })) {
+                        FormLabel(symbol: "arrow.down.circle.fill", tint: .blue, title: L10n.text("Install Updates Automatically"),
+                                  subtitle: L10n.text("Yingxia downloads updates in the background and installs them the next time it quits."))
+                    }
+                    .settingsSwitch()
+                }
+                #endif
                 if !updates.currentNotes.isEmpty {
                     Button(action: updates.showCurrentNotes) {
                         FormLabel(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.current))

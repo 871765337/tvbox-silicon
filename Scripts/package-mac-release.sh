@@ -7,6 +7,7 @@
 # key is a file, so it also works with the screen locked.
 # Output: build/release-mac/<version>/Yingxia-<version>-macos-{arm64,x86_64}.dmg + SHA256SUMS.txt (DMG only since
 # 1.7.4; the app inside is notarized and stapled too, so it also passes Gatekeeper once copied out)
+# Then Scripts/make-appcast.sh <version> adds the DMGs to the appcasts the app updates itself from.
 # One universal build (spider hosts from Scripts/build-universal-hosts.sh) is thinned into an Apple silicon and an
 # Intel package, so each download carries only its own architecture.
 set -euo pipefail
@@ -92,15 +93,25 @@ for ARCH in arm64 x86_64; do
   done < <(find "$APP/Contents/Resources" -name '*.jar' -print0)
   rm -rf "$JARTMP"
 
+  # Sparkle's helpers are bundles of their own: signed as Sparkle documents, after everything else and without the
+  # hosts' JIT entitlements. Its XPC services are only for sandboxed apps, so they go.
+  SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+  rm -rf "$SPARKLE/XPCServices" "$SPARKLE/Versions/B/XPCServices"
+
   # Inside-out: every Mach-O in the bundle except the main executable.
   count=0
   while IFS= read -r -d '' f; do
     [ "$f" = "$APP/Contents/MacOS/$EXECUTABLE" ] && continue
+    [[ $f == "$SPARKLE"/* ]] && continue
     file -b "$f" | grep -q '^Mach-O' || continue
     if [ -x "$f" ] && file -b "$f" | grep -q executable; then sign --entitlements "$HOST_ENT" "$f"; else sign "$f"; fi
     count=$((count + 1))
   done < <(find "$APP/Contents" -type f -print0)
   echo "$ARCH: signed $count nested binaries"
+  test -d "$SPARKLE" || { echo "missing Sparkle.framework" >&2; exit 1; }
+  sign "$SPARKLE/Versions/B/Autoupdate"
+  sign "$SPARKLE/Versions/B/Updater.app"
+  sign "$SPARKLE"
   sign "$APP"
   codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | tail -2
 
