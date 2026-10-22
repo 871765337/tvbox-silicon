@@ -31,6 +31,9 @@ struct RootView: View {
     @Environment(Store.self) private var store
     @Environment(Updates.self) private var updates
     @Environment(\.horizontalSizeClass) private var sizeClass
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
     // Untyped so it can hold both More-tab sections and Route pages.
     @State private var morePath = NavigationPath()
     @State private var moreSection: AppSection = .settings
@@ -46,7 +49,7 @@ struct RootView: View {
     #endif
     private var tabs: [AppSection] {
         #if os(iOS)
-        if sizeClass == .compact { return PhoneTabs(stored: storedTabs).hiding(store.hiddenSections).bar + [.more] }
+        if phoneTabs { return PhoneTabs(stored: storedTabs).arranged(slots: barSlots, hiding: store.hiddenSections).bar + [.more] }
         #endif
         let sections = [AppSection.home, .live, .music, .search, .sites, .files, .history, .favorites, .downloads, .settings]
             .filter { !store.hiddenSections.contains($0) }
@@ -114,8 +117,13 @@ struct RootView: View {
 
     #if !os(macOS)
     #if os(iOS)
+    /// The phone's tab bar: the tabs the viewer arranged, then More with the rest and the tab bar editor. Every
+    /// iPhone screen uses it, not only compact ones: iPhone Duo's inner display is regular both ways, and there
+    /// the full set of sections overflowed the side tab bar into the system's own More list, without the editor.
+    private var phoneTabs: Bool { sizeClass == .compact || UIDevice.current.userInterfaceIdiom == .phone }
     /// Sections a phone reaches through More, as arranged in the tab bar editor.
-    private var inMore: [AppSection] { PhoneTabs(stored: storedTabs).hiding(store.hiddenSections).more }
+    private var inMore: [AppSection] { PhoneTabs(stored: storedTabs).arranged(slots: barSlots, hiding: store.hiddenSections).more }
+    private var barSlots: Int { PhoneTabs.slots(horizontal: sizeClass, vertical: verticalSizeClass) }
     #endif
     private var platformTabs: some View {
         @Bindable var store = store
@@ -155,18 +163,24 @@ struct RootView: View {
             #endif
             #if os(iOS)
             .minimizesTabBarOnScroll()
-            .musicAccessory(enabled: store.music.track != nil && sizeClass == .compact)
+            .musicAccessory(enabled: store.music.track != nil && phoneTabs)
             // Opened from the mini player; swiping down closes it, as in Music.
             .sheet(isPresented: Binding(get: { store.music.presentsPlayer }, set: { store.music.presentsPlayer = $0 })) { MusicNowPlayingScreen() }
             .onChange(of: store.section) { _, section in
-                if sizeClass == .compact && inMore.contains(section) {
+                if phoneTabs && inMore.contains(section) {
                     moreSection = section; morePath = NavigationPath([section])
                     store.section = .more
                 }
             }
-            .onChange(of: sizeClass) { _, size in
-                if size != .compact && store.section == .more { store.section = morePath.isEmpty ? .settings : moreSection }
-                else if size == .compact && inMore.contains(store.section) {
+            // Closing iPhone Duo narrows the side bar back to four: a section that just left it opens inside More.
+            .onChange(of: barSlots) { _, _ in
+                if phoneTabs && inMore.contains(store.section) {
+                    moreSection = store.section; morePath = NavigationPath([store.section]); store.section = .more
+                }
+            }
+            .onChange(of: phoneTabs) { _, phone in
+                if !phone && store.section == .more { store.section = morePath.isEmpty ? .settings : moreSection }
+                else if phone && inMore.contains(store.section) {
                     moreSection = store.section; morePath = NavigationPath([store.section]); store.section = .more
                 }
             }
@@ -176,7 +190,7 @@ struct RootView: View {
     #if os(iOS)
     /// Software Update lives in Settings, so More carries the badge only while Settings is inside it.
     private func showsUpdateBadge(_ item: AppSection) -> Bool {
-        item == .more ? sizeClass == .compact && inMore.contains(.settings) : item.showsUpdateBadge
+        item == .more ? phoneTabs && inMore.contains(.settings) : item.showsUpdateBadge
     }
     #endif
     #endif

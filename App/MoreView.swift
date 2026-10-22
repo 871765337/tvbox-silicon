@@ -7,6 +7,12 @@ import TVCore
 struct PhoneTabs: Equatable {
     static let storageKey = "phoneTabOrder"
     static let barSlots = 4
+    /// iPhone Duo's inner display (regular both ways): its side tab bar has room for seven before More.
+    static let wideBarSlots = 7
+    /// The bar's places on a screen with these size classes.
+    static func slots(horizontal: UserInterfaceSizeClass?, vertical: UserInterfaceSizeClass?) -> Int {
+        horizontal == .regular && vertical == .regular ? wideBarSlots : barSlots
+    }
     static let standard = PhoneTabs(bar: [.home, .live, .music, .search], more: [.sites, .files, .history, .favorites, .downloads, .settings])
     var bar: [AppSection]
     var more: [AppSection]
@@ -19,7 +25,7 @@ struct PhoneTabs: Equatable {
         }
         guard halves.count == 2, !halves[0].isEmpty else { self = .standard; return }
         var bar: [AppSection] = [], more: [AppSection] = []
-        for section in halves[0] where !bar.contains(section) && bar.count < Self.barSlots { bar.append(section) }
+        for section in halves[0] where !bar.contains(section) && bar.count < Self.wideBarSlots { bar.append(section) }
         // Overflow, then sections a newer version added, land in More.
         for section in halves[0] + halves[1] + Self.standard.more + Self.standard.bar where !bar.contains(section) && !more.contains(section) {
             more.append(section)
@@ -29,12 +35,12 @@ struct PhoneTabs: Equatable {
 
     var stored: String { bar.map(\.rawValue).joined(separator: ",") + "|" + more.map(\.rawValue).joined(separator: ",") }
 
-    /// Without the sections `hidden`; the first in More take their places in the bar.
-    func hiding(_ hidden: [AppSection]) -> PhoneTabs {
-        guard !hidden.isEmpty else { return self }
-        let bar = self.bar.filter { !hidden.contains($0) }, more = self.more.filter { !hidden.contains($0) }
-        let moved = Self.barSlots - bar.count
-        return PhoneTabs(bar: bar + more.prefix(moved), more: Array(more.dropFirst(moved)))
+    /// For a bar with `slots` places and without the sections `hidden`: the sections keep their order, the bar
+    /// takes the first and More the rest. Opening iPhone Duo moves the top of More into its wider side bar, and
+    /// closing it moves them back.
+    func arranged(slots: Int, hiding hidden: [AppSection] = []) -> PhoneTabs {
+        let all = (bar + more).filter { !hidden.contains($0) }
+        return PhoneTabs(bar: Array(all.prefix(slots)), more: Array(all.dropFirst(slots)))
     }
 }
 
@@ -100,9 +106,12 @@ struct MoreView: View {
     @Environment(Updates.self) private var updates
     @AppStorage(PhoneTabs.storageKey) private var storedTabs = ""
     @State private var editing = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    private var slots: Int { PhoneTabs.slots(horizontal: horizontalSizeClass, vertical: verticalSizeClass) }
 
     var body: some View {
-        let tabs = PhoneTabs(stored: storedTabs).hiding(store.hiddenSections)
+        let tabs = PhoneTabs(stored: storedTabs).arranged(slots: slots, hiding: store.hiddenSections)
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(spacing: 12) {
@@ -126,7 +135,7 @@ struct MoreView: View {
         .screenBackdrop()
         .screenTitle(L10n.text("More"))
         .sheet(isPresented: $editing) {
-            TabBarEditor(tabs: tabs) { storedTabs = $0.stored }
+            TabBarEditor(tabs: tabs, slots: slots) { storedTabs = $0.stored }
         }
         #if DEBUG
         // `-qaEditTabs 1` opens the editor for screenshots.
@@ -229,24 +238,27 @@ private struct TabBarEditor: View {
         case section(AppSection), divider
         var id: Self { self }
         static func rows(_ tabs: PhoneTabs) -> [Row] { tabs.bar.map(Row.section) + [.divider] + tabs.more.map(Row.section) }
-        static func tabs(_ rows: [Row]) -> PhoneTabs {
+        static func tabs(_ rows: [Row], slots: Int) -> PhoneTabs {
             let split = rows.firstIndex(of: .divider) ?? rows.count
             let sections: (ArraySlice<Row>) -> [AppSection] = { $0.compactMap { if case .section(let s) = $0 { s } else { nil } } }
             let above = sections(rows[..<split]), below = sections(rows[split...])
-            return PhoneTabs(bar: Array(above.prefix(PhoneTabs.barSlots)), more: Array(above.dropFirst(PhoneTabs.barSlots)) + below)
+            return PhoneTabs(bar: Array(above.prefix(slots)), more: Array(above.dropFirst(slots)) + below)
         }
     }
 
     @Environment(\.dismiss) private var dismiss
     @State private var rows: [Row]
+    private let slots: Int
     private let save: (PhoneTabs) -> Void
 
-    init(tabs: PhoneTabs, save: @escaping (PhoneTabs) -> Void) {
+    init(tabs: PhoneTabs, slots: Int, save: @escaping (PhoneTabs) -> Void) {
         _rows = State(initialValue: Row.rows(tabs))
+        self.slots = slots
         self.save = save
     }
 
-    private var tabs: PhoneTabs { Row.tabs(rows) }
+    private var tabs: PhoneTabs { Row.tabs(rows, slots: slots) }
+    private var standard: PhoneTabs { PhoneTabs.standard.arranged(slots: slots) }
 
     var body: some View {
         NavigationStack {
@@ -277,7 +289,9 @@ private struct TabBarEditor: View {
                 } header: {
                     heading(L10n.text("Tab Bar"), symbol: "dock.rectangle")
                 } footer: {
-                    Text(L10n.text("Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More."))
+                    Text(L10n.text(slots > PhoneTabs.barSlots
+                                   ? "Drag to reorder. Up to seven sections fit in the tab bar here, and four when the phone is closed; the rest stay in More."
+                                   : "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More."))
                 }
             }
             .listRowSpacing(8)
@@ -294,8 +308,8 @@ private struct TabBarEditor: View {
                     Button(L10n.text("Done")) { save(tabs); dismiss() }.fontWeight(.semibold)
                 }
                 ToolbarItem(placement: .bottomBar) {
-                    Button(L10n.text("Reset")) { withAnimation(.smooth) { rows = Row.rows(.standard) } }
-                        .disabled(tabs == .standard)
+                    Button(L10n.text("Reset")) { withAnimation(.smooth) { rows = Row.rows(standard) } }
+                        .disabled(tabs == standard)
                 }
             }
         }
@@ -310,7 +324,7 @@ private struct TabBarEditor: View {
     private func move(from source: IndexSet, to destination: Int) {
         var next = rows
         next.move(fromOffsets: source, toOffset: destination)
-        let tabs = Row.tabs(next)
+        let tabs = Row.tabs(next, slots: slots)
         guard !tabs.bar.isEmpty else { return } // The tab bar keeps at least one section besides More.
         withAnimation(.smooth) { rows = Row.rows(tabs) }
     }

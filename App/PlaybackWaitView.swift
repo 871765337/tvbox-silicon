@@ -176,7 +176,9 @@ struct PlaybackWaitView: View {
         guard UIDevice.current.userInterfaceIdiom == .phone,
               let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
                 .first(where: { $0.activationState == .foregroundActive }),
-              let window = scene.keyWindow ?? scene.windows.first else { return width / 2 }
+              let window = scene.keyWindow ?? scene.windows.first,
+              // A phone held sideways. iPhone Duo's inner display is regular both ways and keeps the camera elsewhere.
+              window.traitCollection.verticalSizeClass == .compact else { return width / 2 }
         let insets = window.safeAreaInsets
         switch scene.interfaceOrientation {
         case .landscapeRight: return (insets.left + width - 8) / 2 // camera on the left
