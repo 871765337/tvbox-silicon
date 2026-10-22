@@ -77,6 +77,9 @@ struct CloudFilesView: View {
 /// so the folder reads as it does on the drive.
 struct CloudFolderView: View {
     @Environment(Store.self) private var store
+    #if os(tvOS)
+    @Environment(\.dismiss) private var dismiss
+    #endif
     let drive: CloudFilesDrive
     let folder: String
     let name: String
@@ -97,7 +100,14 @@ struct CloudFolderView: View {
                 .refreshable { await load() }
                 #endif
             } else if files != nil {
+                #if os(tvOS)
+                // A text-only page has no focused control to receive the remote's Back press.
+                FilesMessage(symbol: "folder", title: L10n.text("This Folder Is Empty")) {
+                    Button(L10n.text("Back")) { dismiss() }.controlButton(prominent: true)
+                }
+                #else
                 FilesMessage(symbol: "folder", title: L10n.text("This Folder Is Empty"))
+                #endif
             } else if let failure {
                 FilesMessage(symbol: "exclamationmark.triangle", title: L10n.text("Couldn't Open This Folder"), message: failure.localizedDescription) {
                     Button(L10n.text("Retry")) { Task { await load() } }.controlButton(prominent: true)
@@ -107,10 +117,16 @@ struct CloudFolderView: View {
                 }
             } else {
                 ProgressView().controlSize(.large).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    #if os(tvOS)
+                    .focusable()
+                    #endif
             }
         }
         .screenBackdrop()
         .screenTitle(name)
+        #if os(tvOS)
+        .onExitCommand { dismiss() }
+        #endif
         .task { if files == nil { await load() } }
         .alert(L10n.text("Folder Password"), isPresented: $asksPassword) {
             SecureField(L10n.text("Password"), text: $password)

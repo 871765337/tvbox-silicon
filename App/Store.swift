@@ -60,6 +60,9 @@ import TVCore
         #endif
     }
     init(defaults: UserDefaults = .standard) {
+        #if os(macOS)
+        if defaults === UserDefaults.standard { Self.adoptPreviousBundleDefaults(defaults) }
+        #endif
         self.defaults = defaults
         #if DEBUG
         playbackDefaults = defaults.bool(forKey: "qaIsolatedData")
@@ -446,6 +449,23 @@ import TVCore
         }
     }
 }
+
+#if os(macOS)
+extension Store {
+    /// 1.7.7 moved the Mac app from `com.tvbox.yingxia.mac` to `com.jo32.yingxia.mac`, which starts a
+    /// new defaults domain: subscriptions, favorites and settings would look lost. Copy the old domain
+    /// over once (the app isn't sandboxed, so it can read it). Files under Application Support and
+    /// Caches keep their `com.tvbox.yingxia` folder and need nothing.
+    static func adoptPreviousBundleDefaults(_ defaults: UserDefaults) {
+        let previous = "com.tvbox.yingxia.mac", done = "adoptedDefaults." + previous
+        guard Bundle.main.bundleIdentifier != previous, !defaults.bool(forKey: done) else { return }
+        for (key, value) in defaults.persistentDomain(forName: previous) ?? [:] where defaults.object(forKey: key) == nil {
+            defaults.set(value, forKey: key)
+        }
+        defaults.set(true, forKey: done)
+    }
+}
+#endif
 
 /// How this build reaches people. App Store and TestFlight builds are archived with
 /// `SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) APPSTORE'`; direct downloads and sideloaded

@@ -312,6 +312,7 @@
 "Save Login" = "ログインを保存";
 "Finish signing in before saving the login." = "ログインを完了してから保存してください。";
 "Cancel" = "キャンセル";
+"Back" = "戻る";
 "Browse" = "ブラウズ";
 "Library" = "ライブラリ";
 "Episodes" = "エピソード";
