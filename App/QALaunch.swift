@@ -58,7 +58,7 @@ enum QALaunch {
             }
             await store.importSubscription(address: subscription)
         }
-        else if store.subscription == nil, !Distribution.isAppStore { await store.importSubscription() }
+        else if store.subscription == nil, !Distribution.isAppStore { await store.importSubscription(address: Store.defaultURL) }
         if QASweep.enabled, let config = store.subscription { Task.detached(priority: .utility) { await QASweep.run(config) } }
         if let section { store.section = section }
         if let page, page.hasPrefix("search:") {

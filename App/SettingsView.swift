@@ -161,20 +161,29 @@ private enum FormMetrics {
     #if os(macOS)
     static let icon: CGFloat = 22, symbol: CGFloat = 11, hero: CGFloat = 52
     #else
-    static let icon: CGFloat = 30, symbol: CGFloat = 15, hero: CGFloat = 64
+    static let icon: CGFloat = 30, symbol: CGFloat = 14, hero: CGFloat = 64
     #endif
 }
 
-/// The coloured tile that leads a row.
+/// The tile that leads a row: a coloured symbol on grey on iPhone and iPad, white on colour on the Mac.
 struct SettingsIcon: View {
     let symbol: String
     var tint: Color = .gray
     var body: some View {
+        #if os(iOS)
+        // Black (Douyin) would vanish in dark mode, so it follows the text colour.
+        Image(systemName: symbol)
+            .font(.system(size: FormMetrics.symbol, weight: .semibold)).foregroundStyle(tint == .black ? Color.primary : tint)
+            .frame(width: FormMetrics.icon, height: FormMetrics.icon)
+            .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: FormMetrics.icon * 0.26, style: .continuous))
+            .accessibilityHidden(true)
+        #else
         Image(systemName: symbol)
             .font(.system(size: FormMetrics.symbol, weight: .semibold)).foregroundStyle(.white)
             .frame(width: FormMetrics.icon, height: FormMetrics.icon)
             .background(tint.gradient, in: RoundedRectangle(cornerRadius: FormMetrics.icon * 0.26, style: .continuous))
             .accessibilityHidden(true)
+        #endif
     }
 }
 
@@ -613,7 +622,7 @@ struct FormSettingsView: View {
             }
             Spacer()
             if store.importing { ProgressView().controlSize(.small); ElapsedTime() }
-            if store.extrasUnlocked { Button(L10n.text("Use Default URL")) { store.subscriptionAddress = Store.defaultURL } }
+            Button(L10n.text("Use a Demo URL")) { store.subscriptionAddress = Store.defaultURL }
             Button(store.importing ? L10n.text("Importing…") : L10n.text("Add Subscription")) { add() }
                 .buttonStyle(.borderedProminent).disabled(!canAdd)
         }
@@ -664,12 +673,11 @@ private struct AddSubscriptionSheet: View {
                     if let error = store.error { Text(error).foregroundStyle(Brand.amber) }
                     else { Text(L10n.text("Paste the address of a TVBox JSON subscription, an M3U or TXT live playlist, or an AList server.")) }
                 }
-                if store.extrasUnlocked {
-                    Section {
-                        Button { store.subscriptionAddress = Store.defaultURL } label: {
-                            FormLabel(symbol: "sparkles", tint: Brand.indigo, title: L10n.text("Use Default URL"), subtitle: Store.defaultURL)
-                                .foregroundStyle(.primary)
-                        }
+                // Offered, never filled in or imported on its own.
+                Section {
+                    Button { store.subscriptionAddress = Store.defaultURL } label: {
+                        FormLabel(symbol: "sparkles", tint: Brand.indigo, title: L10n.text("Use a Demo URL"))
+                            .foregroundStyle(.primary)
                     }
                 }
             }.settingsRows() }
@@ -1500,7 +1508,7 @@ private struct TVAddSubscriptionPage: View {
                     }
                 }
                 .disabled(store.importing || empty)
-                if store.extrasUnlocked { TVSettingsAction(title: L10n.text("Use Default URL")) { store.subscriptionAddress = Store.defaultURL } }
+                TVSettingsAction(title: L10n.text("Use a Demo URL")) { store.subscriptionAddress = Store.defaultURL }
             }
         }
     }

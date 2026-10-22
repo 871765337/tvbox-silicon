@@ -25,6 +25,7 @@
 "Subscription URL" = "订阅地址";
 "Save and Refresh" = "保存并更新订阅";
 "Use Default URL" = "使用默认地址";
+"Use a Demo URL" = "使用演示地址";
 "Current subscription: %@" = "当前订阅：%@";
 "Play a URL" = "播放链接";
 "HTTP / HTTPS media URL" = "HTTP / HTTPS 媒体地址";
@@ -296,6 +297,7 @@
 
 // Cloud drive accounts
 "Cloud Drive Accounts" = "网盘账号";
+"Sign In to Cloud Drive" = "登录网盘";
 "Manage Cloud Accounts" = "管理网盘账号";
 "Sign in on the provider's official page, then save the login. Supported plugins use these accounts for cloud playback." = "在网盘官方页面登录后保存登录信息。兼容的插件会使用这些账号播放网盘内容。";
 "Sign In to Quark" = "登录夸克网盘";

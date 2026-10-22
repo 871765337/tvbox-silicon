@@ -7,7 +7,7 @@ struct HomeView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
     #if os(tvOS)
-    @FocusState private var importFocused: Bool
+    @FocusState private var primaryFocused: Bool
     #endif
 
     var body: some View {
@@ -58,7 +58,7 @@ struct HomeView: View {
         .containerRelativeFrame(.vertical, alignment: .center) { height, _ in height * 0.82 }
         #if os(tvOS)
         // Moving right out of the sidebar lands on the primary action, not the secondary one.
-        .defaultFocus($importFocused, true, priority: .userInitiated)
+        .defaultFocus($primaryFocused, true, priority: .userInitiated)
         #endif
     }
 
@@ -78,21 +78,19 @@ struct HomeView: View {
                 .frame(maxWidth: Layout.heroTitle * 10, alignment: .leading)
                 .padding(.bottom, 40)
             HStack(spacing: 16) {
-                // App Store builds have no default subscription: the address is added in Settings.
-                Button { if Distribution.isAppStore { store.section = .settings } else { Task { await store.importSubscription() } } } label: {
-                    Label(store.importing ? L10n.text("Importing…") : L10n.text(Distribution.isAppStore ? "Add Subscription" : "Import Subscription"),
-                          systemImage: "plus.circle.fill")
+                // There is no default subscription. A cloud drive works without one (Cloud Files), and a
+                // subscription address is added in Settings.
+                RouteLink { CloudDriveView() } label: {
+                    Label(L10n.text("Sign In to Cloud Drive"), systemImage: "externaldrive.fill.badge.person.crop")
                 }
-                .controlButton(prominent: true).tint(Brand.accent).disabled(store.importing)
+                .controlButton(prominent: true).tint(Brand.accent)
                 #if os(tvOS)
-                .focused($importFocused)
+                .focused($primaryFocused)
                 #endif
-                if !Distribution.isAppStore {
-                    Button { store.section = .settings } label: {
-                        Label(L10n.text("Use Another URL"), systemImage: "link")
-                    }
-                    .controlButton()
+                Button { store.section = .settings } label: {
+                    Label(L10n.text("Add Subscription"), systemImage: "plus.circle.fill")
                 }
+                .controlButton().disabled(store.importing)
             }
             .controlSize(.large)
             if store.importing {

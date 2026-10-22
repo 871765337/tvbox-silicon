@@ -25,6 +25,7 @@
 "Subscription URL" = "訂閱網址";
 "Save and Refresh" = "儲存並更新訂閱";
 "Use Default URL" = "使用預設網址";
+"Use a Demo URL" = "使用示範網址";
 "Current subscription: %@" = "目前訂閱：%@";
 "Play a URL" = "播放連結";
 "HTTP / HTTPS media URL" = "HTTP / HTTPS 媒體網址";
@@ -296,6 +297,7 @@
 
 // Cloud drive accounts
 "Cloud Drive Accounts" = "網盤帳號";
+"Sign In to Cloud Drive" = "登入網盤";
 "Manage Cloud Accounts" = "管理網盤帳號";
 "Sign in on the provider's official page, then save the login. Supported plugins use these accounts for cloud playback." = "在網盤官方頁面登入後儲存登入資訊。相容的外掛會使用這些帳號播放網盤內容。";
 "Sign In to Quark" = "登入夸克網盤";

@@ -45,9 +45,9 @@ import TVCore
     private var episodeRequest = UUID()
     private var episodeTask: Task<Void, Never>?
     var section: AppSection = .home
-    /// App Store and TestFlight builds show the built-in services, the default subscription and the
-    /// plugin pages only once a subscription has been added; other builds always show them.
-    var extrasUnlocked: Bool { !Distribution.isAppStore || !subscriptions.isEmpty }
+    /// Every build shows the built-in services (Music, Bilibili, Douyin), the default subscription and
+    /// the plugin pages only once a subscription has been added.
+    var extrasUnlocked: Bool { !subscriptions.isEmpty }
     /// Sections kept out of the tab bar and sidebar until then.
     var hiddenSections: [AppSection] { extrasUnlocked ? [] : [.music] }
     private let defaults: UserDefaults
@@ -87,7 +87,7 @@ import TVCore
         }
         subscriptions = entries
         documents = copies
-        subscriptionAddress = entries.isEmpty && !Distribution.isAppStore ? Self.defaultURL : ""
+        subscriptionAddress = ""
         if persistsChanges, let legacyAddress {
             if let legacy, copies[legacyAddress] != nil { try? Self.save(legacy, to: Self.file(for: entries[0])) }
             saveSubscriptionList()
@@ -162,7 +162,7 @@ import TVCore
         defer { importing = false }
         let typed = (address ?? subscriptionAddress).trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            let url = try WebAddress.resolve(typed.isEmpty && !Distribution.isAppStore ? Self.defaultURL : typed)
+            let url = try WebAddress.resolve(typed)
             switch try await http.subscriptionImport(url) {
             case .subscription(let value):
                 let entry = SubscriptionEntry(address: url.absoluteString)

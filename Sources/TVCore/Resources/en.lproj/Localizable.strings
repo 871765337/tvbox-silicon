@@ -25,6 +25,7 @@
 "Subscription URL" = "Subscription URL";
 "Save and Refresh" = "Save and Refresh";
 "Use Default URL" = "Use Default URL";
+"Use a Demo URL" = "Use a Demo URL";
 "Current subscription: %@" = "Current subscription: %@";
 "Play a URL" = "Play a URL";
 "HTTP / HTTPS media URL" = "HTTP / HTTPS media URL";
@@ -296,6 +297,7 @@
 
 // Cloud drive accounts
 "Cloud Drive Accounts" = "Cloud Drive Accounts";
+"Sign In to Cloud Drive" = "Sign In to Cloud Drive";
 "Manage Cloud Accounts" = "Manage Cloud Accounts";
 "Sign in on the provider's official page, then save the login. Supported plugins use these accounts for cloud playback." = "Sign in on the provider's official page, then save the login. Supported plugins use these accounts for cloud playback.";
 "Sign In to Quark" = "Sign In to Quark";

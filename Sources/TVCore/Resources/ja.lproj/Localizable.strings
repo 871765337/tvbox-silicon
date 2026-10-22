@@ -25,6 +25,7 @@
 "Subscription URL" = "配信設定 URL";
 "Save and Refresh" = "保存して更新";
 "Use Default URL" = "既定の URL を使用";
+"Use a Demo URL" = "デモ用の URL を使用";
 "Current subscription: %@" = "現在の配信設定：%@";
 "Play a URL" = "URL を再生";
 "HTTP / HTTPS media URL" = "HTTP / HTTPS メディア URL";
@@ -296,6 +297,7 @@
 
 // Cloud drive accounts
 "Cloud Drive Accounts" = "クラウドドライブのアカウント";
+"Sign In to Cloud Drive" = "クラウドドライブにログイン";
 "Manage Cloud Accounts" = "アカウントを管理";
 "Sign in on the provider's official page, then save the login. Supported plugins use these accounts for cloud playback." = "公式ページでログインしてから保存してください。対応プラグインが再生に使用します。";
 "Sign In to Quark" = "Quark にログイン";
