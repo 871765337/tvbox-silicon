@@ -15,14 +15,14 @@ export function SoonPill({ small = false }: { small?: boolean }) {
 }
 
 /** The current Mac release on download.getmegaportal.com (R2 bucket megaportal-downloads): Apple silicon, and Intel. */
-export const MAC_DOWNLOAD = "https://download.getmegaportal.com/yingxia/1.7.6/Yingxia-1.7.6-macos-arm64.dmg";
-export const MAC_INTEL_DOWNLOAD = "https://download.getmegaportal.com/yingxia/1.7.6/Yingxia-1.7.6-macos-x86_64.dmg";
+export const MAC_DOWNLOAD = "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-arm64.dmg";
+export const MAC_INTEL_DOWNLOAD = "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-x86_64.dmg";
 
 /** iPhone/iPad and Apple TV IPAs for sideloading, next to the Mac release. */
 export const DOWNLOADS = {
   mac: MAC_DOWNLOAD,
-  ios: "https://download.getmegaportal.com/yingxia/1.7.6/Yingxia-1.7.6-ios.ipa",
-  tv: "https://download.getmegaportal.com/yingxia/1.7.6/Yingxia-1.7.6-tvos.ipa",
+  ios: "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-ios.ipa",
+  tv: "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-tvos.ipa",
 } as const;
 
 /** Sideloading tools, official sources only (iloader.site and plamimpactor.site are third-party mirrors). */

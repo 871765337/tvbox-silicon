@@ -42,10 +42,10 @@ curl.exe -LO https://download.getmegaportal.com/yingxia/<version>/Yingxia-<versi
 
 | Device | Requirement | File | Bundle ID |
 | --- | --- | --- | --- |
-| Mac | macOS 15+, Apple silicon | `…-macos-arm64.dmg` | `com.tvbox.yingxia.mac` |
-| Intel Mac | macOS 15+, Intel processor (1.7.3 and later) | `…-macos-x86_64.dmg` | `com.tvbox.yingxia.mac` |
-| iPhone / iPad | iOS / iPadOS 18+ | `…-ios.ipa` | `com.tvbox.yingxia.ios` |
-| Apple TV | tvOS 26+ (Apple TV 4K) | `…-tvos.ipa` | `com.tvbox.yingxia.tv` |
+| Mac | macOS 15+, Apple silicon | `…-macos-arm64.dmg` | `com.jo32.yingxia.mac` |
+| Intel Mac | macOS 15+, Intel processor (1.7.3 and later) | `…-macos-x86_64.dmg` | `com.jo32.yingxia.mac` |
+| iPhone / iPad | iOS / iPadOS 18+ | `…-ios.ipa` | `com.jo32.yingxia.ios` |
+| Apple TV | tvOS 26+ (Apple TV 4K) | `…-tvos.ipa` | `com.jo32.yingxia.tv` |
 
 The iOS and tvOS IPAs are not interchangeable.
 
@@ -134,7 +134,7 @@ Verified on tvOS 27: `cider device list` and `cider device install` with an alre
 
 ## What the installed app is called
 
-cider gives the signed app the bundle ID `<original ID>.<team ID>`, for example `com.tvbox.yingxia.ios.A1B2C3D4E5`. So:
+cider gives the signed app the bundle ID `<original ID>.<team ID>`, for example `com.jo32.yingxia.ios.A1B2C3D4E5`. So:
 
 - Signing again with the **same** Apple account updates the same app and keeps its data.
 - Signing with a **different** account installs a second, separate Yingxia with empty data.

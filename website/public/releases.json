@@ -1,6 +1,154 @@
 {
   "releases": [
     {
+      "version": "1.7.8",
+      "date": "2026-10-23",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-arm64.dmg",
+        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-x86_64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "folder",
+          "title": {
+            "en": "Cloud Files: browse your drives and play what’s there",
+            "zh-Hans": "云盘文件：浏览云盘并直接播放",
+            "zh-Hant": "雲端檔案：瀏覽雲端硬碟並直接播放",
+            "ja": "クラウドのファイル：ドライブを見て、そのまま再生"
+          },
+          "detail": {
+            "en": "A new Cloud Files section lists the Quark and UC drives you’ve signed in to and your AList or OpenList servers. Open a folder and play a video or a song: the rest of the folder plays after it, and Continue Watching picks it up where you left off.",
+            "zh-Hans": "新的“云盘文件”栏目会列出你已登录的夸克和 UC 网盘，以及你的 AList 或 OpenList 服务器。打开文件夹即可播放视频或歌曲，同一文件夹的其余内容会接着播放，“继续观看”也会从上次停下的地方继续。",
+            "zh-Hant": "新的「雲端檔案」欄目會列出你已登入的夸克和 UC 網盤，以及你的 AList 或 OpenList 伺服器。打開資料夾即可播放影片或歌曲，同一資料夾的其餘內容會接著播放，「繼續觀看」也會從上次停下的地方繼續。",
+            "ja": "新しい「クラウドのファイル」に、サインインした夸克と UC のドライブ、AList や OpenList のサーバーが並びます。フォルダを開いてビデオや曲を再生すると、フォルダの残りが続けて再生され、「続きを見る」から前回の続きを再生できます。"
+          }
+        },
+        {
+          "symbol": "arrow.down.circle",
+          "title": {
+            "en": "The Mac app updates itself",
+            "zh-Hans": "Mac 版可以自动更新",
+            "zh-Hant": "Mac 版可以自動更新",
+            "ja": "Mac 版が自動でアップデート"
+          },
+          "detail": {
+            "en": "From this version on, Yingxia downloads new versions in the background and installs them when you quit. Install and Relaunch updates right away; Settings › Install Updates Automatically turns it off.",
+            "zh-Hans": "从这个版本开始，映匣会在后台下载新版本，并在你退出时安装。点“安装并重新打开”可立即更新；在“设置”中关闭“自动安装更新”即可停用。",
+            "zh-Hant": "從這個版本開始，映匣會在背景下載新版本，並在你結束時安裝。按「安裝並重新開啟」可立即更新；在「設定」中關閉「自動安裝更新」即可停用。",
+            "ja": "このバージョンから、映匣は新しいバージョンをバックグラウンドでダウンロードし、終了時にインストールします。「インストールして再起動」ですぐに更新でき、設定の「アップデートを自動的にインストール」でオフにできます。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        },
+        {
+          "symbol": "forward.end",
+          "title": {
+            "en": "Previous and Next Episode in the Mac player",
+            "zh-Hans": "Mac 播放器新增上一集和下一集按钮",
+            "zh-Hant": "Mac 播放器新增上一集和下一集按鈕",
+            "ja": "Mac のプレーヤーに前のエピソードと次のエピソード"
+          },
+          "detail": {
+            "en": "The player window’s top bar has Previous Episode and Next Episode buttons, as on iPhone and Apple TV, so short dramas with dozens of episodes no longer need the Episodes menu.",
+            "zh-Hans": "和 iPhone、Apple TV 一样，播放窗口顶部现在有“上一集”和“下一集”按钮，看几十集的短剧不必再打开选集菜单。",
+            "zh-Hant": "和 iPhone、Apple TV 一樣，播放視窗頂部現在有「上一集」和「下一集」按鈕，看幾十集的短劇不必再打開選集選單。",
+            "ja": "iPhone や Apple TV と同じく、プレーヤーウインドウの上部に「前のエピソード」と「次のエピソード」のボタンが付きました。何十話もあるショートドラマでもエピソードのメニューを開かずに済みます。"
+          },
+          "platforms": [
+            "macos"
+          ]
+        },
+        {
+          "symbol": "person.badge.key",
+          "title": {
+            "en": "Sign in on the service’s own page",
+            "zh-Hans": "在服务自己的页面登录",
+            "zh-Hant": "在服務自己的頁面登入",
+            "ja": "サービスのページでサインイン"
+          },
+          "detail": {
+            "en": "On iPhone and iPad, signing in to Bilibili, Quark, UC, Baidu Netdisk or Aliyun Drive opens the service’s own page, where you use a text-message code or your password, instead of showing a QR code your phone can’t scan.",
+            "zh-Hans": "在 iPhone 和 iPad 上登录哔哩哔哩、夸克、UC、百度网盘或阿里云盘时，会打开服务自己的登录页面，用短信验证码或密码登录，而不是显示手机无法扫描的二维码。",
+            "zh-Hant": "在 iPhone 和 iPad 上登入嗶哩嗶哩、夸克、UC、百度網盤或阿里雲盤時，會打開服務自己的登入頁面，用簡訊驗證碼或密碼登入，而不是顯示手機無法掃描的 QR 碼。",
+            "ja": "iPhone と iPad で Bilibili、夸克、UC、百度網盤、阿里雲盤にサインインするとき、スマートフォンでは読み取れない QR コードの代わりにサービスのページが開き、SMS のコードかパスワードでサインインできます。"
+          },
+          "platforms": [
+            "ios"
+          ]
+        },
+        {
+          "symbol": "play.rectangle",
+          "title": {
+            "en": "More videos and channels play",
+            "zh-Hans": "更多视频和频道可以播放",
+            "zh-Hant": "更多影片和頻道可以播放",
+            "ja": "再生できるビデオとチャンネルが増えました"
+          },
+          "detail": {
+            "en": "HEVC videos on cloud drives that played sound over a black screen now show their picture, Huya channels behind FLV relays play, and 立播’s BD line plays.",
+            "zh-Hans": "云盘里有声音但画面全黑的 HEVC 视频现在可以正常显示画面，经由 FLV 中转的虎牙频道可以播放，立播的 BD 线路也能播放了。",
+            "zh-Hant": "雲端硬碟裡有聲音但畫面全黑的 HEVC 影片現在可以正常顯示畫面，經由 FLV 中轉的虎牙頻道可以播放，立播的 BD 線路也能播放了。",
+            "ja": "クラウドドライブで音だけ出て画面が真っ黒だった HEVC のビデオに映像が出るようになり、FLV の中継を通る虎牙のチャンネルと立播の BD 回線も再生できます。"
+          }
+        },
+        {
+          "symbol": "puzzlepiece.extension",
+          "title": {
+            "en": "The latest FTY sources work again",
+            "zh-Hans": "最新版 FTY 站点恢复正常",
+            "zh-Hant": "最新版 FTY 來源恢復正常",
+            "ja": "最新の FTY のサイトが再び使えます"
+          },
+          "detail": {
+            "en": "With the FTY jar published on October 21, 玩偶哥哥 and its other sources came up empty and Quark lines kept asking you to sign in. They list their titles again and use your Quark sign-in.",
+            "zh-Hans": "使用 10 月 21 日发布的 FTY jar 时，玩偶哥哥等站点一片空白，夸克线路也不停要求登录。现在它们可以正常列出内容，并使用你已登录的夸克账号。",
+            "zh-Hant": "使用 10 月 21 日發布的 FTY jar 時，玩偶哥哥等來源一片空白，夸克線路也不停要求登入。現在它們可以正常列出內容，並使用你已登入的夸克帳號。",
+            "ja": "10 月 21 日に公開された FTY の jar では、玩偶哥哥などのサイトが空のままで、夸克の回線はサインインを求め続けていました。今は作品が表示され、サインイン済みの夸克アカウントが使われます。"
+          }
+        },
+        {
+          "symbol": "iphone",
+          "title": {
+            "en": "Ready for iPhone Duo",
+            "zh-Hans": "适配 iPhone Duo",
+            "zh-Hant": "支援 iPhone Duo",
+            "ja": "iPhone Duo に対応"
+          },
+          "detail": {
+            "en": "Opened, iPhone Duo shows seven sections in the side bar and keeps the player’s buttons clear of the system’s; closed, it works like any iPhone.",
+            "zh-Hans": "展开时，iPhone Duo 的侧边栏显示七个栏目，播放器按钮也不再被系统按钮挡住；合上时，用起来和其他 iPhone 一样。",
+            "zh-Hant": "展開時，iPhone Duo 的側邊欄顯示七個欄目，播放器按鈕也不再被系統按鈕擋住；闔上時，用起來和其他 iPhone 一樣。",
+            "ja": "開いた iPhone Duo ではサイドバーに 7 つのセクションが並び、プレーヤーのボタンがシステムのボタンと重なりません。閉じれば、ほかの iPhone と同じように使えます。"
+          },
+          "platforms": [
+            "ios"
+          ]
+        },
+        {
+          "symbol": "exclamationmark.triangle",
+          "title": {
+            "en": "Installs next to your old Yingxia",
+            "zh-Hans": "会作为新应用安装",
+            "zh-Hant": "會作為新的 App 安裝",
+            "ja": "別のアプリとしてインストールされます"
+          },
+          "detail": {
+            "en": "This version has a new app ID, so it installs as a separate app instead of replacing the one you have. Add your subscription in the new app, then delete the old one.",
+            "zh-Hans": "这个版本使用了新的应用 ID，安装后会成为一个独立的应用，而不会替换原来的映匣。请在新应用中重新添加订阅，然后删除旧的应用。",
+            "zh-Hant": "這個版本使用了新的 App ID，安裝後會成為一個獨立的 App，而不會取代原來的映匣。請在新 App 中重新加入訂閱，然後刪除舊的 App。",
+            "ja": "このバージョンはアプリ ID が新しくなったため、今のアプリを置き換えずに別のアプリとしてインストールされます。新しいアプリで配信設定を追加してから、古いアプリを削除してください。"
+          },
+          "platforms": [
+            "ios",
+            "tvos"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.6",
       "date": "2026-10-22",
       "links": {
