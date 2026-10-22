@@ -486,6 +486,41 @@ public class IR2JConverter implements Opcodes {
         }
     }
 
+    // tvbox: a class file constant holds at most 65535 bytes of modified UTF-8. Longer strings are appended
+    // piece by piece on the operand stack (DexFix no longer splits them in registers).
+    private static int modifiedUtf8Size(char c) {
+        return c >= 0x0001 && c <= 0x007F ? 1 : c <= 0x07FF ? 2 : 3;
+    }
+
+    private static boolean tooLongForConstant(String value) {
+        if (value.length() <= 65535 / 3) return false;
+        int bytes = 0;
+        for (int i = 0; i < value.length(); i++) {
+            bytes += modifiedUtf8Size(value.charAt(i));
+            if (bytes > 65535) return true;
+        }
+        return false;
+    }
+
+    private static void constLongString(MethodVisitor asm, String value) {
+        asm.visitTypeInsn(Opcodes.NEW, "java/lang/StringBuilder");
+        asm.visitInsn(Opcodes.DUP);
+        asm.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false);
+        int start = 0, bytes = 0;
+        for (int i = 0; i <= value.length(); i++) {
+            int size = i < value.length() ? modifiedUtf8Size(value.charAt(i)) : 0;
+            if (i == value.length() || bytes + size > 65535) {
+                asm.visitLdcInsn(value.substring(start, i));
+                asm.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+                start = i;
+                bytes = 0;
+            }
+            bytes += size;
+        }
+        asm.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
+    }
+
     private void constLargeArray(MethodVisitor asm, byte[] data, String elementType) {
         String cst = hexEncode(data);
         if (cst.length() > 65535) { // asm have the limit
@@ -699,6 +734,8 @@ public class IR2JConverter implements Opcodes {
                     asm.visitInsn(ACONST_NULL);
                 } else if (cst.value instanceof DexType || cst.value instanceof MethodHandle || cst.value instanceof Proto) {
                     asm.visitLdcInsn(Dex2Asm.convertConstantValue(cst.value));
+                } else if (cst.value instanceof String && tooLongForConstant((String) cst.value)) {
+                    constLongString(asm, (String) cst.value);
                 } else {
                     asm.visitLdcInsn(cst.value);
                 }
