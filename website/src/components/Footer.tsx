@@ -28,6 +28,7 @@ export function Footer() {
             © {new Date().getFullYear()}
           </span>
           <GitHubLink label={t("footer.source")} />
+          <a href="/privacy/">Privacy</a>
           <LanguageSelect />
         </div>
         <p className="disclaimer">{t("footer.disclaimer")}</p>
