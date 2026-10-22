@@ -145,9 +145,10 @@ struct HistoryCard: View {
                     .overlay { PosterImage(url: entry.context.poster, headers: entry.context.posterHeaders ?? [:]) }
                     .overlay(alignment: .bottom) {
                         if entry.duration > 0 {
+                            // White on the artwork, as in the TV app: the accent is near-black in light mode.
                             GeometryReader { proxy in
                                 Capsule().fill(.white.opacity(0.25))
-                                    .overlay(alignment: .leading) { Capsule().fill(Brand.accent).frame(width: proxy.size.width * entry.progress) }
+                                    .overlay(alignment: .leading) { Capsule().fill(.white).frame(width: proxy.size.width * entry.progress) }
                             }
                             .frame(height: 5).padding(10)
                         }
