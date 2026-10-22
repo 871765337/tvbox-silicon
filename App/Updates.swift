@@ -21,7 +21,8 @@ import TVCore
     /// The version this build carries, e.g. "1.0.1".
     let current: String
     /// Newer releases for this platform, newest first. Drives the "New" badges.
-    var available: [ReleaseFeed.Release] { feed.updates(after: current) }
+    /// The release feed points at direct downloads; the App Store updates its own builds.
+    var available: [ReleaseFeed.Release] { Distribution.isAppStore ? [] : feed.updates(after: current) }
     var sheet: Sheet?
     /// Result of a check someone asked for.
     var message: String?
@@ -51,11 +52,12 @@ import TVCore
     }
 
     /// The current release's notes, for "What's New in This Version".
-    var currentNotes: [ReleaseFeed.Release] { feed.whatsNew(since: nil, current: current) }
+    var currentNotes: [ReleaseFeed.Release] { Distribution.isAppStore ? [] : feed.whatsNew(since: nil, current: current) }
 
     /// Once per launch: queue What's New after an update, then look for a newer release.
     /// `returning` says whether someone used the app before this build recorded versions.
     func launched(returning: Bool) async {
+        guard !Distribution.isAppStore else { return }
         let previous = defaults.string(forKey: Keys.lastVersion)
         defaults.set(current, forKey: Keys.lastVersion)
         if previous != nil || returning, previous.map({ AppVersion($0) < AppVersion(current) }) ?? true {
@@ -68,7 +70,7 @@ import TVCore
     /// Looks for a newer release. Automatic checks run at most every few hours and announce each
     /// version once; a check someone asks for always runs and reports the outcome.
     func check(manual: Bool = false) async {
-        guard !checking else { return }
+        guard !checking, !Distribution.isAppStore else { return }
         if !manual, let lastChecked, Date().timeIntervalSince(lastChecked) < Self.interval { announce(); return }
         checking = true
         defer { checking = false }

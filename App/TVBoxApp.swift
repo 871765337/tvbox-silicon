@@ -49,6 +49,7 @@ import TVCore
                 }
                 #if os(tvOS) || os(macOS)
                 .task { BilibiliCastController.shared.start(store) }
+                .onChange(of: store.extrasUnlocked) { _, unlocked in if unlocked { BilibiliCastController.shared.start(store) } }
                 #endif
                 #if os(iOS)
                 .onOpenURL { url in if let link = DouyinHandoff.Link(url) { douyinHandoff = link } }
@@ -84,8 +85,10 @@ import TVCore
         .defaultSize(width: 1240, height: 820)
         .commands {
             CommandGroup(after: .appInfo) {
-                Button(L10n.text("Check for Updates…")) { Task { await updates.check(manual: true) } }
-                    .disabled(updates.checking)
+                if !Distribution.isAppStore {
+                    Button(L10n.text("Check for Updates…")) { Task { await updates.check(manual: true) } }
+                        .disabled(updates.checking)
+                }
             }
         }
         #endif

@@ -83,15 +83,14 @@ extension View {
 
 // Content-first surfaces: neutral backgrounds, quiet controls, and strong selection contrast.
 
-/// The icon's navy canvases with neutral controls, as in the TV app: the active state is light on
-/// dark (dark on light), never a hue, so it reads the same on Liquid Glass.
+/// The icon's navy canvases with the icon's blue for selection and prominent actions.
 enum Brand {
-    /// Selection, prominent actions and progress. A fixed grey rather than `.primary`: as a tint,
-    /// `.primary` turned prominent buttons white-on-white. Kept just short of white so a focused
-    /// control (pure white) still stands out from a prominent one.
-    static let accent = Color(light: Color(white: 0.12), dark: Color(white: 0.92))
+    /// Selection, prominent actions and progress: the icon's blue. Not white or near-white, which
+    /// matched the white focus on Apple TV and the hover highlight, so the focused control was
+    /// hard to tell from a prominent one. Brighter in dark mode to stand out on the navy.
+    static let accent = Color(light: Color(red: 0.0, green: 0.45, blue: 0.80), dark: Color(red: 0.12, green: 0.54, blue: 0.90))
     /// Label colour on an accent fill.
-    static let onAccent = Color(light: .white, dark: Color(white: 0.06))
+    static let onAccent = Color.white
     /// The icon's cyan, for decoration only (icon tiles, charts, artwork placeholders), not for state.
     static let cyan = Color(red: 0.30, green: 0.78, blue: 1.0)
     static let indigo = Color(red: 0.42, green: 0.50, blue: 1.0)
@@ -1022,7 +1021,9 @@ extension View {
     /// prominent labels vanish against a white fill.
     @ViewBuilder func controlButton(prominent: Bool = false) -> some View {
         #if os(tvOS)
-        buttonStyle(TVControlStyle(prominent: prominent))
+        // On tvOS the only highlight is focus: a coloured primary button beside a white focused one
+        // left people unsure which was focused, so every control looks the same until focused.
+        buttonStyle(TVControlStyle())
         #else
         buttonStyle(ContentControlStyle(prominent: prominent))
         #endif
@@ -1037,21 +1038,19 @@ extension View {
 }
 #if os(tvOS)
 private struct TVControlStyle: ButtonStyle {
-    var prominent: Bool
-    func makeBody(configuration: Configuration) -> some View { Control(configuration: configuration, prominent: prominent) }
+    func makeBody(configuration: Configuration) -> some View { Control(configuration: configuration) }
     private struct Control: View {
         let configuration: ButtonStyleConfiguration
-        let prominent: Bool
         @Environment(\.isFocused) private var focused
         @Environment(\.isEnabled) private var enabled
         var body: some View {
             configuration.label
                 .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(focused ? Color.black : prominent ? Brand.onAccent : Color.white)
+                .foregroundStyle(focused ? Color.black : Color.white)
                 .padding(.horizontal, 24).padding(.vertical, 15)
                 .frame(minHeight: 62)
-                // Focus stays white, as everywhere on tvOS; the primary action is a near-white fill.
-                .background(focused ? Color.white : prominent ? Brand.accent : TVStyle.surface, in: RoundedRectangle(cornerRadius: 14))
+                // Focus is white, as everywhere on tvOS.
+                .background(focused ? Color.white : TVStyle.surface, in: RoundedRectangle(cornerRadius: 14))
                 .opacity(enabled ? 1 : 0.35)
                 .scaleEffect(configuration.isPressed ? 0.97 : focused ? 1.02 : 1)
                 .animation(.easeOut(duration: 0.18), value: focused)
@@ -1104,7 +1103,7 @@ extension View {
 extension View {
     @ViewBuilder func tvDefaultControls() -> some View {
         #if os(tvOS)
-        buttonStyle(TVControlStyle(prominent: false))
+        buttonStyle(TVControlStyle())
         #else
         self
         #endif

@@ -161,20 +161,29 @@ private enum FormMetrics {
     #if os(macOS)
     static let icon: CGFloat = 22, symbol: CGFloat = 11, hero: CGFloat = 52
     #else
-    static let icon: CGFloat = 30, symbol: CGFloat = 15, hero: CGFloat = 64
+    static let icon: CGFloat = 30, symbol: CGFloat = 14, hero: CGFloat = 64
     #endif
 }
 
-/// The coloured tile that leads a row.
+/// The tile that leads a row: a coloured symbol on grey on iPhone and iPad, white on colour on the Mac.
 struct SettingsIcon: View {
     let symbol: String
     var tint: Color = .gray
     var body: some View {
+        #if os(iOS)
+        // Black (Douyin) would vanish in dark mode, so it follows the text colour.
+        Image(systemName: symbol)
+            .font(.system(size: FormMetrics.symbol, weight: .semibold)).foregroundStyle(tint == .black ? Color.primary : tint)
+            .frame(width: FormMetrics.icon, height: FormMetrics.icon)
+            .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: FormMetrics.icon * 0.26, style: .continuous))
+            .accessibilityHidden(true)
+        #else
         Image(systemName: symbol)
             .font(.system(size: FormMetrics.symbol, weight: .semibold)).foregroundStyle(.white)
             .frame(width: FormMetrics.icon, height: FormMetrics.icon)
             .background(tint.gradient, in: RoundedRectangle(cornerRadius: FormMetrics.icon * 0.26, style: .continuous))
             .accessibilityHidden(true)
+        #endif
     }
 }
 
@@ -349,39 +358,48 @@ struct FormSettingsView: View {
             }
 
             Section(L10n.text("Accounts")) {
-                FormLink(symbol: "play.tv.fill", tint: .pink, title: L10n.text("Bilibili"), value: bilibiliSummary) { BilibiliAccountView() }
-                FormLink(symbol: "music.note", tint: .black, title: L10n.text("Douyin"), value: douyinSummary) { DouyinAccountView() }
+                if store.extrasUnlocked {
+                    FormLink(symbol: "play.tv.fill", tint: .pink, title: L10n.text("Bilibili"), value: bilibiliSummary) { BilibiliAccountView() }
+                    FormLink(symbol: "music.note", tint: .black, title: L10n.text("Douyin"), value: douyinSummary) { DouyinAccountView() }
+                }
                 FormLink(symbol: "externaldrive.fill.badge.person.crop", tint: .brown, title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
             }
 
+            #if os(macOS)
             Section {
-                Toggle(isOn: $showsDanmaku) {
-                    #if os(iOS)
-                    FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"))
-                    #else
-                    FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"), subtitle: danmakuNote)
-                    #endif
-                }
-                .settingsSwitch()
-                #if os(macOS)
-                Toggle(isOn: $receivesCasts) {
-                    FormLabel(symbol: "tv.and.mediabox.fill", tint: BilibiliMark.blue, title: L10n.text("Cast from the Bilibili App"),
-                              subtitle: L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia")))
-                }
-                .onChange(of: receivesCasts) { _, on in
-                    if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
+                if store.extrasUnlocked {
+                    Toggle(isOn: $showsDanmaku) {
+                        FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"), subtitle: danmakuNote)
+                    }
+                    .settingsSwitch()
+                    Toggle(isOn: $receivesCasts) {
+                        FormLabel(symbol: "tv.and.mediabox.fill", tint: BilibiliMark.blue, title: L10n.text("Cast from the Bilibili App"),
+                                  subtitle: L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia")))
+                    }
+                    .onChange(of: receivesCasts) { _, on in
+                        if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
+                    }
                 }
                 FormLink(symbol: "play.fill", tint: Brand.indigo, title: L10n.text("Play a URL")) { PlayURLView() }
-                #endif
             } header: {
                 Text(L10n.text("Playback"))
-            } footer: {
-                // The Settings app explains a switch under its group, not inside the row; the switch
-                // gets a group of its own so the note plainly belongs to it.
-                #if os(iOS)
-                Text(danmakuNote)
-                #endif
             }
+            #else
+            if store.extrasUnlocked {
+                Section {
+                    Toggle(isOn: $showsDanmaku) {
+                        FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"))
+                    }
+                    .settingsSwitch()
+                } header: {
+                    Text(L10n.text("Playback"))
+                } footer: {
+                    // The Settings app explains a switch under its group, not inside the row; the switch
+                    // gets a group of its own so the note plainly belongs to it.
+                    Text(danmakuNote)
+                }
+            }
+            #endif
             if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
                 Section {
                     if VideoEnhancement.canUpscale {
@@ -420,7 +438,9 @@ struct FormSettingsView: View {
 
             Section {
                 FormLink(symbol: "internaldrive", tint: .blue, title: L10n.text("Local Cache")) { CacheSettingsView() }
-                FormLink(symbol: "cpu.fill", tint: .orange, title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
+                if store.extrasUnlocked {
+                    FormLink(symbol: "cpu.fill", tint: .orange, title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
+                }
                 FormLink(symbol: "doc.text.magnifyingglass", tint: .gray, title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
                 Toggle(isOn: $sendsErrorReports) {
                     #if os(iOS)
@@ -442,6 +462,7 @@ struct FormSettingsView: View {
             #if os(iOS)
             // As in the Settings app: one-line rows with their state on the right, and the notes under
             // each group instead of a second line and a small link inside the row.
+            if !Distribution.isAppStore {
             Section {
                 Button {
                     if updates.available.isEmpty { Task { await updates.check(manual: true) } } else { updates.show() }
@@ -464,6 +485,7 @@ struct FormSettingsView: View {
                 if let latest = updates.available.first { Text(L10n.text("Yingxia %@ is available", latest.version)) }
                 else if let checked = updates.lastChecked { Text(L10n.text("Last checked %@", checked.formatted(date: .abbreviated, time: .shortened))) }
             }
+            }
 
             Section {
                 if !updates.currentNotes.isEmpty {
@@ -480,11 +502,11 @@ struct FormSettingsView: View {
                 FormLink(symbol: "doc.plaintext.fill", tint: .gray, title: L10n.text("Open Source Licenses")) { LicensesView() }
                     .id("settings.end")
             } footer: {
-                Text(L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source."))
+                if store.extrasUnlocked { Text(L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source.")) }
             }
             #else
             Section {
-                if updates.available.isEmpty {
+                if updates.available.isEmpty, !Distribution.isAppStore {
                     LabeledContent {
                         Button { Task { await updates.check(manual: true) } } label: {
                             if updates.checking { ProgressView().controlSize(.small) } else { Text(L10n.text("Check Now")) }
@@ -505,7 +527,7 @@ struct FormSettingsView: View {
             } header: {
                 Text(L10n.text("About"))
             } footer: {
-                Text(L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source."))
+                if store.extrasUnlocked { Text(L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source.")) }
             }
             #endif
         }.settingsRows() }
@@ -600,7 +622,7 @@ struct FormSettingsView: View {
             }
             Spacer()
             if store.importing { ProgressView().controlSize(.small); ElapsedTime() }
-            Button(L10n.text("Use Default URL")) { store.subscriptionAddress = Store.defaultURL }
+            Button(L10n.text("Use a Demo URL")) { store.subscriptionAddress = Store.defaultURL }
             Button(store.importing ? L10n.text("Importing…") : L10n.text("Add Subscription")) { add() }
                 .buttonStyle(.borderedProminent).disabled(!canAdd)
         }
@@ -649,11 +671,12 @@ private struct AddSubscriptionSheet: View {
                         .onSubmit(add)
                 } footer: {
                     if let error = store.error { Text(error).foregroundStyle(Brand.amber) }
-                    else { Text(L10n.text("Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist.")) }
+                    else { Text(L10n.text("Paste the address of a TVBox JSON subscription, an M3U or TXT live playlist, or an AList server.")) }
                 }
+                // Offered, never filled in or imported on its own.
                 Section {
                     Button { store.subscriptionAddress = Store.defaultURL } label: {
-                        FormLabel(symbol: "sparkles", tint: Brand.indigo, title: L10n.text("Use Default URL"), subtitle: Store.defaultURL)
+                        FormLabel(symbol: "sparkles", tint: Brand.indigo, title: L10n.text("Use a Demo URL"))
                             .foregroundStyle(.primary)
                     }
                 }
@@ -1159,17 +1182,21 @@ struct TVSettingsView: View {
             }
             subscriptionSection
             TVSettingsSection(title: L10n.text("Accounts")) {
-                TVSettingsLink(title: L10n.text("Bilibili"), value: bilibiliSummary) { BilibiliAccountView() }
-                TVSettingsLink(title: L10n.text("Douyin"), value: douyinSummary) { DouyinAccountView() }
+                if store.extrasUnlocked {
+                    TVSettingsLink(title: L10n.text("Bilibili"), value: bilibiliSummary) { BilibiliAccountView() }
+                    TVSettingsLink(title: L10n.text("Douyin"), value: douyinSummary) { DouyinAccountView() }
+                }
                 TVSettingsLink(title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
             }
             TVSettingsSection(title: L10n.text("Playback"),
-                              footer: L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia"))) {
-                TVSettingsToggle(title: L10n.text("Show Danmaku"), isOn: $showsDanmaku)
-                TVSettingsToggle(title: L10n.text("Cast from the Bilibili App"), isOn: $receivesCasts)
-                    .onChange(of: receivesCasts) { _, on in
-                        if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
-                    }
+                              footer: store.extrasUnlocked ? L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia")) : nil) {
+                if store.extrasUnlocked {
+                    TVSettingsToggle(title: L10n.text("Show Danmaku"), isOn: $showsDanmaku)
+                    TVSettingsToggle(title: L10n.text("Cast from the Bilibili App"), isOn: $receivesCasts)
+                        .onChange(of: receivesCasts) { _, on in
+                            if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
+                        }
+                }
                 TVSettingsLink(title: L10n.text("Play a URL")) { TVPlayURLPage() }
             }
             if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
@@ -1181,14 +1208,14 @@ struct TVSettingsView: View {
             TVSettingsSection(title: L10n.text("Advanced"),
                               footer: L10n.text("Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history.")) {
                 TVSettingsLink(title: L10n.text("Local Cache")) { CacheSettingsView() }
-                TVSettingsLink(title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() }
+                if store.extrasUnlocked { TVSettingsLink(title: L10n.text("JAR Runtime and Compatibility")) { RuntimeView() } }
                 TVSettingsLink(title: L10n.text("Diagnostic Logs")) { DiagnosticsView() }
                 TVSettingsToggle(title: L10n.text("Send Error Reports"), isOn: $sendsErrorReports)
                     .onChange(of: sendsErrorReports) { _, on in if !on { ErrorReports.shared.discard() } }
             }
-            if updates.available.isEmpty { updateSection }
+            if updates.available.isEmpty, !Distribution.isAppStore { updateSection }
             TVSettingsSection(title: L10n.text("About"),
-                              footer: L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source.")) {
+                              footer: store.extrasUnlocked ? L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source.") : nil) {
                 TVSettingsLink(title: L10n.text("Open Source Licenses")) { LicensesView() }
             }
         }
@@ -1481,7 +1508,7 @@ private struct TVAddSubscriptionPage: View {
                     }
                 }
                 .disabled(store.importing || empty)
-                TVSettingsAction(title: L10n.text("Use Default URL")) { store.subscriptionAddress = Store.defaultURL }
+                TVSettingsAction(title: L10n.text("Use a Demo URL")) { store.subscriptionAddress = Store.defaultURL }
             }
         }
     }

@@ -25,6 +25,7 @@
 "Subscription URL" = "訂閱網址";
 "Save and Refresh" = "儲存並更新訂閱";
 "Use Default URL" = "使用預設網址";
+"Use a Demo URL" = "使用示範網址";
 "Current subscription: %@" = "目前訂閱：%@";
 "Play a URL" = "播放連結";
 "HTTP / HTTPS media URL" = "HTTP / HTTPS 媒體網址";
@@ -296,6 +297,7 @@
 
 // Cloud drive accounts
 "Cloud Drive Accounts" = "網盤帳號";
+"Sign In to Cloud Drive" = "登入網盤";
 "Manage Cloud Accounts" = "管理網盤帳號";
 "Sign in on the provider's official page, then save the login. Supported plugins use these accounts for cloud playback." = "在網盤官方頁面登入後儲存登入資訊。相容的外掛會使用這些帳號播放網盤內容。";
 "Sign In to Quark" = "登入夸克網盤";
@@ -780,7 +782,7 @@
 "Choose your tabs and their order." = "選擇要顯示的標籤及其順序。";
 "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "拖移即可調整順序。標籤列最多放四項，其餘的留在「更多」中。";
 "Add" = "新增";
-"Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist." = "貼上 TVBox JSON 訂閱網址，或 M3U / TXT 直播清單網址。";
+"Paste the address of a TVBox JSON subscription, an M3U or TXT live playlist, or an AList server." = "貼上 TVBox JSON 訂閱網址、M3U / TXT 直播清單網址，或 AList 伺服器網址。";
 "Up to Date" = "已是最新";
 "Migu Music" = "咪咕音樂";
 "Kuwo Music" = "酷我音樂";
@@ -876,3 +878,40 @@
 "Or scan this code with the %@ app on another phone." = "也可以用另一支手機上的%@ App 掃描此 QR 碼。";
 "Sign In on This iPhone" = "在這支 iPhone 上登入";
 "Sign In on This iPad" = "在這台 iPad 上登入";
+
+/* Cloud Files */
+"Cloud Files" = "網盤檔案";
+"Cloud Drives" = "網盤";
+"Sign in to %@ to browse its files." = "登入%@後即可瀏覽其中的檔案。";
+"This folder is protected by a password." = "此檔案夾受密碼保護。";
+"Apple devices can't play %@ files." = "Apple 裝置無法播放 %@ 檔案。";
+"This file's drive is no longer in Cloud Files." = "此檔案所在的網盤已不在網盤檔案中。";
+"%@ didn't return a link for this file. Try again." = "%@沒有傳回此檔案的連結，請重試。";
+"%@ hasn't prepared a version of this video that Apple devices can play." = "%@尚未為此影片準備 Apple 裝置可播放的版本。";
+"%@ says: %@" = "%@ 提示：%@";
+"%@ didn't accept the user name and password." = "%@ 不接受此使用者名稱和密碼。";
+"Added the AList server %@. Browse it in Cloud Files." = "已新增 AList 伺服器 %@，可在「網盤檔案」中瀏覽。";
+"Added %lld AList servers. Browse them in Cloud Files." = "已新增 %lld 個 AList 伺服器，可在「網盤檔案」中瀏覽。";
+"This address is now an AList server. Add it again to browse it in Cloud Files." = "此網址現在是 AList 伺服器。重新新增即可在「網盤檔案」中瀏覽。";
+"Sign in to Quark or UC under Cloud Drive Accounts to browse their files here." = "在「網盤帳號」中登入夸克或 UC 後，即可在此瀏覽其中的檔案。";
+"Add an AList or OpenList server by the address you open it at. Pasting that address, or a TVBox AList configuration, in Add Subscription adds servers too." = "用開啟 AList 或 OpenList 伺服器的網址來新增它。在「新增訂閱」中貼上該網址或 TVBox AList 設定，也能新增伺服器。";
+"Edit Server" = "編輯伺服器";
+"Remove Server" = "移除伺服器";
+"Add AList Server" = "新增 AList 伺服器";
+"Remove %@ from Cloud Files?" = "要從網盤檔案中移除%@嗎？";
+"This Folder Is Empty" = "此檔案夾是空的";
+"Couldn't Open This Folder" = "無法開啟此檔案夾";
+"Folder Password" = "檔案夾密碼";
+"Password" = "密碼";
+"Open" = "開啟";
+"Enter the password for %@." = "輸入「%@」的密碼。";
+"The address you open the server at in a browser, such as http://192.168.1.10:5244. Add a folder after it to start there. The user name and password are only for servers that don't let guests browse." = "在瀏覽器中開啟伺服器所用的網址，例如 http://192.168.1.10:5244。在後面加上檔案夾即可從那裡開始瀏覽。使用者名稱和密碼僅用於不允許訪客瀏覽的伺服器。";
+"Address" = "網址";
+"Name (Optional)" = "名稱（選填）";
+"User Name (Optional)" = "使用者名稱（選填）";
+"Password (Optional)" = "密碼（選填）";
+"No AList server answered at this address." = "此網址上沒有回應的 AList 伺服器。";
+"This server doesn't let guests browse. Enter a user name and password." = "此伺服器不允許訪客瀏覽，請輸入使用者名稱和密碼。";
+"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "夸克和 UC 在官方頁面登入。映匣會將登入資訊儲存在這台 Mac 上。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "在網盤官方頁面登入，或用另一支手機上的網盤 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "用網盤的手機 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上。";

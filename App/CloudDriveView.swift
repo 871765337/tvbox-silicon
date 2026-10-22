@@ -4,6 +4,7 @@ import TVCore
 import WebKit
 
 struct CloudDriveView: View {
+    @Environment(Store.self) private var store
     @State private var accounts = CloudDriveAccounts()
     @State private var login: CloudProvider?
     /// Baidu and Aliyun sign in with a code to scan, as on Apple TV.
@@ -14,8 +15,9 @@ struct CloudDriveView: View {
     @State private var showsManual = false
     var body: some View {
         SettingsPage(title: L10n.text("Cloud Drive Accounts"), symbol: "externaldrive") {
-            SettingsGroup(footer: L10n.text("Sign in to Quark and UC on their official page, and to Baidu and Aliyun by scanning a code with their phone app. Yingxia stores the login on this Mac and supplies it to the plugins you run.")) {
-                ForEach(CloudProvider.allCases) { provider in
+            SettingsGroup(footer: store.extrasUnlocked ? L10n.text("Sign in to Quark and UC on their official page, and to Baidu and Aliyun by scanning a code with their phone app. Yingxia stores the login on this Mac and supplies it to the plugins you run.")
+                            : L10n.text("Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac.")) {
+                ForEach(CloudProvider.shown(store)) { provider in
                     let signedIn = provider.isSignedIn(accounts)
                     SettingsRow(symbol: provider.symbol, tint: provider.tint, title: provider.name,
                                 subtitle: L10n.text(signedIn ? "Signed In" : "Not Signed In")) {
@@ -33,6 +35,7 @@ struct CloudDriveView: View {
                     }
                 }
             }
+            if store.extrasUnlocked {
             SettingsGroup(title: L10n.text("Advanced"),
                           footer: L10n.text("You can also paste existing credentials. They are stored locally and supplied to the subscription plugins you run. Saving restarts plugin sessions.")) {
                 DisclosureGroup(isExpanded: $showsManual) {
@@ -45,6 +48,7 @@ struct CloudDriveView: View {
                 } label: {
                     Text(L10n.text("Paste Credentials Manually"))
                 }
+            }
             }
             if let notice { Label(notice, systemImage: "checkmark.circle.fill").font(.callout).foregroundStyle(.green) }
             if let error { Label(error, systemImage: "exclamationmark.triangle.fill").font(.callout).foregroundStyle(Brand.rose) }
@@ -175,13 +179,14 @@ private struct CloudLoginBrowser: NSViewRepresentable {
 /// drive's own sign-in page, with the code for another phone as the alternative. Plugins read the
 /// saved sign-in on their next request.
 struct CloudDriveView: View {
+    @Environment(Store.self) private var store
     @State private var accounts = CloudDriveAccounts()
     @State private var login: CloudProvider?
     @State private var error: String?
     var body: some View {
         SettingsPage(title: L10n.text("Cloud Drive Accounts"), symbol: "externaldrive") {
             SettingsGroup(footer: footer) {
-                ForEach(CloudProvider.allCases) { provider in
+                ForEach(CloudProvider.shown(store)) { provider in
                     let signedIn = provider.isSignedIn(accounts)
                     SettingsRow(symbol: provider.symbol, tint: provider.tint, title: provider.name,
                                 subtitle: L10n.text(signedIn ? "Signed In" : "Not Signed In")) {
@@ -210,9 +215,11 @@ struct CloudDriveView: View {
     }
     private var footer: String {
         #if os(iOS)
-        L10n.text("Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")
+        store.extrasUnlocked ? L10n.text("Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")
+            : L10n.text("Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device.")
         #else
-        L10n.text("Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")
+        store.extrasUnlocked ? L10n.text("Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run.")
+            : L10n.text("Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device.")
         #endif
     }
     private func reload() {
@@ -255,6 +262,10 @@ enum CloudProvider: String, Identifiable, CaseIterable {
         case .aliyun: .purple
         }
     }
+    /// Baidu and Aliyun only serve plugins, so an App Store build lists them once a subscription is added;
+    /// Quark and UC are browsed in Cloud Files too.
+    @MainActor static func shown(_ store: Store) -> [CloudProvider] { store.extrasUnlocked ? allCases : [.quark, .uc] }
+
     /// Quark and UC sign in on their web page on a Mac; every other sign-in is a code to scan.
     var signsInOnWeb: Bool { self == .quark || self == .uc }
     var domain: String { self == .quark ? "quark.cn" : "uc.cn" }

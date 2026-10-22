@@ -2,7 +2,7 @@ import SwiftUI
 import TVCore
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case home = "Watch Now", live = "Live TV", music = "Music", search = "Global Search", sites = "Sources", favorites = "Favorites", history = "Playback History", downloads = "Downloads", settings = "Settings", more = "More"
+    case home = "Watch Now", live = "Live TV", music = "Music", search = "Global Search", sites = "Sources", files = "Cloud Files", favorites = "Favorites", history = "Playback History", downloads = "Downloads", settings = "Settings", more = "More"
     /// Apple TV's sidebar item for the song playing, first while one is loaded; it opens the player.
     case nowPlaying = "Now Playing"
     var id: String { rawValue }
@@ -16,6 +16,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .live: "dot.radiowaves.left.and.right"
         case .music: "music.note"
         case .sites: "square.grid.2x2.fill"
+        case .files: "folder.fill"
         case .favorites: "heart.fill"
         case .downloads: "arrow.down.circle.fill"
         case .history: "clock.arrow.circlepath"
@@ -45,9 +46,10 @@ struct RootView: View {
     #endif
     private var tabs: [AppSection] {
         #if os(iOS)
-        if sizeClass == .compact { return PhoneTabs(stored: storedTabs).bar + [.more] }
+        if sizeClass == .compact { return PhoneTabs(stored: storedTabs).hiding(store.hiddenSections).bar + [.more] }
         #endif
-        let sections: [AppSection] = [.home, .live, .music, .search, .sites, .history, .favorites, .downloads, .settings]
+        let sections = [AppSection.home, .live, .music, .search, .sites, .files, .history, .favorites, .downloads, .settings]
+            .filter { !store.hiddenSections.contains($0) }
         #if os(tvOS)
         // Where the remote already goes to change section, so the song is one move away from anywhere.
         // Before tvOS 27 the sidebar has no header for the Now Playing card.
@@ -113,7 +115,7 @@ struct RootView: View {
     #if !os(macOS)
     #if os(iOS)
     /// Sections a phone reaches through More, as arranged in the tab bar editor.
-    private var inMore: [AppSection] { PhoneTabs(stored: storedTabs).more }
+    private var inMore: [AppSection] { PhoneTabs(stored: storedTabs).hiding(store.hiddenSections).more }
     #endif
     private var platformTabs: some View {
         @Bindable var store = store
@@ -195,6 +197,7 @@ struct RootView: View {
         case .live: LiveView()
         case .music: MusicView()
         case .sites: SitesView()
+        case .files: CloudFilesView()
         case .favorites: FavoritesView()
         case .downloads: DownloadsView()
         case .history: PlaybackHistoryView()
@@ -251,7 +254,9 @@ private struct MacSidebar: View {
     @Environment(Store.self) private var store
     @Environment(Updates.self) private var updates
     private var groups: [(title: String, items: [AppSection])] {
-        [(L10n.text("Browse"), [.home, .search, .live, .music, .sites]), (L10n.text("Library"), [.history, .favorites, .downloads, .settings])]
+        let groups: [(title: String, items: [AppSection])] = [(L10n.text("Browse"), [.home, .search, .live, .music, .sites, .files]),
+                                                             (L10n.text("Library"), [.history, .favorites, .downloads, .settings])]
+        return groups.map { (title: $0.title, items: $0.items.filter { !store.hiddenSections.contains($0) }) }
     }
 
     var body: some View {
@@ -268,7 +273,7 @@ private struct MacSidebar: View {
                         ForEach(group.items) { item in
                             SidebarRow(section: item, selected: store.section == item,
                                        badge: item.showsUpdateBadge && !updates.available.isEmpty,
-                                       shortcut: Character(String((ordered.firstIndex(of: item) ?? 0) + 1))) {
+                                       shortcut: (ordered.firstIndex(of: item).map { $0 + 1 }).flatMap { $0 < 10 ? Character(String($0)) : nil }) {
                                 store.section = item
                             }
                         }
@@ -286,7 +291,8 @@ private struct SidebarRow: View {
     let section: AppSection
     let selected: Bool
     var badge = false
-    let shortcut: Character
+    /// ⌘1–⌘9; sections past the ninth have none.
+    let shortcut: Character?
     let action: () -> Void
     @State private var hovering = false
 
@@ -315,7 +321,7 @@ private struct SidebarRow: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .animation(.smooth(duration: 0.15), value: hovering)
-        .keyboardShortcut(KeyEquivalent(shortcut), modifiers: .command)
+        .keyboardShortcut(shortcut.map { KeyboardShortcut(KeyEquivalent($0), modifiers: .command) })
         .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }

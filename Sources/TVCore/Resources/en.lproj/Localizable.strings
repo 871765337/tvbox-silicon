@@ -25,6 +25,7 @@
 "Subscription URL" = "Subscription URL";
 "Save and Refresh" = "Save and Refresh";
 "Use Default URL" = "Use Default URL";
+"Use a Demo URL" = "Use a Demo URL";
 "Current subscription: %@" = "Current subscription: %@";
 "Play a URL" = "Play a URL";
 "HTTP / HTTPS media URL" = "HTTP / HTTPS media URL";
@@ -296,6 +297,7 @@
 
 // Cloud drive accounts
 "Cloud Drive Accounts" = "Cloud Drive Accounts";
+"Sign In to Cloud Drive" = "Sign In to Cloud Drive";
 "Manage Cloud Accounts" = "Manage Cloud Accounts";
 "Sign in on the provider's official page, then save the login. Supported plugins use these accounts for cloud playback." = "Sign in on the provider's official page, then save the login. Supported plugins use these accounts for cloud playback.";
 "Sign In to Quark" = "Sign In to Quark";
@@ -780,7 +782,7 @@
 "Choose your tabs and their order." = "Choose your tabs and their order.";
 "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More." = "Drag to reorder. Up to four sections fit in the tab bar; the rest stay in More.";
 "Add" = "Add";
-"Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist." = "Paste the address of a TVBox JSON subscription, or of an M3U or TXT live playlist.";
+"Paste the address of a TVBox JSON subscription, an M3U or TXT live playlist, or an AList server." = "Paste the address of a TVBox JSON subscription, an M3U or TXT live playlist, or an AList server.";
 "Up to Date" = "Up to Date";
 "Migu Music" = "Migu Music";
 "Kuwo Music" = "Kuwo Music";
@@ -876,3 +878,40 @@
 "Or scan this code with the %@ app on another phone." = "Or scan this code with the %@ app on another phone.";
 "Sign In on This iPhone" = "Sign In on This iPhone";
 "Sign In on This iPad" = "Sign In on This iPad";
+
+/* Cloud Files */
+"Cloud Files" = "Cloud Files";
+"Cloud Drives" = "Cloud Drives";
+"Sign in to %@ to browse its files." = "Sign in to %@ to browse its files.";
+"This folder is protected by a password." = "This folder is protected by a password.";
+"Apple devices can't play %@ files." = "Apple devices can't play %@ files.";
+"This file's drive is no longer in Cloud Files." = "This file's drive is no longer in Cloud Files.";
+"%@ didn't return a link for this file. Try again." = "%@ didn't return a link for this file. Try again.";
+"%@ hasn't prepared a version of this video that Apple devices can play." = "%@ hasn't prepared a version of this video that Apple devices can play.";
+"%@ says: %@" = "%@ says: %@";
+"%@ didn't accept the user name and password." = "%@ didn't accept the user name and password.";
+"Added the AList server %@. Browse it in Cloud Files." = "Added the AList server %@. Browse it in Cloud Files.";
+"Added %lld AList servers. Browse them in Cloud Files." = "Added %lld AList servers. Browse them in Cloud Files.";
+"This address is now an AList server. Add it again to browse it in Cloud Files." = "This address is now an AList server. Add it again to browse it in Cloud Files.";
+"Sign in to Quark or UC under Cloud Drive Accounts to browse their files here." = "Sign in to Quark or UC under Cloud Drive Accounts to browse their files here.";
+"Add an AList or OpenList server by the address you open it at. Pasting that address, or a TVBox AList configuration, in Add Subscription adds servers too." = "Add an AList or OpenList server by the address you open it at. Pasting that address, or a TVBox AList configuration, in Add Subscription adds servers too.";
+"Edit Server" = "Edit Server";
+"Remove Server" = "Remove Server";
+"Add AList Server" = "Add AList Server";
+"Remove %@ from Cloud Files?" = "Remove %@ from Cloud Files?";
+"This Folder Is Empty" = "This Folder Is Empty";
+"Couldn't Open This Folder" = "Couldn't Open This Folder";
+"Folder Password" = "Folder Password";
+"Password" = "Password";
+"Open" = "Open";
+"Enter the password for %@." = "Enter the password for %@.";
+"The address you open the server at in a browser, such as http://192.168.1.10:5244. Add a folder after it to start there. The user name and password are only for servers that don't let guests browse." = "The address you open the server at in a browser, such as http://192.168.1.10:5244. Add a folder after it to start there. The user name and password are only for servers that don't let guests browse.";
+"Address" = "Address";
+"Name (Optional)" = "Name (Optional)";
+"User Name (Optional)" = "User Name (Optional)";
+"Password (Optional)" = "Password (Optional)";
+"No AList server answered at this address." = "No AList server answered at this address.";
+"This server doesn't let guests browse. Enter a user name and password." = "This server doesn't let guests browse. Enter a user name and password.";
+"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac.";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device.";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device.";
