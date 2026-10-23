@@ -29,7 +29,8 @@ public class NativeProbe extends AbstractJni {
 
     public static org.json.JSONObject failure(Throwable error) throws Exception {
         error.printStackTrace(System.err);
-        var result = new org.json.JSONObject().put("error", error.toString());
+        // The host version tells a report from a stale runtime apart from a bug in the current one.
+        var result = new org.json.JSONObject().put("error", error.toString()).put("host", BytecodeCompatibility.VERSION);
         var chain = new java.util.ArrayList<Throwable>();
         var visited = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Throwable, Boolean>());
         for (Throwable link = error; link != null && visited.add(link); link = link.getCause()) chain.add(link);
@@ -39,6 +40,9 @@ public class NativeProbe extends AbstractJni {
         result.put("trace", trace(chain));
         NoClassDefFoundError missing = null;
         for (Throwable link : chain) if (link instanceof NoClassDefFoundError found) { missing = found; break; }
+        // The verifier rejects bytecode that dex conversion got wrong; the JVM names the class in the message.
+        LinkageError rejected = null;
+        for (Throwable link : chain) if (link instanceof VerifyError || link instanceof ClassFormatError) { rejected = (LinkageError) link; break; }
         HttpDiagnostics.CloudLoginRequired login = null;
         for (Throwable link : chain) if (link instanceof HttpDiagnostics.CloudLoginRequired found) { login = found; break; }
         if (login != null) {
@@ -61,6 +65,10 @@ public class NativeProbe extends AbstractJni {
             String name = missing.getMessage().replace('/', '.');
             boolean android = name.startsWith("android.") || name.startsWith("androidx.") || name.startsWith("dalvik.");
             result.put("errorCode", android ? "unsupported_android" : "class_conversion").put("missingClass", name);
+        } else if (rejected != null) {
+            result.put("errorCode", "class_conversion");
+            String name = rejectedClass(rejected.getMessage());
+            if (name != null) result.put("brokenClass", name);
         } else if (chain.stream().anyMatch(link -> link instanceof LinkageError || link instanceof UnsupportedOperationException
             || (link instanceof RuntimeException && "Stub!".equals(link.getMessage())))) {
             result.put("errorCode", "unsupported_android");
@@ -68,6 +76,27 @@ public class NativeProbe extends AbstractJni {
             result.put("errorCode", "plugin_crash");
         }
         return result;
+    }
+
+    private static final java.util.regex.Pattern REJECTED = java.util.regex.Pattern.compile(
+        "Location:\\s+([\\w/$]+)\\.|(?:in class(?: file)?|class:) ([\\w/$.]*[\\w$])");
+
+    /** The class a VerifyError or ClassFormatError is about, from "Location: com/x/Y.m(...)" or "... in class com/x/Y". */
+    public static String rejectedClass(String message) {
+        if (message == null) return null;
+        var match = REJECTED.matcher(message);
+        if (!match.find()) return null;
+        return (match.group(1) != null ? match.group(1) : match.group(2)).replace('/', '.');
+    }
+
+    /** FTY's native loader returns null however the spider failed; loading the class ourselves recovers why. */
+    public static IllegalStateException spiderFailed(String name, ClassLoader loader) {
+        var failed = new IllegalStateException("Spider creation failed");
+        if (loader != null) {
+            try { Class.forName(name, true, loader); }
+            catch (Throwable cause) { failed.initCause(cause); }
+        }
+        return failed;
     }
 
     /** The first application frame decides: plugin code crashed on its own, not inside our runtime. */
@@ -176,8 +205,9 @@ public class NativeProbe extends AbstractJni {
                 com.github.unidbg.linux.android.dvm.jni.ProxyDvmObject.createObject(vm, context));
             System.out.println("LOADER_RESULT=" + (loader == null ? "null" : loader.getValue()));
             if(loader == null) throw new IllegalStateException("Plugin loader failed");
-            Object spider = com.github.catvod.spider.DexNative.getSpider(loader.getValue(), "com.github.catvod.spider." + input.getString("api").replace("csp_", ""));
-            if(spider == null) throw new IllegalStateException("Spider creation failed");
+            String spiderName = "com.github.catvod.spider." + input.getString("api").replace("csp_", "");
+            Object spider = com.github.catvod.spider.DexNative.getSpider(loader.getValue(), spiderName);
+            if(spider == null) throw spiderFailed(spiderName, loader.getValue() instanceof ClassLoader own ? own : dalvik.system.DexClassLoader.current);
             System.out.println("SPIDER=" + spider.getClass().getName());
             com.github.catvod.crawler.Spider actual = (com.github.catvod.crawler.Spider)spider;
             actual.siteKey = input.optString("key");

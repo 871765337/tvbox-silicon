@@ -16,7 +16,7 @@ public class HostCompatibilityTest {
             }
             return;
         }
-        reflectiveArrayCloneWorks(); conversionCacheReusesAndRepairs(); partialInitializationDoesNotHideWorkingSources(); recommendationsMerge(); stateSurvivesAndRestores(); interfaceCallsExecute(); sourceFailuresStaySpecific(); cloudLoginReturnsToTheApp(); asyncCloudLoginEndsPlayback(); packageContextExists(); androidLogHasEveryOverload(); pluginKeepsItsOwnSlf4j();
+        reflectiveArrayCloneWorks(); conversionCacheReusesAndRepairs(); partialInitializationDoesNotHideWorkingSources(); recommendationsMerge(); stateSurvivesAndRestores(); interfaceCallsExecute(); sourceFailuresStaySpecific(); cloudLoginReturnsToTheApp(); asyncCloudLoginEndsPlayback(); packageContextExists(); androidLogHasEveryOverload(); pluginKeepsItsOwnSlf4j(); conversionFailuresNameTheClass();
         System.out.println("Java host regression checks passed (state, interface bytecode, HTTP failures, Android context).");
     }
 
@@ -212,6 +212,29 @@ public class HostCompatibilityTest {
         });
         try { failing.request(new JSONObject().put("ids", "a")); throw new AssertionError("HTTP failure was hidden"); }
         catch (HttpDiagnostics.SourceHTTPException error) { check(error.status == 503, "Wrong source failure"); }
+    }
+
+    private static void conversionFailuresNameTheClass() throws Exception {
+        // Bytecode the verifier rejects was reported as an Android gap, with no class to look at.
+        var writer = new ClassWriter(0);
+        writer.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, "tvbox/test/Rejected", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "value", "()I", null, null);
+        method.visitCode(); method.visitInsn(Opcodes.ACONST_NULL); method.visitInsn(Opcodes.IRETURN); method.visitMaxs(1, 0); method.visitEnd();
+        writer.visitEnd();
+        byte[] bytes = writer.toByteArray();
+        var loader = new ClassLoader(HostCompatibilityTest.class.getClassLoader()) {
+            @Override protected Class<?> findClass(String name) throws ClassNotFoundException {
+                if (!name.equals("tvbox.test.Rejected")) throw new ClassNotFoundException(name);
+                return defineClass(name, bytes, 0, bytes.length);
+            }
+        };
+        JSONObject rejected = NativeProbe.failure(new java.lang.reflect.InvocationTargetException(NativeProbe.spiderFailed("tvbox.test.Rejected", loader)));
+        check(rejected.optString("errorCode").equals("class_conversion") && rejected.optString("brokenClass").equals("tvbox.test.Rejected"), "Verifier failure lost its class: " + rejected);
+        check(rejected.optString("host").equals(BytecodeCompatibility.VERSION), "Failure did not name the host version");
+        check(NativeProbe.rejectedClass("Illegal field name \"a-b\" in class file com/x/Y").equals("com.x.Y"), "ClassFormatError class not found");
+        // A spider class the archive lacks keeps the subscription error, which lets the app try another archive.
+        JSONObject missing = NativeProbe.failure(NativeProbe.spiderFailed("com.github.catvod.spider.Absent", loader));
+        check(missing.optString("error").contains("ClassNotFoundException: com.github.catvod.spider.Absent"), "Missing spider was hidden: " + missing);
     }
 
     private static void cloudLoginReturnsToTheApp() throws Exception {
