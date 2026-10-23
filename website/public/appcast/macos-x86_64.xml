@@ -1,18 +1,32 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Yingxia</title>
+        <item>
+            <title>1.7.10</title>
+            <pubDate>Sat, 24 Oct 2026 02:09:42 +0800</pubDate>
+            <sparkle:version>29</sparkle:version>
+            <sparkle:shortVersionString>1.7.10</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://download.getmegaportal.com/yingxia/1.7.10/Yingxia-1.7.10-macos-x86_64.dmg" length="192847585" type="application/octet-stream" sparkle:edSignature="kybunK9lPw63VKSPCjDFiLlKx1aWhhEOzx4IRgJDkjQ5zyenufLusnWpoJYF/yhZXQIVB3Sq2HwRaW/3aPKwBA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://download.getmegaportal.com/yingxia/1.7.10/Yingxia29-27-x86_64.delta" sparkle:deltaFrom="27" length="2400818" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="479392" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="axkV+aEPvYUoLXzTJz9h3mm3KvLb7YHRg1SFLciu8IbGZVp0PEohPMUSMKNqNU1UcdsvU4zFtvivI4fTBmfsAA=="/>
+            </sparkle:deltas>
+        </item>
         <item>
             <title>1.7.8</title>
             <pubDate>Fri, 23 Oct 2026 00:56:21 +0800</pubDate>
             <sparkle:version>27</sparkle:version>
             <sparkle:shortVersionString>1.7.8</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-x86_64.dmg" length="194962137" type="application/octet-stream" sparkle:edSignature="MDV5YXegHMJWI7sbP7Glr7PhcMpiRgc2vngEa7If7+N2mB7GxFuv9+RwATZXkPSc9FYomnitVSfWVf7QNoCbAA=="></enclosure>
+            <enclosure url="https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-x86_64.dmg" length="194962137" type="application/octet-stream" sparkle:edSignature="MDV5YXegHMJWI7sbP7Glr7PhcMpiRgc2vngEa7If7+N2mB7GxFuv9+RwATZXkPSc9FYomnitVSfWVf7QNoCbAA=="/>
         </item>
     </channel>
-</rss><!-- sparkle-signatures:
-edSignature: z/iH00vYyGE02f/YO8j84xkhh++CXVjF1BZZd/VKJURfjFhH+75CLuklYJxFkHQerLMhfWOzUM46x9Y6HtNkDg==
-length: 1059
+</rss>
+<!-- sparkle-signatures:
+edSignature: kAOoJq4In1x1+feI/QaaYcLr/eD6d0cQQk30a64ycXycubDDvg8ObuKSsouPdUklqwd5hHVXjZyX7wiN4f7eCw==
+length: 2114
 -->

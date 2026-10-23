@@ -1,8 +1,22 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Yingxia</title>
+        <item>
+            <title>1.7.10</title>
+            <pubDate>Sat, 24 Oct 2026 02:09:15 +0800</pubDate>
+            <sparkle:version>29</sparkle:version>
+            <sparkle:shortVersionString>1.7.10</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://download.getmegaportal.com/yingxia/1.7.10/Yingxia-1.7.10-macos-arm64.dmg" length="190364787" type="application/octet-stream" sparkle:edSignature="XBGYMFNQfH4IyOch1Bbl8D0tmKsXCnNlK5VdTytpR1a191aEqABUtwXljguz+MqdxTIEi/Y9rA0n8rIP2cNSCA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://download.getmegaportal.com/yingxia/1.7.10/Yingxia29-27-arm64.delta" sparkle:deltaFrom="27" length="2191290" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="468528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="82jr1maHnteu7KyhyErw6e/ghmf53F1l5mQwYxCGx0sP1D6Bso1bBJEQukt1T/nqpzLQNzqfEBrPwMz2iAQrBg=="/>
+            </sparkle:deltas>
+        </item>
         <item>
             <title>1.7.8</title>
             <pubDate>Fri, 23 Oct 2026 00:56:15 +0800</pubDate>
@@ -10,10 +24,11 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <sparkle:shortVersionString>1.7.8</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-arm64.dmg" length="185289210" type="application/octet-stream" sparkle:edSignature="6oIExUJViWHk/8T7a9BIWJWgkAG277OKNZ/OlhJZxwxs3y7Dds22s37XwSob7Rqu53h5I5DeGCcDnqzuwahUCg=="></enclosure>
+            <enclosure url="https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-arm64.dmg" length="185289210" type="application/octet-stream" sparkle:edSignature="6oIExUJViWHk/8T7a9BIWJWgkAG277OKNZ/OlhJZxwxs3y7Dds22s37XwSob7Rqu53h5I5DeGCcDnqzuwahUCg=="/>
         </item>
     </channel>
-</rss><!-- sparkle-signatures:
-edSignature: YILmWAxiErMUbWPlB/iwyPJ3HPE5rekbKjmW+r/eCO/QG5LkVmXOHvydc3mgeOB8svivqaGdp7Ut9onH1kolAg==
-length: 1137
+</rss>
+<!-- sparkle-signatures:
+edSignature: sS4wqimetw2/vnOPX9hXocbDJRfnypQiYOqWWpj7gCGD2+vJ7Xchw5Icy89wJj7+FiaHAxTG6cUmHnT3WeknBg==
+length: 2269
 -->
