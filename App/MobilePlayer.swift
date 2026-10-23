@@ -114,21 +114,18 @@ struct MobilePlayerView: View {
 
     // MARK: Top row
 
-    /// One row when it fits; on a phone held upright the buttons take a row of their own under Back and the title.
+    /// One row when it fits; on a phone held upright, Back and the buttons share the first row and the title has the
+    /// next one to itself, as in YouTube's player.
     private var topRow: some View {
-        ChromeRow(minimumTitle: 180) {
-            HStack(spacing: 12) {
-                Button(action: close) { Image(systemName: "chevron.backward").font(.headline).frame(width: 22, height: 22) }
-                    .chromeButton()
-                    .accessibilityLabel(L10n.text("Back"))
-                    .accessibilityIdentifier("player.close")
-                    .keyboardShortcut(.cancelAction)
-                Text(channel.name).font(.headline).lineLimit(1)
-                    .shadow(color: .black.opacity(0.6), radius: 4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            toolbar
-            optionsMenu
+        PlayerTopBar {
+            Button(action: close) { Image(systemName: "chevron.backward").font(.headline).frame(width: 22, height: 22) }
+                .chromeButton()
+                .accessibilityLabel(L10n.text("Back"))
+                .accessibilityIdentifier("player.close")
+                .keyboardShortcut(.cancelAction)
+            Text(channel.name).font(.headline).lineLimit(1)
+                .shadow(color: .black.opacity(0.6), radius: 4)
+            HStack(spacing: 10) { toolbar; optionsMenu }
         }
         .simultaneousGesture(TapGesture().onEnded { poke() })
     }
@@ -294,7 +291,8 @@ struct MobilePlayerView: View {
     }
 }
 
-/// The elapsed time, a scrubber and the time left. A view of its own, so only it redraws as the position moves.
+/// The position and the length in a capsule over a scrubber the width of the screen, as in YouTube's player. A view
+/// of its own, so only it redraws as the position moves.
 private struct SeekBar: View {
     let clock: PlayerClock
     let hold: (Bool) -> Void
@@ -303,8 +301,12 @@ private struct SeekBar: View {
     var body: some View {
         let duration = clock.duration
         let value = min(clock.scrubbing ?? clock.position, duration)
-        HStack(spacing: 12) {
-            Text(Self.format(value)).frame(minWidth: 44, alignment: .leading)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(Self.format(value) + " / " + Self.format(duration))
+                .font(.footnote.monospacedDigit().weight(.medium))
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .glassSurface(.regular, in: Capsule())
+                .accessibilityHidden(true)
             Slider(value: Binding(get: { value }, set: { clock.scrub(to: $0) }), in: 0...max(duration, 1), onEditingChanged: { editing in
                 if editing { hold(true) } else { hold(false); clock.endScrub(); sought() }
             })
@@ -312,16 +314,74 @@ private struct SeekBar: View {
             .accessibilityLabel(L10n.text("Playback Position"))
             .accessibilityValue(Self.format(value))
             .accessibilityIdentifier("player.seek")
-            Text("-" + Self.format(max(0, duration - value))).frame(minWidth: 52, alignment: .trailing)
         }
-        .font(.footnote.monospacedDigit())
-        .shadow(color: .black.opacity(0.5), radius: 3)
     }
 
     static func format(_ seconds: Double) -> String {
         let total = Int(seconds.isFinite ? max(0, seconds) : 0)
         let hours = total / 3600, minutes = total / 60 % 60, rest = total % 60
         return hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: "%d:%02d", minutes, rest)
+    }
+}
+
+/// The top row's three parts: Back, the title and the buttons. All in one row while the title keeps `minimumTitle`;
+/// otherwise Back and the buttons share the first row and the title has the next one to itself. On a screen too
+/// narrow even for Back beside the buttons, the buttons take the first row alone and Back goes beside the title.
+private struct PlayerTopBar: SwiftUI.Layout {
+    var spacing: CGFloat = 12
+    var rowSpacing: CGFloat = 10
+    var minimumTitle: CGFloat = 160
+
+    private enum Arrangement { case oneRow, titleBelow, buttonsAlone }
+
+    private func arrangement(_ width: CGFloat, back: CGSize, buttons: CGSize) -> Arrangement {
+        if back.width + spacing + minimumTitle + spacing + buttons.width <= width { return .oneRow }
+        return back.width + spacing + buttons.width <= width ? .titleBelow : .buttonsAlone
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
+        guard subviews.count == 3 else { return .zero }
+        let back = subviews[0].sizeThatFits(.unspecified), buttons = subviews[2].sizeThatFits(.unspecified)
+        let width = proposal.width ?? back.width + subviews[1].sizeThatFits(.unspecified).width + buttons.width + 2 * spacing
+        func title(_ room: CGFloat) -> CGSize { subviews[1].sizeThatFits(ProposedViewSize(width: room, height: nil)) }
+        switch arrangement(width, back: back, buttons: buttons) {
+        case .oneRow:
+            let title = title(width - back.width - buttons.width - 2 * spacing)
+            return CGSize(width: width, height: max(back.height, buttons.height, title.height))
+        case .titleBelow:
+            return CGSize(width: width, height: max(back.height, buttons.height) + rowSpacing + title(width).height)
+        case .buttonsAlone:
+            return CGSize(width: width, height: buttons.height + rowSpacing + max(back.height, title(width - back.width - spacing).height))
+        }
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
+        guard subviews.count == 3 else { return }
+        let back = subviews[0].sizeThatFits(.unspecified), buttons = subviews[2].sizeThatFits(.unspecified)
+        /// Places a subview with its vertical centre at `middle`; the title gets `room` and truncates to it.
+        func place(_ index: Int, x: CGFloat, middle: CGFloat, room: CGFloat? = nil) {
+            let size = room.map { subviews[index].sizeThatFits(ProposedViewSize(width: $0, height: nil)) } ?? subviews[index].sizeThatFits(.unspecified)
+            subviews[index].place(at: CGPoint(x: x, y: middle - size.height / 2), proposal: ProposedViewSize(width: size.width, height: size.height))
+        }
+        switch arrangement(bounds.width, back: back, buttons: buttons) {
+        case .oneRow:
+            place(0, x: bounds.minX, middle: bounds.midY)
+            place(1, x: bounds.minX + back.width + spacing, middle: bounds.midY, room: bounds.width - back.width - buttons.width - 2 * spacing)
+            place(2, x: bounds.maxX - buttons.width, middle: bounds.midY)
+        case .titleBelow:
+            let row = max(back.height, buttons.height)
+            place(0, x: bounds.minX, middle: bounds.minY + row / 2)
+            place(2, x: bounds.maxX - buttons.width, middle: bounds.minY + row / 2)
+            let title = subviews[1].sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
+            place(1, x: bounds.minX, middle: bounds.minY + row + rowSpacing + title.height / 2, room: bounds.width)
+        case .buttonsAlone:
+            place(2, x: bounds.maxX - buttons.width, middle: bounds.minY + buttons.height / 2)
+            let room = bounds.width - back.width - spacing
+            let row = max(back.height, subviews[1].sizeThatFits(ProposedViewSize(width: room, height: nil)).height)
+            let middle = bounds.minY + buttons.height + rowSpacing + row / 2
+            place(0, x: bounds.minX, middle: middle)
+            place(1, x: bounds.minX + back.width + spacing, middle: middle, room: room)
+        }
     }
 }
 

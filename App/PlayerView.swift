@@ -329,7 +329,7 @@ extension PlaybackWaitContent {
 /// The player's title bar: the title, the buttons and Close share one row, the title truncating to leave the others
 /// their width; when that would leave the title less than `minimumTitle`, the buttons and Close take a row of their
 /// own, right-aligned.
-struct ChromeRow: SwiftUI.Layout {
+private struct ChromeRow: SwiftUI.Layout {
     var spacing: CGFloat = 12
     var rowSpacing: CGFloat = 10
     /// Between the buttons and Close, as between the buttons themselves.
