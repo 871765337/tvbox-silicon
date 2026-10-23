@@ -291,40 +291,125 @@ struct MobilePlayerView: View {
     }
 }
 
-/// The position and the length in a capsule over a scrubber the width of the screen, as in YouTube's player. A view
-/// of its own, so only it redraws as the position moves.
+/// The position and the length in a capsule over a scrubber the width of the screen, as in YouTube's player, and
+/// scrubbing as in Telegram's: while dragged, only the bar, the time and a frame from that point (above the handle)
+/// follow the finger, and the video seeks once, when the finger lifts. Seeking the playing video along with the finger
+/// left it stuttering behind. A view of its own, so only it redraws as the position moves.
 private struct SeekBar: View {
     let clock: PlayerClock
-    /// Playing with the controls showing: the scrubber follows the player every frame.
+    /// Playing with the controls showing: the bar follows the player every frame.
     let moving: Bool
     let hold: (Bool) -> Void
     let sought: () -> Void
+    /// Where a drag began: the position then and the finger's start. The handle moves by as much as the finger does
+    /// (Telegram), rather than jumping under it; a touch away from the handle puts it there first.
+    @State private var drag: (position: Double, location: CGPoint)?
+    /// Slower scrubbing while the finger moves away from the bar: half, a quarter and a tenth of the speed (Telegram).
+    @State private var fineness = 1.0
+    @State private var width: CGFloat = 0
 
     var body: some View {
-        // Every display frame while it plays, as AVKit's scrubber does; the clock's quarter-second ticks alone made
-        // the thumb jump. Paused, held or hidden, it redraws only when the clock changes.
+        // Every display frame while it plays, as AVKit's bar does; paused, held or hidden, only when the clock changes.
         let follows = moving && clock.scrubbing == nil
         TimelineView(.animation(paused: !follows)) { _ in
             bar(clock.scrubbing ?? (follows ? clock.currentPosition : clock.position))
         }
+        .sensoryFeedback(.selection, trigger: fineness)
     }
 
     private func bar(_ position: Double) -> some View {
         let duration = clock.duration
         let value = min(max(0, position), duration)
-        return VStack(alignment: .leading, spacing: 4) {
-            Text(Self.format(value) + " / " + Self.format(duration))
-                .font(.footnote.monospacedDigit().weight(.medium))
-                .padding(.horizontal, 10).padding(.vertical, 5)
-                .glassSurface(.regular, in: Capsule())
-                .accessibilityHidden(true)
-            Slider(value: Binding(get: { value }, set: { clock.scrub(to: $0) }), in: 0...max(duration, 1), onEditingChanged: { editing in
-                if editing { hold(true) } else { hold(false); clock.endScrub(); sought() }
-            })
-            .tint(.white)
-            .accessibilityLabel(L10n.text("Playback Position"))
-            .accessibilityValue(Self.format(value))
-            .accessibilityIdentifier("player.seek")
+        let x = duration > 0 ? width * value / duration : 0
+        let held = drag != nil
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(Self.format(value) + " / " + Self.format(duration))
+                if let speed = Self.fineLabel(fineness) { Text(speed).foregroundStyle(.white.opacity(0.75)) }
+            }
+            .font(.footnote.monospacedDigit().weight(.medium))
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .glassSurface(.regular, in: Capsule())
+            .accessibilityHidden(true)
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.3)).frame(height: held ? 6 : 4)
+                Capsule().fill(.white).frame(width: max(0, x), height: held ? 6 : 4)
+                Circle().fill(.white)
+                    .frame(width: held ? 24 : 14, height: held ? 24 : 14)
+                    .shadow(color: .black.opacity(0.35), radius: 3)
+                    .offset(x: x - (held ? 12 : 7))
+            }
+            .frame(maxWidth: .infinity, minHeight: 32)
+            .contentShape(Rectangle())
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .gesture(DragGesture(minimumDistance: 0)
+                .onChanged { changed($0, value: value, duration: duration) }
+                .onEnded { _ in ended() })
+            .animation(.spring(duration: 0.3, bounce: 0.3), value: held)
+        }
+        // The frame at the finger, above the time, centred on the handle and kept on screen.
+        .overlay(alignment: .topLeading) {
+            if held, let preview = clock.preview {
+                let previewWidth: CGFloat = 160
+                Image(decorative: preview, scale: 1).resizable().aspectRatio(contentMode: .fit)
+                    .frame(width: previewWidth)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.8), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.4), radius: 6)
+                    .alignmentGuide(.top) { $0[.bottom] + 8 }
+                    .offset(x: min(max(0, x - previewWidth / 2), max(0, width - previewWidth)))
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+        }
+        .animation(.easeOut(duration: 0.12), value: held && clock.preview != nil)
+        .accessibilityElement()
+        .accessibilityLabel(L10n.text("Playback Position"))
+        .accessibilityValue(Self.format(value))
+        .accessibilityIdentifier("player.seek")
+        .accessibilityAdjustableAction { direction in
+            clock.seek(to: min(max(0, value + (direction == .increment ? 10 : -10)), duration))
+            sought()
+        }
+    }
+
+    private func changed(_ gesture: DragGesture.Value, value: Double, duration: Double) {
+        guard duration > 0, width > 0 else { return }
+        if drag == nil {
+            let handle = width * value / duration
+            let start = abs(gesture.startLocation.x - handle) <= 30 ? value : duration * Double(min(max(0, gesture.startLocation.x / width), 1))
+            drag = (start, gesture.startLocation)
+            hold(true)
+            clock.scrub(to: start)
+        }
+        guard let begin = drag else { return }
+        let away = abs(gesture.location.y - begin.location.y)
+        let wanted = away > 150 ? 0.1 : away > 100 ? 0.25 : away > 50 ? 0.5 : 1
+        if wanted != fineness {
+            // Carry on from here at the new speed, so the handle doesn't jump.
+            fineness = wanted
+            drag = (clock.scrubbing ?? begin.position, gesture.location)
+            return
+        }
+        let moved = Double((gesture.location.x - begin.location.x) / width) * duration * fineness
+        clock.scrub(to: min(max(0, begin.position + moved), duration))
+    }
+
+    private func ended() {
+        guard drag != nil else { return }
+        drag = nil
+        fineness = 1
+        hold(false)
+        clock.endScrub()
+        sought()
+    }
+
+    private static func fineLabel(_ fineness: Double) -> String? {
+        switch fineness {
+        case 0.5: L10n.text("Half-Speed Scrubbing")
+        case 0.25: L10n.text("Quarter-Speed Scrubbing")
+        case ..<0.25: L10n.text("Fine Scrubbing")
+        default: nil
         }
     }
 
@@ -512,39 +597,69 @@ private struct PlayerLayerView: UIViewRepresentable {
         return seconds.isFinite ? seconds : position
     }
 
-    /// A seek on its way, and where the finger has moved since it began.
-    @ObservationIgnored private var seeking = false
-    @ObservationIgnored private var chase: (seconds: Double, exact: Bool)?
+    /// The frame the seek bar shows above its handle while dragged; nil until one is made, or where none can be.
+    private(set) var preview: CGImage?
+    @ObservationIgnored private var generator: AVAssetImageGenerator?
+    @ObservationIgnored private var generatorItem: ObjectIdentifier?
+    /// An item AVFoundation made no frame from (an HLS stream, say): no more tries for it.
+    @ObservationIgnored private var previewless: ObjectIdentifier?
+    @ObservationIgnored private var generating = false
+    @ObservationIgnored private var nextPreview: Double?
 
-    /// While dragging, the thumb follows the finger at once and the picture follows by chasing it: one quick seek at
-    /// a time, each to wherever the finger is when the last one lands (Apple's QA1820). A seek per drag event queued
-    /// up behind each other and left both the picture and the thumb lagging.
+    /// While dragging, only the bar, the time and the preview follow the finger; the playing video is left alone
+    /// until the finger lifts (Telegram).
     func scrub(to seconds: Double) {
         scrubbing = seconds
-        chase = (seconds, false)
-        seekToChase()
+        nextPreview = seconds
+        makePreview()
     }
 
-    /// Let go: an exact seek to where the finger stopped, once the quick one on its way lands.
+    /// Let go: one exact seek to where the finger stopped.
     func endScrub() {
-        guard let target = scrubbing else { return }
-        chase = (target, true)
-        seekToChase()
+        nextPreview = nil
+        preview = nil
+        if let target = scrubbing { seek(to: target) }
     }
 
-    private func seekToChase() {
-        guard !seeking, let player, let (seconds, exact) = chase else { return }
-        chase = nil
-        seeking = true
-        let time = CMTime(seconds: seconds, preferredTimescale: 600)
-        let tolerance: CMTime = exact ? .zero : .positiveInfinity
-        player.seek(to: time, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] _ in
+    /// An exact seek; the bar stays at the target until it lands, rather than jumping back to the old position.
+    func seek(to seconds: Double) {
+        guard let player else { scrubbing = nil; return }
+        scrubbing = seconds
+        player.seek(to: CMTime(seconds: seconds, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.scrubbing == seconds else { return }
+                self.position = seconds
+                self.scrubbing = nil
+            }
+        }
+    }
+
+    /// One frame at a time, then the latest place asked for (Telegram's MediaPlayerFramePreview does the same), from
+    /// a generator of its own so the playing video isn't disturbed. Nearby keyframes are good enough, and quick.
+    private func makePreview() {
+        guard !generating, let seconds = nextPreview, let item = player?.currentItem else { return }
+        let identity = ObjectIdentifier(item)
+        guard previewless != identity else { nextPreview = nil; return }
+        if generatorItem != identity {
+            let generator = AVAssetImageGenerator(asset: item.asset)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: 320, height: 320)
+            generator.requestedTimeToleranceBefore = CMTime(seconds: 2, preferredTimescale: 600)
+            generator.requestedTimeToleranceAfter = CMTime(seconds: 2, preferredTimescale: 600)
+            self.generator = generator
+            generatorItem = identity
+        }
+        guard let generator else { return }
+        nextPreview = nil
+        generating = true
+        generator.generateCGImageAsynchronously(for: CMTime(seconds: seconds, preferredTimescale: 600)) { [weak self] image, _, _ in
+            nonisolated(unsafe) let frame = image
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.seeking = false
-                if self.chase != nil { self.seekToChase() }
-                // The exact seek landed and nothing newer is held: the scrubber follows the player again.
-                else if exact, self.scrubbing == seconds { self.position = seconds; self.scrubbing = nil }
+                self.generating = false
+                if let frame { if self.scrubbing != nil { self.preview = frame } }
+                else if self.preview == nil { self.previewless = identity }
+                self.makePreview()
             }
         }
     }

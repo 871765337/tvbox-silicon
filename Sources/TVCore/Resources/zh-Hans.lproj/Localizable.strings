@@ -936,3 +936,6 @@
 "Fill Screen" = "填满屏幕";
 "Back 10 seconds" = "后退 10 秒";
 "Forward 10 seconds" = "前进 10 秒";
+"Half-Speed Scrubbing" = "半速拖动";
+"Quarter-Speed Scrubbing" = "四分之一速拖动";
+"Fine Scrubbing" = "精细拖动";

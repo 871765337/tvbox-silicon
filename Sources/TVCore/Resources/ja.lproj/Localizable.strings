@@ -936,3 +936,6 @@
 "Fill Screen" = "画面いっぱいに表示";
 "Back 10 seconds" = "10 秒戻る";
 "Forward 10 seconds" = "10 秒進む";
+"Half-Speed Scrubbing" = "半速スクラブ";
+"Quarter-Speed Scrubbing" = "1/4速スクラブ";
+"Fine Scrubbing" = "微調整スクラブ";
