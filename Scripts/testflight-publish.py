@@ -101,11 +101,15 @@ def main():
                 call("/betaBuildLocalizations", "POST", {"data": {"type": "betaBuildLocalizations", "attributes": {"locale": locale, "whatsNew": text}, "relationships": {"build": {"data": {"type": "builds", "id": b["id"]}}}}})
         print(f"   What to Test: {', '.join(notes) or 'none found'}" + (f" (from build {source})" if source else ""))
 
-        call(f"/betaGroups/{group['id']}/relationships/builds", "POST", {"data": [{"type": "builds", "id": b["id"]}]})
-        print(f"   added to {GROUP}")
-        sub = call("/betaAppReviewSubmissions", "POST", {"data": {"type": "betaAppReviewSubmissions", "relationships": {"build": {"data": {"type": "builds", "id": b["id"]}}}}}, ok=(409, 422))
-        if sub.get("errors"):
-            print(f"   review submission: {sub['errors'][0].get('detail') or sub['errors'][0].get('title')}")
+        # Adding to a group and submitting for review need an App Manager or Admin key; JFADGLA7XZ (2026-10) gets
+        # 403 for both, so then it's one step in App Store Connect (adding the build to the group submits it).
+        added = call(f"/betaGroups/{group['id']}/relationships/builds", "POST", {"data": [{"type": "builds", "id": b["id"]}]}, ok=(403, 409))
+        sub = call("/betaAppReviewSubmissions", "POST", {"data": {"type": "betaAppReviewSubmissions", "relationships": {"build": {"data": {"type": "builds", "id": b["id"]}}}}}, ok=(403, 409, 422))
+        if added.get("status") == 403 or sub.get("status") == 403:
+            print(f"   MANUAL STEP (this API key may not manage groups or submit): add {version} ({build}) to {GROUP} > Builds > +")
+            print(f"   https://appstoreconnect.apple.com/apps/{app}/testflight/groups/{group['id']}")
+        else:
+            print(f"   added to {GROUP}; " + (f"review: {sub['errors'][0].get('detail') or sub['errors'][0].get('title')}" if sub.get("errors") else "submitted for Beta App Review"))
 
         time.sleep(10)
         state = next(x for x in builds(app, version) if x["id"] == b["id"])["beta"].get("externalBuildState")
