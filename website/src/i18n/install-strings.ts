@@ -45,14 +45,12 @@ export interface InstallCopy {
   apps: { t: string; b: string; impactor: string; iloader: string; sideloadly: string };
   keep: { t: string; b: string; free: string; freeTime: string; paid: string; paidTime: string; tip: string };
   guide: string;
-  /** TestFlight, the recommended install for iPhone, iPad and Apple TV: its eyebrow, button, QR card
-   * (`here` replaces the scan text when the visitor is on an iPhone or iPad), steps and keep-up-to-date panel. */
+  /** TestFlight, the recommended install for iPhone, iPad and Apple TV: its eyebrow, button, the caption under
+   * the QR code (`t`; `here` stands in for the code on an iPhone or iPad), steps and keep-up-to-date panel. */
   tf: {
     tag: string;
     join: string;
     t: string;
-    b: Record<Sideload, string>;
-    hereT: string;
     here: Record<Sideload, string>;
     open: string;
     app: string;
@@ -154,8 +152,6 @@ export const INSTALL: Record<Lang, InstallCopy> = {
       tag: "Public beta · TestFlight",
       join: "Join the beta",
       t: "Scan to join the beta",
-      b: { ios: "Point your iPhone or iPad camera at the code, then tap the banner to open the invite in TestFlight.", tv: "Scan it with an iPhone or iPad signed in to the same Apple Account as your Apple TV. Accept the invite there, then install on the TV." },
-      hereT: "Join from this device",
       here: { ios: "Tap the button to open the invite in TestFlight. If TestFlight isn't installed yet, get it from the App Store first.", tv: "If this device uses the same Apple Account as your Apple TV, open the invite here and tap Accept in TestFlight, then install on the TV." },
       open: "Open the invite",
       app: "Get TestFlight",
@@ -266,8 +262,6 @@ export const INSTALL: Record<Lang, InstallCopy> = {
       tag: "パブリックベータ · TestFlight",
       join: "ベータに参加",
       t: "スキャンしてベータに参加",
-      b: { ios: "iPhone または iPad のカメラでコードを読み取り、表示されたバナーをタップすると TestFlight で招待が開きます。", tv: "Apple TV と同じ Apple アカウントでサインインしている iPhone または iPad で読み取ります。そこで招待を承認してから、テレビでインストールします。" },
-      hereT: "このデバイスから参加",
       here: { ios: "ボタンをタップすると TestFlight で招待が開きます。TestFlight が未インストールなら、先に App Store から入手してください。", tv: "このデバイスが Apple TV と同じ Apple アカウントなら、ここで招待を開いて TestFlight で承認し、テレビでインストールします。" },
       open: "招待を開く",
       app: "TestFlight を入手",
@@ -378,8 +372,6 @@ export const INSTALL: Record<Lang, InstallCopy> = {
       tag: "공개 베타 · TestFlight",
       join: "베타 참여하기",
       t: "스캔해서 베타 참여",
-      b: { ios: "iPhone이나 iPad 카메라로 코드를 비춘 뒤 나타나는 배너를 탭하면 TestFlight에서 초대가 열립니다.", tv: "Apple TV와 같은 Apple 계정으로 로그인한 iPhone이나 iPad로 스캔하세요. 그 기기에서 초대를 수락한 다음 TV에서 설치합니다." },
-      hereT: "이 기기에서 참여",
       here: { ios: "버튼을 탭하면 TestFlight에서 초대가 열립니다. TestFlight가 없다면 먼저 App Store에서 받으세요.", tv: "이 기기가 Apple TV와 같은 Apple 계정이라면 여기서 초대를 열어 TestFlight에서 수락한 뒤 TV에서 설치하세요." },
       open: "초대 열기",
       app: "TestFlight 받기",
@@ -490,8 +482,6 @@ export const INSTALL: Record<Lang, InstallCopy> = {
       tag: "公開測試版 · TestFlight",
       join: "加入測試",
       t: "掃描加入測試",
-      b: { ios: "用 iPhone 或 iPad 的相機對準條碼，點一下跳出的橫幅，就會在 TestFlight 打開邀請。", tv: "請用與 Apple TV 登入同一個 Apple 帳號的 iPhone 或 iPad 掃描，先在那裡接受邀請，再到電視上安裝。" },
-      hereT: "直接在這台裝置加入",
       here: { ios: "點按按鈕即可在 TestFlight 打開邀請。如果還沒安裝 TestFlight，請先從 App Store 取得。", tv: "如果這台裝置與 Apple TV 使用同一個 Apple 帳號，就在這裡打開邀請、在 TestFlight 點「接受」，再到電視上安裝。" },
       open: "打開邀請",
       app: "取得 TestFlight",
