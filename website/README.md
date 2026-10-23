@@ -24,21 +24,19 @@ The Worker is named `yingxia-website` in `wrangler.jsonc` and serves https://yin
 | `src/i18n/I18nProvider.tsx` | Language detection (`?lang=`, saved choice, browser languages) and the `useI18n` hook |
 | `src/components/` | Page sections (`Nav`, `Hero`, `Features`, `Details`, `Faq`, `Footer`) and shared pieces (`Headline`, `Stage`, `Reveal`, `controls`) |
 | `src/styles.css` | All styles |
-| `public/screenshots/<language>/` | tvOS screenshots shown on the page |
+| `src/components/Device.tsx`, `mock-*.tsx`, `src/mockups.css` | Device mockups: HTML app screens on Apple's product bezels |
+| `public/devices/`, `public/film/` | The bezels (empty screens) and the CC0 photos used as posters |
 
 Fonts (Inter, Instrument Serif) are self-hosted through Fontsource. Japanese, Korean, and Chinese headlines use the system's Mincho, Myungjo, or Song serif.
 
 The source repository (`REPO` in `src/components/controls.tsx`) is linked from the nav, the footer, the install guide, the JSON-LD and `llms.txt`.
 
-## Screenshots
+## Device mockups
 
-`public/screenshots/<language>/{home,live,search,site}.jpg` are 1920×1080 captures of the debug tvOS app on an Apple TV 4K (1080p) simulator, launched with `-AppleLanguages (<language>)` and the `QALaunch` hooks:
+The page shows no real screenshots: the app's UI changes too often for captures to stay current. Every device on the page is an HTML mockup of the app (`src/components/mock-tv.tsx` for Apple TV, `mock-apple.tsx` for Mac, iPad and iPhone) under Apple's product bezels from [Apple Design Resources](https://developer.apple.com/design/resources/).
 
-| Shot | Launch arguments |
-| --- | --- |
-| home | `-qaSection home` |
-| live | `-qaSection live -qaPage channels:1` |
-| search | `-qaSection search -qaPage search:<query>` |
-| site | `-qaSection sites -qaPage site:<source key>` |
-
-Capture with `xcrun simctl io <device> screenshot`. The app has no Korean localization yet, so the Korean page uses the English screenshots (`shots: "en"` in `strings.ts`); add `public/screenshots/ko/` and change it once the app supports Korean.
+- `public/devices/{tv,mac,ipad,iphone}.webp` are the bezels with transparent screens, exported by `build/website-shots/frames.sh` (not in git). `Device.tsx` records where each screen sits in its image; the mockup is laid out in points of the real screen (`--pt`), so it scales with the image.
+- UI labels follow the app's own strings (`mock-i18n.ts`); titles, sources and categories stay in Chinese, as a TVBox subscription serves them.
+- Posters and the live preview are CC0 or public-domain photos in `public/film/`, listed in `public/film/SOURCES.txt`. Titles are made up.
+- When the app's UI changes in a way worth showing, edit the mockup markup and styles; there is nothing to recapture.
+- `public/og/<language>.jpg`, the social preview images, are the Apple TV mockup rendered by `node scripts/og-images.mjs` against `vite preview --port 4199`. Rerun it after changing that mockup.

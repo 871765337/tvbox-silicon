@@ -94,11 +94,11 @@ h1, h2, h3, h4, p { margin: 0; }
 .actions { display: flex; align-items: center; justify-content: center; gap: 28px; margin-top: 36px; flex-wrap: wrap; }
 .meta { margin-top: 20px; font-size: 13px; color: var(--muted); }
 
-/* Feature screenshots on Apple's Apple TV bezel. Keep a whole feature card (title, text and image) on one
+/* Feature mockups on Apple's Apple TV bezel. Keep a whole feature card (title, text and image) on one
    screen below the 64px nav: the image gets the height left after the card's text (--chrome). */
 :root { --sp: 5svh; }
 .stage { padding-top: min(3%, var(--sp)); }
-.stage img { display: block; width: 100%; height: auto; margin-inline: auto; max-width: max(260px, calc((100svh - 104px - var(--chrome, 0px) - var(--sp)) * 1600 / 994)); }
+.stage .device { width: 100%; margin-inline: auto; max-width: max(260px, calc((100svh - 104px - var(--chrome, 0px) - var(--sp)) * 1600 / 994)); }
 .card { --chrome: 260px; }
 .hero-stage { width: min(1200px, 100% - 32px); margin-top: 64px; }
 .hero-film { display: flex; flex-direction: column; align-items: center; gap: 18px; }
@@ -120,7 +120,6 @@ h1, h2, h3, h4, p { margin: 0; }
 .card h3 { font-size: clamp(26px, 3vw, 38px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.15; }
 :lang(ja) .card h3, :lang(ko) .card h3, :lang(zh-Hant) .card h3 { letter-spacing: 0; }
 .card > p { max-width: 34em; margin: 14px auto 40px; color: var(--muted); font-size: 17px; }
-.note { margin-top: 16px; text-align: center; font-size: 13px; color: var(--muted); }
 
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 56px; }
 .tile { background: var(--card); border-radius: 24px; padding: 30px 28px; }
@@ -172,9 +171,13 @@ h1, h2, h3, h4, p { margin: 0; }
 .showcase { display: flex; flex-direction: column; align-items: center; text-align: center; animation: showcase-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 @keyframes showcase-in { from { opacity: 0; transform: translateY(16px); } }
 .showcase-art { width: min(800px, 100%); }
-.showcase-art img { display: block; width: 100%; height: auto; }
 /* The iPad and iPhone pair is portrait, so keep it about as tall as the landscape mockups. */
 .showcase-art.art-ios { width: min(480px, 100%); }
+/* iPhone in front of the iPad (Install.tsx IOSPair); sizes and the box come from the two bezels' trimmed images. */
+.ios-pair { position: relative; aspect-ratio: 2216 / 2613; }
+.ios-pair .device { position: absolute; }
+.ios-pair .device-ipad { left: 0; top: 0; width: 83.66%; }
+.ios-pair .device-iphone { right: 0; bottom: 0; width: 32.75%; }
 .eyebrow { margin-top: 32px; font-size: 15px; font-weight: 600; color: #bf4800; }
 .eyebrow.signed { color: #1d7d3f; }
 .product { margin-top: 4px; font-size: clamp(32px, 4.4vw, 48px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; }

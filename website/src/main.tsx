@@ -4,6 +4,7 @@ import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import "@fontsource/instrument-serif/400-italic.css";
 import "./styles.css";
+import "./mockups.css";
 
 import { StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";

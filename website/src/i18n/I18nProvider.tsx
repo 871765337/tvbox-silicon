@@ -7,7 +7,6 @@ interface I18n {
   lang: Lang;
   locale: Locale;
   t: (key: TextKey) => string;
-  shot: (name: string) => string;
   setLang: (lang: Lang) => void;
 }
 
@@ -54,7 +53,6 @@ export function I18nProvider({ renderedLang, children }: Props) {
       lang,
       locale,
       t: (key) => locale.text[key],
-      shot: (name) => `/screenshots/${locale.shots}/${name}.jpg`,
       setLang,
     }),
     [lang, locale, setLang],

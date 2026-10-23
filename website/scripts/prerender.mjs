@@ -42,9 +42,10 @@ const pageUrl = (lang) => SITE_URL + LANG_PATH[lang];
 const ALTERNATES = [...LANGS.map((lang) => [lang, lang]), ["zh", "zh-Hant"], ["x-default", "en"]];
 
 function head(lang) {
-  const { text: t, shots } = LOCALES[lang];
+  const { text: t } = LOCALES[lang];
   const url = pageUrl(lang);
-  const image = `${SITE_URL}/screenshots/${shots}/home.jpg`;
+  // The Apple TV mockup in the page language, rendered by scripts/og-images.mjs.
+  const image = `${SITE_URL}/og/${lang}.jpg`;
   const app = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -85,8 +86,8 @@ function head(lang) {
     `<meta property="og:title" content="${escape(t["meta.title"])}" />`,
     `<meta property="og:description" content="${escape(t["meta.description"])}" />`,
     `<meta property="og:image" content="${image}" />`,
-    `<meta property="og:image:width" content="1920" />`,
-    `<meta property="og:image:height" content="1080" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="675" />`,
     `<meta property="og:image:alt" content="${escape(t["meta.title"])}" />`,
     `<meta property="og:locale" content="${OG_LOCALE[lang]}" />`,
     ...LANGS.filter((l) => l !== lang).map((l) => `<meta property="og:locale:alternate" content="${OG_LOCALE[l]}" />`),

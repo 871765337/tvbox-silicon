@@ -1,6 +1,4 @@
 // Site copy for every supported language.
-// `shots` names the screenshot folder under public/screenshots; Korean uses the English
-// screenshots until the app ships a Korean UI.
 
 export const LANGS = ["en","ja","ko","zh-Hant"] as const;
 export type Lang = (typeof LANGS)[number];
@@ -60,7 +58,6 @@ export type TextKey =
   | "sec.l1"
   | "sec.l2"
   | "sec.sub"
-  | "shots.note"
   | "soon"
   | "new"
   | "dl.mac"
@@ -68,7 +65,6 @@ export type TextKey =
 
 export interface Locale {
   name: string;
-  shots: string;
   chips: string[];
   text: Record<TextKey, string>;
 }
@@ -76,7 +72,6 @@ export interface Locale {
 export const LOCALES: Record<Lang, Locale> = {
   "en": {
     name: "English",
-    shots: "en",
     chips: ["Watch Now","Live TV guide","Global search","Favorites","JSON sources","M3U & TXT playlists","HLS","Picture in Picture on Mac","No account"],
     text: {
       "brand": "Yingxia",
@@ -133,7 +128,6 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "Everything TVBox does.",
       "sec.l2": "Rebuilt natively.",
       "sec.sub": "Written in SwiftUI and played through AVKit. No web views, no ported Android screens.",
-      "shots.note": "",
       "dl.mac": "Download",
       "dl.req": "For Mac, iPhone, iPad and Apple TV · Free",
       "soon": "Coming soon",
@@ -142,7 +136,6 @@ export const LOCALES: Record<Lang, Locale> = {
   },
   "ja": {
     name: "日本語",
-    shots: "ja",
     chips: ["今すぐ観る","ライブ番組ガイド","横断検索","お気に入り","JSON ソース","M3U・TXT プレイリスト","HLS","Mac でピクチャ・イン・ピクチャ","アカウント不要"],
     text: {
       "brand": "映匣",
@@ -199,7 +192,6 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox のすべてを、",
       "sec.l2": "ネイティブに。",
       "sec.sub": "SwiftUI で書かれ、AVKit で再生。Web ビューも、Android 画面の移植もありません。",
-      "shots.note": "",
       "dl.mac": "ダウンロード",
       "dl.req": "Mac・iPhone・iPad・Apple TV 対応 · 無料",
       "soon": "近日公開",
@@ -208,7 +200,6 @@ export const LOCALES: Record<Lang, Locale> = {
   },
   "ko": {
     name: "한국어",
-    shots: "en",
     chips: ["지금 보기","실시간 TV 가이드","통합 검색","즐겨찾기","JSON 소스","M3U·TXT 재생 목록","HLS","Mac에서 PIP","계정 불필요"],
     text: {
       "brand": "Yingxia",
@@ -265,7 +256,6 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox의 모든 것을,",
       "sec.l2": "네이티브로.",
       "sec.sub": "SwiftUI로 작성하고 AVKit으로 재생합니다. 웹 뷰도, Android 화면 이식도 없습니다.",
-      "shots.note": "앱은 아직 한국어를 지원하지 않아 스크린샷은 영어 화면입니다.",
       "dl.mac": "다운로드",
       "dl.req": "Mac·iPhone·iPad·Apple TV 지원 · 무료",
       "soon": "출시 예정",
@@ -274,7 +264,6 @@ export const LOCALES: Record<Lang, Locale> = {
   },
   "zh-Hant": {
     name: "繁體中文",
-    shots: "zh-Hant",
     chips: ["立即觀看","直播頻道指南","全域搜尋","收藏","JSON 片源","M3U、TXT 播放清單","HLS","Mac 子母畫面","免帳號"],
     text: {
       "brand": "映匣",
@@ -331,7 +320,6 @@ export const LOCALES: Record<Lang, Locale> = {
       "sec.l1": "TVBox 的一切，",
       "sec.l2": "原生重建。",
       "sec.sub": "以 SwiftUI 撰寫、透過 AVKit 播放。沒有網頁視圖，也不是移植的 Android 畫面。",
-      "shots.note": "",
       "dl.mac": "下載",
       "dl.req": "支援 Mac、iPhone、iPad 與 Apple TV · 免費",
       "soon": "即將推出",

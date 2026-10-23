@@ -4,10 +4,10 @@ import { useI18n } from "../i18n/I18nProvider";
 import { INSTALL, type InstallCopy, type Mode, type Platform, type Sideload } from "../i18n/install-strings";
 import { AGENTS, CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, MAC_INTEL_DOWNLOAD, SIDELOADLY, TESTFLIGHT, TESTFLIGHT_APP } from "./controls";
 import { AppleTVIcon, IPhoneIPadIcon, MacIcon } from "./icons-devices";
+import { Device } from "./Device";
+import { IPadWatchNow, IPhoneWatchNow, MacWatchNow } from "./mock-apple";
+import { TvHome } from "./mock-tv";
 import { Reveal } from "./Reveal";
-
-/** Pixel heights of the 1600px-wide mockup images, so the page reserves their space. */
-const MOCKUP_HEIGHT: Record<Platform, number> = { mac: 966, ios: 1886, tv: 994 };
 
 const PLATFORMS: { id: Platform; Icon: ComponentType }[] = [
   { id: "mac", Icon: MacIcon },
@@ -60,8 +60,22 @@ async function copyText(text: string) {
   }
 }
 
+/** iPhone in front of the iPad at true relative size (an 11-inch iPad is ~1.7x as tall as an iPhone 17 Pro). */
+function IOSPair({ label }: { label: string }) {
+  return (
+    <div className="ios-pair" role="img" aria-label={label}>
+      <Device kind="ipad">
+        <IPadWatchNow />
+      </Device>
+      <Device kind="iphone">
+        <IPhoneWatchNow />
+      </Device>
+    </div>
+  );
+}
+
 export function Install() {
-  const { lang, locale } = useI18n();
+  const { lang } = useI18n();
   const copy = INSTALL[lang];
   // Starts on the Mac tab, as prerendered, then picks the visitor's tab after hydration.
   const [platform, setPlatform] = useState<Platform>("mac");
@@ -144,8 +158,14 @@ export function Install() {
       <div className="install-panel" id="install-panel" role="tabpanel" aria-labelledby={`install-${platform}`}>
         <div className="showcase" key={platform}>
           <div className={`showcase-art art-${platform}`}>
-            {/* Real app screenshots composited into Apple's product bezels (developer.apple.com/design/resources). */}
-            <img src={`/devices/${platform}-${locale.shots}.webp`} alt={copy.title[platform]} width={1600} height={MOCKUP_HEIGHT[platform]} />
+            {/* HTML mockups of the app on Apple's product bezels (developer.apple.com/design/resources). */}
+            {platform === "ios" ? (
+              <IOSPair label={copy.title.ios} />
+            ) : (
+              <Device kind={platform} label={copy.title[platform]}>
+                {platform === "mac" ? <MacWatchNow /> : <TvHome />}
+              </Device>
+            )}
           </div>
           <p className={sideload && !testflight ? "eyebrow" : "eyebrow signed"}>{testflight ? copy.tf.tag : copy.tag[platform]}</p>
           <h3 className="product">{copy.title[platform]}</h3>

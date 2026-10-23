@@ -1,11 +1,13 @@
+import type { ComponentType } from "react";
 import { useI18n } from "../i18n/I18nProvider";
 import type { TextKey } from "../i18n/strings";
 import { Headline } from "./Headline";
 import { Reveal } from "./Reveal";
+import { TvLive, TvSearch, TvSite } from "./mock-tv";
 import { Stage } from "./Stage";
 
 interface Feature {
-  shot: string;
+  Screen: ComponentType;
   title: TextKey;
   body: TextKey;
   /** A short orange label above the title, such as "New" for the latest release's features. */
@@ -13,9 +15,9 @@ interface Feature {
 }
 
 const FEATURES: Feature[] = [
-  { shot: "live", title: "c.live.t", body: "c.live.b" },
-  { shot: "search", title: "c.search.t", body: "c.search.b" },
-  { shot: "site", title: "c.site.t", body: "c.site.b" },
+  { Screen: TvLive, title: "c.live.t", body: "c.live.b" },
+  { Screen: TvSearch, title: "c.search.t", body: "c.search.b" },
+  { Screen: TvSite, title: "c.site.t", body: "c.site.b" },
 ];
 
 export function Features() {
@@ -34,15 +36,16 @@ export function Features() {
         ))}
       </Reveal>
 
-      {FEATURES.map(({ shot, title, body, eyebrow }) => (
-        <Reveal as="article" className="card" key={shot}>
+      {FEATURES.map(({ Screen, title, body, eyebrow }) => (
+        <Reveal as="article" className="card" key={title}>
           {eyebrow && <p className="eyebrow">{t(eyebrow)}</p>}
           <h3>{t(title)}</h3>
           <p>{t(body)}</p>
-          <Stage shot={shot} alt={t(title)} />
+          <Stage label={t(title)}>
+            <Screen />
+          </Stage>
         </Reveal>
       ))}
-      {t("shots.note") && <p className="note">{t("shots.note")}</p>}
     </section>
   );
 }
