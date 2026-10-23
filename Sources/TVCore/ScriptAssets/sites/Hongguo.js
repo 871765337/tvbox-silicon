@@ -115,11 +115,14 @@ export function detail(text, id) {
     return { list: [video] };
 }
 
-export function search(text) {
-    const data = loader(text, item => Array.isArray(item.searchList));
-    // The website currently ignores page= and returns only its first search batch.
-    // Do not claim more pages from totalCount and keep fetching the same ten results.
-    return { list: cards(data.searchList), page: 1, pagecount: 1 };
+// The search page now renders in the browser; its results come from this JSON endpoint.
+export function search(text, page) {
+    let data;
+    try { data = JSON.parse(text); } catch { fail('changed'); }
+    if (!data || !Array.isArray(data.searchList)) fail('changed');
+    // totalPages changes from page to page, so only trust it while hasMore says there is a next page.
+    const pagecount = data.hasMore === true ? Math.max(page + 1, Number(data.totalPages) || 0) : page;
+    return { list: cards(data.searchList), page, pagecount };
 }
 
 export function webMedia(text, id, vid) {
@@ -154,8 +157,9 @@ export default {
         return catalog(html(`${SITE}/${id.startsWith('hot-') ? 'rank' : 'category'}/${id}?page=${page}`), id, page);
     },
     search(query, quick, pg) {
-        if (Number(pg) > 1) return { list: [], pagecount: 1 };
-        return search(html(`${SITE}/search/${encodeURIComponent(String(query).trim())}`));
+        const page = Math.max(1, parseInt(pg, 10) || 1);
+        const params = `query=${encodeURIComponent(String(query).trim())}${page > 1 ? `&page=${page}` : ''}`;
+        return search(html(`${SITE}/api/search/result?${params}`), page);
     },
     detail(id) { if (!validID(id)) fail('changed'); return detail(html(`${SITE}/player/${id}`), id); },
     async play(flag, address) {
