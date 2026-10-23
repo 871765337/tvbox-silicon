@@ -17,7 +17,7 @@ extension View {
     }
 }
 
-/// A Liquid Glass recipe. On macOS 26, iOS 26 and tvOS it is real glass; on macOS 15 and iOS 18,
+/// A Liquid Glass recipe. On macOS 26, iOS 26 and tvOS 26 it is real glass; on macOS 15, iOS 18 and tvOS 17–18,
 /// which have no glass, `glassSurface` draws a material with the same tint instead.
 struct GlassStyle {
     var tint: Color?
@@ -79,6 +79,32 @@ extension View {
         if #available(iOS 26, *) { tabBarMinimizeBehavior(.onScrollDown) } else { self }
     }
     #endif
+
+    // tvOS 17 stand-ins for tvOS 18 APIs. macOS 15 and iOS 18 always take the first branch.
+
+    /// `onScrollVisibilityChange`; before tvOS 18 the visible share comes from the view's bounds
+    /// against its scroll view's.
+    @ViewBuilder func onScrolledIntoView(threshold: Double, _ action: @escaping (Bool) -> Void) -> some View {
+        if #available(iOS 18, tvOS 18, *) {
+            onScrollVisibilityChange(threshold: threshold, action)
+        } else {
+            onGeometryChange(for: Bool.self) { geometry in
+                let own = CGRect(origin: .zero, size: geometry.size)
+                guard own.width * own.height > 0, let viewport = geometry.bounds(of: .scrollView) else { return false }
+                let shown = own.intersection(viewport)
+                return !shown.isNull && shown.width * shown.height >= own.width * own.height * threshold
+            } action: { action($0) }
+        }
+    }
+
+    /// The breathing symbol effect; tvOS 17 has no breathe, so the symbol pulses instead.
+    @ViewBuilder func breathingSymbol() -> some View {
+        if #available(iOS 18, tvOS 18, *) {
+            symbolEffect(.breathe, options: .repeat(.periodic(delay: 2.5)))
+        } else {
+            symbolEffect(.pulse, options: .repeating.speed(0.4))
+        }
+    }
 }
 
 // Content-first surfaces: neutral backgrounds, quiet controls, and strong selection contrast.

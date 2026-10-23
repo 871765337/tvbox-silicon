@@ -128,7 +128,7 @@ struct GlobalSearchView: View {
                             // Scrolling the end into view asks for the next page; while it stays in view each new page asks again.
                             if model.canLoadMore(model.selectedSource) || model.loadingMore {
                                 ProgressView().frame(maxWidth: .infinity).padding(.vertical, 24)
-                                    .onScrollVisibilityChange(threshold: 0.2) { visible in
+                                    .onScrolledIntoView(threshold: 0.2) { visible in
                                         endVisible = visible
                                         if visible { model.loadMore(model.selectedSource, config: config) }
                                     }

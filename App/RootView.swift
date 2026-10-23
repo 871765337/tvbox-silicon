@@ -51,6 +51,12 @@ struct RootView: View {
         #if os(iOS)
         if phoneTabs { return PhoneTabs(stored: storedTabs).arranged(slots: barSlots, hiding: store.hiddenSections).bar + [.more] }
         #endif
+        #if os(tvOS)
+        if !tvMore.isEmpty { return Array(sections.prefix(Self.topBarSlots - 1)) + [.more] }
+        #endif
+        return sections
+    }
+    private var sections: [AppSection] {
         let sections = [AppSection.home, .live, .music, .search, .sites, .files, .history, .favorites, .downloads, .settings]
             .filter { !store.hiddenSections.contains($0) }
         #if os(tvOS)
@@ -60,6 +66,15 @@ struct RootView: View {
         #endif
         return sections
     }
+    #if os(tvOS)
+    /// tvOS 17 has no sidebar, only the tab bar along the top, and selecting its eighth or a later tab does
+    /// nothing. Past its seventh place, the bar ends in More with the rest, as on iPhone.
+    private static let topBarSlots = 7
+    private var tvMore: [AppSection] {
+        if #available(tvOS 18, *) { return [] }
+        return sections.count > Self.topBarSlots ? Array(sections.dropFirst(Self.topBarSlots - 1)) : []
+    }
+    #endif
     var body: some View {
         @Bindable var store = store
         Group {
@@ -126,31 +141,7 @@ struct RootView: View {
     private var barSlots: Int { PhoneTabs.slots(horizontal: sizeClass, vertical: verticalSizeClass) }
     #endif
     private var platformTabs: some View {
-        @Bindable var store = store
-        return TabView(selection: $store.section) {
-                ForEach(tabs) { item in
-                    Tab(value: item) {
-                        if item == .more {
-                            NavigationStack(path: $morePath) {
-                                content(.more).routeDestinations()
-                                    // Any section can be moved into More, so any can be pushed here.
-                                    .navigationDestination(for: AppSection.self) { content($0) }
-                            }
-                        } else { NavigationStack { content(item).tvDefaultControls().routeDestinations() } }
-                    } label: {
-                        #if os(tvOS)
-                        if item == .nowPlaying { MusicTabLabel() } else { Label(item.title, systemImage: item.icon) }
-                        #else
-                        Label(item.title, systemImage: item.icon)
-                        #endif
-                    }
-                    #if os(iOS)
-                    // tvOS tab bars have no badges; there the launch sheet and Settings carry the news.
-                    .badge(showsUpdateBadge(item) && !updates.available.isEmpty ? Text(L10n.text("New")) : nil)
-                    #endif
-                }
-            }
-            .tabViewStyle(.sidebarAdaptable)
+        tabView
             #if os(tvOS)
             .musicSidebarHeader()
             // Now Playing is not a page: choosing it opens the full-screen player over the section
@@ -159,6 +150,12 @@ struct RootView: View {
                 guard section == .nowPlaying else { return }
                 store.section = previous == .nowPlaying ? .music : previous
                 store.music.presentsPlayer = true
+            }
+            // tvOS 17: a section in More opens there, whether a button or the Now Playing tab moved it in.
+            .onChange(of: store.section) { _, section in openInMore(section) }
+            .onChange(of: tvMore) { _, more in
+                if more.isEmpty && store.section == .more { store.section = morePath.isEmpty ? .home : moreSection }
+                else { openInMore(store.section) }
             }
             #endif
             #if os(iOS)
@@ -185,6 +182,54 @@ struct RootView: View {
                 }
             }
             #endif
+    }
+
+    @ViewBuilder private var tabView: some View {
+        @Bindable var store = store
+        if #available(iOS 18, tvOS 18, *) {
+            TabView(selection: $store.section) {
+                ForEach(tabs) { item in
+                    Tab(value: item) { tabPage(item) } label: { tabLabel(item) }
+                        #if os(iOS)
+                        // tvOS tab bars have no badges; there the launch sheet and Settings carry the news.
+                        .badge(showsUpdateBadge(item) && !updates.available.isEmpty ? Text(L10n.text("New")) : nil)
+                        #endif
+                }
+            }
+            .tabViewStyle(.sidebarAdaptable)
+        } else {
+            // tvOS 17 has no Tab or sidebar: the classic tab bar along the top.
+            TabView(selection: $store.section) {
+                ForEach(tabs) { item in
+                    tabPage(item).tabItem { tabLabel(item) }.tag(item)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func tabPage(_ item: AppSection) -> some View {
+        if item == .more {
+            NavigationStack(path: $morePath) {
+                content(.more).routeDestinations()
+                    // Any section can be moved into More, so any can be pushed here.
+                    .navigationDestination(for: AppSection.self) { content($0).tvDefaultControls() }
+            }
+        } else { NavigationStack { content(item).tvDefaultControls().routeDestinations() } }
+    }
+
+    #if os(tvOS)
+    private func openInMore(_ section: AppSection) {
+        guard tvMore.contains(section) else { return }
+        moreSection = section; morePath = NavigationPath([section]); store.section = .more
+    }
+    #endif
+
+    @ViewBuilder private func tabLabel(_ item: AppSection) -> some View {
+        #if os(tvOS)
+        if item == .nowPlaying { MusicTabLabel() } else { Label(item.title, systemImage: item.icon) }
+        #else
+        Label(item.title, systemImage: item.icon)
+        #endif
     }
 
     #if os(iOS)
@@ -218,15 +263,34 @@ struct RootView: View {
         case .settings: SettingsView()
         case .nowPlaying: EmptyView()
         case .more:
-            // Only the phone's compact tab bar has a More tab.
+            // Only the phone's tab bar and tvOS 17's have a More tab.
             #if os(iOS)
             MoreView()
+            #elseif os(tvOS)
+            TVMoreView(sections: tvMore)
             #else
             EmptyView()
             #endif
         }
     }
 }
+
+#if os(tvOS)
+/// tvOS 17's More tab: the sections that did not fit in its tab bar.
+private struct TVMoreView: View {
+    let sections: [AppSection]
+    var body: some View {
+        List(sections) { section in
+            NavigationLink(value: section) { Label(section.title, systemImage: section.icon) }
+        }
+        // The rows at Settings' width on the app's navy canvas, instead of the system's grey across the screen.
+        .frame(maxWidth: Layout.settingsWidth)
+        .frame(maxWidth: .infinity)
+        .background { Backdrop() }
+        .navigationTitle(AppSection.more.title)
+    }
+}
+#endif
 
 #if !os(macOS)
 /// What the player cover shows; the same presentation whichever channel it holds.
