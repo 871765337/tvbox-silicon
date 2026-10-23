@@ -63,6 +63,16 @@ targets:
       - path: build/JavaHost
         type: folder
         buildPhase: resources
+    preBuildScripts:
+      - name: Check the bundled Java host
+        script: '"$SRCROOT/Scripts/check-java-host.sh" "$SRCROOT/build/JavaHost/host.jar" && touch "$DERIVED_FILE_DIR/java-host-checked"'
+        # Declared, so the script sandbox lets it read them and it runs again only when one changes.
+        inputFiles:
+          - $(SRCROOT)/Scripts/check-java-host.sh
+          - $(SRCROOT)/Runtime/JavaHost/src/main/java/tvbox/runtime/BytecodeCompatibility.java
+          - $(SRCROOT)/build/JavaHost/host.jar
+        outputFiles:
+          - $(DERIVED_FILE_DIR)/java-host-checked
     dependencies:
       - package: Sparkle
     info:
@@ -92,6 +102,7 @@ targets:
           set -eu
           RUNTIME="$SRCROOT/build/AppleRuntime/$PLATFORM_NAME"
           test -f "$RUNTIME/lib/libTVAppleRuntime.a"
+          "$SRCROOT/Scripts/check-java-host.sh" "$RUNTIME/Resources/JavaHost/host.jar"
           rsync -a --delete "$RUNTIME/Resources/lib/" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/"
           rsync -a --delete "$RUNTIME/Resources/JavaHost/" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/"
         basedOnDependencyAnalysis: false
@@ -130,6 +141,7 @@ targets:
           set -eu
           RUNTIME="$SRCROOT/build/AppleRuntime/$PLATFORM_NAME"
           test -f "$RUNTIME/lib/libTVAppleRuntime.a"
+          "$SRCROOT/Scripts/check-java-host.sh" "$RUNTIME/Resources/JavaHost/host.jar"
           rsync -a --delete "$RUNTIME/Resources/lib/" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/"
           rsync -a --delete "$RUNTIME/Resources/JavaHost/" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/"
         basedOnDependencyAnalysis: false
