@@ -109,9 +109,6 @@ targets:
     settings:
       HEADER_SEARCH_PATHS: $(inherited) $(SRCROOT)/build/AppleRuntime/$(PLATFORM_NAME)/include
       OTHER_LDFLAGS: $(inherited) -Wl,-force_load,$(SRCROOT)/build/AppleRuntime/$(PLATFORM_NAME)/lib/libTVAppleRuntime.a -Wl,-export_dynamic -lc++ -lz -liconv -framework Security -framework CoreGraphics
-      # The embedded JVM finds its own functions by name (JIMAGE_Open, JNI natives). Archives strip global
-      # symbols by default, which made 1.7.7 (27) crash on its first plugin call; keep the exported ones.
-      STRIP_STYLE: non-global
       ENABLE_USER_SCRIPT_SANDBOXING: NO
       ENABLE_DEBUG_DYLIB: NO
       # An archive (TestFlight) strips every symbol by default, but the embedded JVM looks up its jimage
@@ -154,9 +151,6 @@ targets:
     settings:
       HEADER_SEARCH_PATHS: $(inherited) $(SRCROOT)/build/AppleRuntime/$(PLATFORM_NAME)/include
       OTHER_LDFLAGS: $(inherited) -Wl,-force_load,$(SRCROOT)/build/AppleRuntime/$(PLATFORM_NAME)/lib/libTVAppleRuntime.a -Wl,-export_dynamic -lc++ -lz -liconv -framework Security -framework CoreGraphics
-      # The embedded JVM finds its own functions by name (JIMAGE_Open, JNI natives). Archives strip global
-      # symbols by default, which made 1.7.7 (27) crash on its first plugin call; keep the exported ones.
-      STRIP_STYLE: non-global
       ENABLE_USER_SCRIPT_SANDBOXING: NO
       ENABLE_DEBUG_DYLIB: NO
       # An archive (TestFlight) strips every symbol by default, but the embedded JVM looks up its jimage

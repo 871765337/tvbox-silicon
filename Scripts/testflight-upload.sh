@@ -71,13 +71,9 @@ for platform in iOS tvOS; do
   got="$(plutil -extract CFBundleIdentifier raw "$info") $(plutil -extract CFBundleShortVersionString raw "$info") $(plutil -extract CFBundleVersion raw "$info")"
   want="$bundle $TESTFLIGHT_VERSION $BUILD"
   [ "$got" = "$want" ] || { echo "archive is \"$got\", expected \"$want\"" >&2; exit 1; }
-  # The embedded JVM finds JIMAGE_Open and the JNI_OnLoad_* functions with dlsym. A fully stripped binary
-  # exports none of them and crashes the first time a Java source starts (TestFlight 1.7.7, builds 25-27).
-  binary=$archive/Products/Applications/$scheme.app/$scheme
-  xcrun dyld_info -exports "$binary" | grep -q ' _JIMAGE_Open$' || { echo "$binary does not export the Java runtime's symbols; check STRIP_STYLE" >&2; exit 1; }
-
-  # The embedded JVM looks up its own functions by name, so a binary stripped of global symbols crashes on the
-  # first plugin call (1.7.7 (27)). STRIP_STYLE in project.yml keeps them.
+  # The embedded JVM finds JIMAGE_Open and the JNI_OnLoad_* functions with dlsym, so a binary stripped of its
+  # global symbols crashes the first time a Java source starts (TestFlight 1.7.7, builds 25-27). STRIP_STYLE in
+  # project.yml keeps them. No grep -q: with pipefail, nm would die of SIGPIPE when grep quit early.
   nm -gU "$archive/Products/Applications/$scheme.app/$scheme" | grep ' _JIMAGE_Open$' >/dev/null ||
     { echo "$scheme does not export JIMAGE_Open: its global symbols were stripped" >&2; exit 1; }
 
