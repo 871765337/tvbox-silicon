@@ -32,6 +32,36 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(open.waitForExistence(timeout: 10), "Back did not return to the previous page")
     }
 
+    /// Back once a video page has given up returns to the source. When the details failed, the error card's buttons
+    /// sat below the full-screen hero, and with no episodes there was no Play: nothing on the page took focus, and
+    /// Back did nothing.
+    func testBackAfterDetailsFailReturnsToTheSource() throws { try backAfterTheVideoPageGivesUp(source: "qa-broken", focused: "detail.retry") }
+    func testBackFromAVideoWithoutEpisodesReturnsToTheSource() throws { try backAfterTheVideoPageGivesUp(source: "qa-no-episodes", focused: "detail.goBack") }
+
+    private func backAfterTheVideoPageGivesUp(source: String, focused identifier: String) throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "sites", "-qaPage", "open-detail:\(source):1", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/stall-config.json",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let remote = XCUIRemote.shared
+        let open = app.buttons["qa.open-detail"]
+        XCTAssertTrue(open.waitForExistence(timeout: 60), "The QA page did not appear")
+        let action = app.buttons[identifier]
+        for _ in 0..<4 where !action.exists {
+            remote.press(.right); sleep(1)
+            remote.press(.select)
+            _ = action.waitForExistence(timeout: 10)
+        }
+        XCTAssertTrue(action.exists, "The video page did not offer \(identifier)")
+        sleep(2)
+        XCTAssertTrue(action.hasFocus, "\(identifier) did not take focus")
+        remote.press(.menu)
+        sleep(3)
+        XCTAssertEqual(app.state, .runningForeground, "Back left the app")
+        XCTAssertTrue(open.waitForExistence(timeout: 10), "Back did not return to the previous page")
+    }
+
     /// Back while a live stream is still loading closes the player. AVKit's player kept the press to itself
     /// until the picture started, so a stream that never loaded could only be left by quitting the app (#22).
     func testBackWhileLiveLoadsClosesThePlayer() throws {
