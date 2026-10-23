@@ -3,7 +3,7 @@ import type { Lang } from "./strings";
 
 export type Platform = "mac" | "ios" | "tv";
 export type Sideload = Exclude<Platform, "mac">;
-export type Mode = "agent" | "cli" | "app";
+export type Mode = "testflight" | "agent" | "cli" | "app";
 
 export interface Step {
   t: string;
@@ -34,7 +34,7 @@ export interface InstallCopy {
   agent: { t: string; b: string; works: string; web: string; prompt: Record<Sideload, string> };
   copy: string;
   copied: string;
-  /** The install-mode switcher; AI agent is the recommended mode. */
+  /** The install-mode switcher; TestFlight is the recommended mode. */
   modes: { label: string; rec: string } & Record<Mode, string>;
   /** Shown when choosing AI agent copies the prompt. */
   copiedPrompt: string;
@@ -45,6 +45,20 @@ export interface InstallCopy {
   apps: { t: string; b: string; impactor: string; iloader: string; sideloadly: string };
   keep: { t: string; b: string; free: string; freeTime: string; paid: string; paidTime: string; tip: string };
   guide: string;
+  /** TestFlight, the recommended install for iPhone, iPad and Apple TV: its eyebrow, button, QR card
+   * (`here` replaces the scan text when the visitor is on an iPhone or iPad), steps and keep-up-to-date panel. */
+  tf: {
+    tag: string;
+    join: string;
+    t: string;
+    b: Record<Sideload, string>;
+    hereT: string;
+    here: Record<Sideload, string>;
+    open: string;
+    app: string;
+    steps: Record<Sideload, Step[]>;
+    keep: { t: string; b: string; days: string; daysLabel: string; devices: string; devicesLabel: string };
+  };
 }
 
 export const INSTALL: Record<Lang, InstallCopy> = {
@@ -52,7 +66,7 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     nav: "Install",
     l1: "Get Yingxia",
     l2: "on every screen.",
-    sub: "The Mac app is a signed download. The iPhone, iPad and Apple TV apps are in preview: sign and install them with cider, a free command-line tool, and your own Apple account, free or paid. Or hand the job to your AI agent.",
+    sub: "The Mac app is a signed download. The iPhone, iPad and Apple TV apps are in public beta on TestFlight, Apple's own app for betas: no computer, cable or re-signing needed. You can still sideload the IPA with cider, or hand the job to your AI agent.",
     device: { mac: "Mac", ios: "iPhone & iPad", tv: "Apple TV" },
     req: { mac: "macOS 15+ · Apple silicon or Intel", ios: "iOS & iPadOS 18+", tv: "tvOS 26+" },
     tag: { mac: "Signed & notarized", ios: "Preview · Sideload", tv: "Preview · Sideload" },
@@ -95,7 +109,7 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     },
     copy: "Copy",
     copied: "Copied",
-    modes: { label: "How to install", rec: "Recommended", agent: "AI agent", cli: "Terminal", app: "App" },
+    modes: { label: "How to install", rec: "Recommended", testflight: "TestFlight", agent: "AI agent", cli: "Terminal", app: "App" },
     copiedPrompt: "Prompt copied. Paste it into your agent.",
     agentSteps: {
       ios: [
@@ -136,12 +150,35 @@ export const INSTALL: Record<Lang, InstallCopy> = {
       tip: "Reinstall with the same Apple account to keep your favorites and history.",
     },
     guide: "Full guide and troubleshooting",
+    tf: {
+      tag: "Public beta · TestFlight",
+      join: "Join the beta",
+      t: "Scan to join the beta",
+      b: { ios: "Point your iPhone or iPad camera at the code, then tap the banner to open the invite in TestFlight.", tv: "Scan it with an iPhone or iPad signed in to the same Apple Account as your Apple TV. Accept the invite there, then install on the TV." },
+      hereT: "Join from this device",
+      here: { ios: "Tap the button to open the invite in TestFlight. If TestFlight isn't installed yet, get it from the App Store first.", tv: "If this device uses the same Apple Account as your Apple TV, open the invite here and tap Accept in TestFlight, then install on the TV." },
+      open: "Open the invite",
+      app: "Get TestFlight",
+      steps: {
+        ios: [
+          { t: "Get TestFlight", b: "Install TestFlight, Apple's free app for beta apps, from the App Store on your iPhone or iPad." },
+          { t: "Open the invite", b: "Scan the code with the Camera, or tap Join the beta on the iPhone or iPad itself." },
+          { t: "Accept and install", b: "In TestFlight, tap Accept, then Install. Open Yingxia and add your subscription." },
+        ],
+        tv: [
+          { t: "Get TestFlight on both", b: "Install TestFlight from the App Store on your Apple TV and on an iPhone or iPad. Both need the same Apple Account." },
+          { t: "Accept on your iPhone", b: "Scan the code, or open the invite on the iPhone or iPad, and tap Accept in TestFlight." },
+          { t: "Install on Apple TV", b: "Open TestFlight on Apple TV, choose Yingxia for Apple TV and select Install." },
+        ],
+      },
+      keep: { t: "Updates come to you", b: "TestFlight tells you when a new build is out. Turn on Automatic Updates and it installs the new build for you, well before the old one expires. The beta installs alongside a sideloaded copy, so you can keep both.", days: "90 days", daysLabel: "Each beta build", devices: "30", devicesLabel: "Devices per Apple Account" },
+    },
   },
   ja: {
     nav: "インストール",
     l1: "どの画面にも、",
     l2: "映匣を。",
-    sub: "Mac 版は署名済みアプリとしてダウンロードできます。iPhone、iPad、Apple TV 版はプレビューです。無料のコマンドラインツール cider とご自身の Apple アカウント（無料・有料どちらでも可）で署名してインストールします。AI エージェントに任せることもできます。",
+    sub: "Mac 版は署名済みアプリとしてダウンロードできます。iPhone、iPad、Apple TV 版は Apple 公式のベータ版配信アプリ TestFlight でパブリックベータを公開中です。パソコンもケーブルも再署名も要りません。cider で IPA をサイドロードしたり、AI エージェントに任せたりすることもできます。",
     device: { mac: "Mac", ios: "iPhone・iPad", tv: "Apple TV" },
     req: { mac: "macOS 15 以降 · Apple シリコンまたは Intel", ios: "iOS・iPadOS 18 以降", tv: "tvOS 26 以降" },
     tag: { mac: "署名・公証済み", ios: "プレビュー · サイドロード", tv: "プレビュー · サイドロード" },
@@ -184,7 +221,7 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     },
     copy: "コピー",
     copied: "コピーしました",
-    modes: { label: "インストール方法", rec: "おすすめ", agent: "AI エージェント", cli: "ターミナル", app: "アプリ" },
+    modes: { label: "インストール方法", rec: "おすすめ", testflight: "TestFlight", agent: "AI エージェント", cli: "ターミナル", app: "アプリ" },
     copiedPrompt: "プロンプトをコピーしました。エージェントに貼り付けてください。",
     agentSteps: {
       ios: [
@@ -225,12 +262,35 @@ export const INSTALL: Record<Lang, InstallCopy> = {
       tip: "同じ Apple アカウントで再インストールすれば、お気に入りや履歴はそのまま残ります。",
     },
     guide: "詳しい手順とトラブルシューティング",
+    tf: {
+      tag: "パブリックベータ · TestFlight",
+      join: "ベータに参加",
+      t: "スキャンしてベータに参加",
+      b: { ios: "iPhone または iPad のカメラでコードを読み取り、表示されたバナーをタップすると TestFlight で招待が開きます。", tv: "Apple TV と同じ Apple アカウントでサインインしている iPhone または iPad で読み取ります。そこで招待を承認してから、テレビでインストールします。" },
+      hereT: "このデバイスから参加",
+      here: { ios: "ボタンをタップすると TestFlight で招待が開きます。TestFlight が未インストールなら、先に App Store から入手してください。", tv: "このデバイスが Apple TV と同じ Apple アカウントなら、ここで招待を開いて TestFlight で承認し、テレビでインストールします。" },
+      open: "招待を開く",
+      app: "TestFlight を入手",
+      steps: {
+        ios: [
+          { t: "TestFlight を入手", b: "Apple の無料ベータ版アプリ TestFlight を、iPhone または iPad の App Store からインストールします。" },
+          { t: "招待を開く", b: "カメラでコードを読み取るか、iPhone・iPad 本体で「ベータに参加」をタップします。" },
+          { t: "承認してインストール", b: "TestFlight で「承認」、続けて「インストール」をタップ。映匣を開いてサブスクリプションを追加します。" },
+        ],
+        tv: [
+          { t: "両方に TestFlight を入手", b: "Apple TV と iPhone または iPad に、App Store から TestFlight をインストールします。どちらも同じ Apple アカウントが必要です。" },
+          { t: "iPhone で承認", b: "コードを読み取るか、iPhone・iPad で招待を開き、TestFlight で「承認」をタップします。" },
+          { t: "Apple TV でインストール", b: "Apple TV で TestFlight を開き、Yingxia for Apple TV を選んで「インストール」を選択します。" },
+        ],
+      },
+      keep: { t: "アップデートは自動で", b: "新しいビルドが出ると TestFlight が知らせてくれます。自動アップデートをオンにすれば、古いビルドの期限が切れる前に新しいビルドが自動でインストールされます。サイドロード版とは別のアプリとして入るので、両方を残しておけます。", days: "90 日", daysLabel: "各ベータビルドの有効期間", devices: "30", devicesLabel: "Apple アカウントあたりのデバイス数" },
+    },
   },
   ko: {
     nav: "설치",
     l1: "모든 화면에",
     l2: "Yingxia를.",
-    sub: "Mac 버전은 서명된 앱으로 바로 다운로드할 수 있습니다. iPhone, iPad, Apple TV 버전은 프리뷰로, 무료 명령줄 도구 cider와 본인의 Apple 계정(무료 또는 유료)으로 서명해 설치합니다. AI 에이전트에게 맡길 수도 있습니다.",
+    sub: "Mac 버전은 서명된 앱으로 바로 다운로드할 수 있습니다. iPhone, iPad, Apple TV 버전은 Apple의 공식 베타 앱 TestFlight에서 공개 베타로 제공되므로 컴퓨터도, 케이블도, 재서명도 필요 없습니다. cider로 IPA를 사이드로드하거나 AI 에이전트에게 맡길 수도 있습니다.",
     device: { mac: "Mac", ios: "iPhone·iPad", tv: "Apple TV" },
     req: { mac: "macOS 15 이상 · Apple 실리콘 또는 Intel", ios: "iOS·iPadOS 18 이상", tv: "tvOS 26 이상" },
     tag: { mac: "서명 및 공증 완료", ios: "프리뷰 · 사이드로드", tv: "프리뷰 · 사이드로드" },
@@ -273,7 +333,7 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     },
     copy: "복사",
     copied: "복사됨",
-    modes: { label: "설치 방법", rec: "추천", agent: "AI 에이전트", cli: "터미널", app: "앱" },
+    modes: { label: "설치 방법", rec: "추천", testflight: "TestFlight", agent: "AI 에이전트", cli: "터미널", app: "앱" },
     copiedPrompt: "프롬프트를 복사했습니다. 에이전트에 붙여 넣으세요.",
     agentSteps: {
       ios: [
@@ -314,12 +374,35 @@ export const INSTALL: Record<Lang, InstallCopy> = {
       tip: "같은 Apple 계정으로 다시 설치하면 즐겨찾기와 기록이 그대로 유지됩니다.",
     },
     guide: "전체 가이드 및 문제 해결",
+    tf: {
+      tag: "공개 베타 · TestFlight",
+      join: "베타 참여하기",
+      t: "스캔해서 베타 참여",
+      b: { ios: "iPhone이나 iPad 카메라로 코드를 비춘 뒤 나타나는 배너를 탭하면 TestFlight에서 초대가 열립니다.", tv: "Apple TV와 같은 Apple 계정으로 로그인한 iPhone이나 iPad로 스캔하세요. 그 기기에서 초대를 수락한 다음 TV에서 설치합니다." },
+      hereT: "이 기기에서 참여",
+      here: { ios: "버튼을 탭하면 TestFlight에서 초대가 열립니다. TestFlight가 없다면 먼저 App Store에서 받으세요.", tv: "이 기기가 Apple TV와 같은 Apple 계정이라면 여기서 초대를 열어 TestFlight에서 수락한 뒤 TV에서 설치하세요." },
+      open: "초대 열기",
+      app: "TestFlight 받기",
+      steps: {
+        ios: [
+          { t: "TestFlight 받기", b: "Apple의 무료 베타 앱 TestFlight를 iPhone이나 iPad의 App Store에서 설치합니다." },
+          { t: "초대 열기", b: "카메라로 코드를 스캔하거나, iPhone·iPad에서 ‘베타 참여하기’를 탭합니다." },
+          { t: "수락하고 설치", b: "TestFlight에서 ‘수락’, 이어서 ‘설치’를 탭합니다. Yingxia를 열고 구독을 추가하세요." },
+        ],
+        tv: [
+          { t: "두 기기에 TestFlight 받기", b: "Apple TV와 iPhone 또는 iPad에 App Store에서 TestFlight를 설치합니다. 두 기기 모두 같은 Apple 계정이어야 합니다." },
+          { t: "iPhone에서 수락", b: "코드를 스캔하거나 iPhone·iPad에서 초대를 열고, TestFlight에서 ‘수락’을 탭합니다." },
+          { t: "Apple TV에서 설치", b: "Apple TV에서 TestFlight를 열고 Yingxia for Apple TV를 골라 ‘설치’를 선택합니다." },
+        ],
+      },
+      keep: { t: "업데이트는 자동으로", b: "새 빌드가 나오면 TestFlight가 알려 줍니다. 자동 업데이트를 켜 두면 이전 빌드가 만료되기 전에 새 빌드를 알아서 설치합니다. 사이드로드한 앱과는 별개로 설치되므로 둘 다 둘 수 있습니다.", days: "90일", daysLabel: "베타 빌드별 사용 기간", devices: "30", devicesLabel: "Apple 계정당 기기 수" },
+    },
   },
   "zh-Hant": {
     nav: "安裝",
     l1: "每一塊螢幕，",
     l2: "都有映匣。",
-    sub: "Mac 版提供已簽署的下載檔。iPhone、iPad 與 Apple TV 版以預覽形式提供，用免費的命令列工具 cider 和你自己的 Apple 帳號（免費或付費皆可）簽署並安裝。也可以交給你的 AI 代理處理。",
+    sub: "Mac 版提供已簽署的下載檔。iPhone、iPad 與 Apple TV 版正在 Apple 官方的測試版 App TestFlight 公開測試，不需要電腦、傳輸線，也不用重新簽署。你也可以用 cider 側載 IPA，或交給 AI 代理處理。",
     device: { mac: "Mac", ios: "iPhone 與 iPad", tv: "Apple TV" },
     req: { mac: "macOS 15 以上 · Apple 晶片或 Intel", ios: "iOS 與 iPadOS 18 以上", tv: "tvOS 26 以上" },
     tag: { mac: "已簽署並公證", ios: "預覽 · 側載", tv: "預覽 · 側載" },
@@ -362,7 +445,7 @@ export const INSTALL: Record<Lang, InstallCopy> = {
     },
     copy: "拷貝",
     copied: "已拷貝",
-    modes: { label: "安裝方式", rec: "推薦", agent: "AI 代理", cli: "終端機", app: "App" },
+    modes: { label: "安裝方式", rec: "推薦", testflight: "TestFlight", agent: "AI 代理", cli: "終端機", app: "App" },
     copiedPrompt: "已拷貝提示，貼到你的代理即可。",
     agentSteps: {
       ios: [
@@ -403,5 +486,28 @@ export const INSTALL: Record<Lang, InstallCopy> = {
       tip: "用同一個 Apple 帳號重新安裝，收藏與紀錄都會保留。",
     },
     guide: "完整指南與疑難排解",
+    tf: {
+      tag: "公開測試版 · TestFlight",
+      join: "加入測試",
+      t: "掃描加入測試",
+      b: { ios: "用 iPhone 或 iPad 的相機對準條碼，點一下跳出的橫幅，就會在 TestFlight 打開邀請。", tv: "請用與 Apple TV 登入同一個 Apple 帳號的 iPhone 或 iPad 掃描，先在那裡接受邀請，再到電視上安裝。" },
+      hereT: "直接在這台裝置加入",
+      here: { ios: "點按按鈕即可在 TestFlight 打開邀請。如果還沒安裝 TestFlight，請先從 App Store 取得。", tv: "如果這台裝置與 Apple TV 使用同一個 Apple 帳號，就在這裡打開邀請、在 TestFlight 點「接受」，再到電視上安裝。" },
+      open: "打開邀請",
+      app: "取得 TestFlight",
+      steps: {
+        ios: [
+          { t: "取得 TestFlight", b: "在 iPhone 或 iPad 的 App Store 安裝 Apple 免費的測試版 App：TestFlight。" },
+          { t: "打開邀請", b: "用相機掃描條碼，或直接在 iPhone、iPad 上點「加入測試」。" },
+          { t: "接受並安裝", b: "在 TestFlight 點「接受」，再點「安裝」。打開映匣，加入你的訂閱。" },
+        ],
+        tv: [
+          { t: "兩台都裝 TestFlight", b: "在 Apple TV 和 iPhone 或 iPad 上，從 App Store 安裝 TestFlight，兩台都要登入同一個 Apple 帳號。" },
+          { t: "在 iPhone 上接受", b: "掃描條碼，或在 iPhone、iPad 上打開邀請，然後在 TestFlight 點「接受」。" },
+          { t: "在 Apple TV 上安裝", b: "在 Apple TV 打開 TestFlight，選擇 Yingxia for Apple TV，再選「安裝」。" },
+        ],
+      },
+      keep: { t: "自動保持最新", b: "有新版本時 TestFlight 會通知你；開啟自動更新後，會在舊版本到期前自動安裝新版本。測試版與側載的版本是兩個獨立的 App，可以同時保留。", days: "90 天", daysLabel: "每個測試版本的可用期限", devices: "30", devicesLabel: "每個 Apple 帳號可安裝的裝置數" },
+    },
   },
 };

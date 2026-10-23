@@ -2,7 +2,7 @@ import { SFSymbol } from "./SFSymbol";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useI18n } from "../i18n/I18nProvider";
 import { INSTALL, type InstallCopy, type Mode, type Platform, type Sideload } from "../i18n/install-strings";
-import { AGENTS, CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, MAC_INTEL_DOWNLOAD, SIDELOADLY } from "./controls";
+import { AGENTS, CIDER, DOWNLOADS, ILOADER, IMPACTOR, INSTALL_GUIDE, INSTALL_SKILL, MAC_INTEL_DOWNLOAD, SIDELOADLY, TESTFLIGHT, TESTFLIGHT_APP } from "./controls";
 import { AppleTVIcon, IPhoneIPadIcon, MacIcon } from "./icons-devices";
 import { Reveal } from "./Reveal";
 
@@ -15,8 +15,9 @@ const PLATFORMS: { id: Platform; Icon: ComponentType }[] = [
   { id: "tv", Icon: AppleTVIcon },
 ];
 
-/** Ways to sideload, recommended first. */
+/** Ways to install, recommended first: TestFlight, then the sideloading modes. */
 const MODES: { id: Mode; icon: string }[] = [
+  { id: "testflight", icon: "arrow.down.circle" },
   { id: "agent", icon: "sparkles" },
   { id: "cli", icon: "terminal" },
   { id: "app", icon: "laptopcomputer.and.iphone" },
@@ -31,6 +32,11 @@ function hashPlatform(): Platform | null {
 // iPadOS reports itself as a Mac, so only phones and older iPads land on the iOS tab.
 function initialPlatform(): Platform {
   return hashPlatform() ?? (/iPhone|iPad|iPod/.test(navigator.userAgent) ? "ios" : "mac");
+}
+
+// On an iPhone or iPad (iPadOS included: a "Mac" with touch), the TestFlight link opens right here, so there's nothing to scan.
+function onAppleMobile() {
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 }
 
 /** The prompt for an AI agent: it reads the install skill, then runs cider. */
@@ -59,16 +65,19 @@ export function Install() {
   const copy = INSTALL[lang];
   // Starts on the Mac tab, as prerendered, then picks the visitor's tab after hydration.
   const [platform, setPlatform] = useState<Platform>("mac");
-  const [mode, setMode] = useState<Mode>("agent");
+  const [mode, setMode] = useState<Mode>("testflight");
+  const [onDevice, setOnDevice] = useState(false);
   // Set when a mode is picked: scroll to its content (the prompt for AI agent, else the steps).
   const [jump, setJump] = useState<{ mode: Mode; at: number } | null>(null);
   const [autoCopied, setAutoCopied] = useState(0);
   const promptRef = useRef<HTMLDivElement>(null);
   const howRef = useRef<HTMLDivElement>(null);
   const sideload = platform !== "mac";
+  const testflight = sideload && mode === "testflight";
 
   useEffect(() => {
     setPlatform(initialPlatform());
+    setOnDevice(onAppleMobile());
     const onHash = () => {
       const next = hashPlatform();
       if (next) setPlatform(next);
@@ -96,7 +105,7 @@ export function Install() {
     setJump({ mode: next, at: Date.now() });
   };
 
-  const steps = !sideload ? copy.steps.mac : mode === "agent" ? copy.agentSteps[platform] : mode === "app" ? copy.appSteps[platform] : copy.steps[platform];
+  const steps = !sideload ? copy.steps.mac : mode === "testflight" ? copy.tf.steps[platform] : mode === "agent" ? copy.agentSteps[platform] : mode === "app" ? copy.appSteps[platform] : copy.steps[platform];
 
   return (
     <section className="section install" id="install">
@@ -138,13 +147,19 @@ export function Install() {
             {/* Real app screenshots composited into Apple's product bezels (developer.apple.com/design/resources). */}
             <img src={`/devices/${platform}-${locale.shots}.webp`} alt={copy.title[platform]} width={1600} height={MOCKUP_HEIGHT[platform]} />
           </div>
-          <p className={sideload ? "eyebrow" : "eyebrow signed"}>{copy.tag[platform]}</p>
+          <p className={sideload && !testflight ? "eyebrow" : "eyebrow signed"}>{testflight ? copy.tf.tag : copy.tag[platform]}</p>
           <h3 className="product">{copy.title[platform]}</h3>
           <p className="product-req">{copy.req[platform]}</p>
           <div className="product-actions">
-            <a className="btn-blue" href={DOWNLOADS[platform]}>
-              {copy.get}
-            </a>
+            {testflight ? (
+              <a className="btn-blue" href={TESTFLIGHT[platform]} target="_blank" rel="noreferrer">
+                {copy.tf.join}
+              </a>
+            ) : (
+              <a className="btn-blue" href={DOWNLOADS[platform]}>
+                {copy.get}
+              </a>
+            )}
             {platform === "mac" && (
               <a className="link-blue" href={MAC_INTEL_DOWNLOAD}>
                 {copy.intel} <SFSymbol name="chevron.right" />
@@ -159,7 +174,7 @@ export function Install() {
                   <button key={id} type="button" role="radio" aria-checked={mode === id} className={mode === id ? "mode on" : "mode"} onClick={() => choose(id)}>
                     <SFSymbol name={icon} />
                     <span>{copy.modes[id]}</span>
-                    {id === "agent" && <span className="mode-rec">{copy.modes.rec}</span>}
+                    {id === "testflight" && <span className="mode-rec">{copy.modes.rec}</span>}
                   </button>
                 ))}
               </div>
@@ -201,12 +216,29 @@ export function Install() {
                 </div>
               </div>
             )}
+            {testflight && <TestFlightCard copy={copy} platform={platform} onDevice={onDevice} />}
             {sideload && mode === "cli" && <TerminalCard copy={copy} platform={platform} />}
             {sideload && mode === "app" && <AppsCard copy={copy} />}
           </div>
         </div>
 
-        {sideload && (
+        {testflight && (
+          <div className="keep">
+            <h3 className="how-title">{copy.tf.keep.t}</h3>
+            <div className="keep-stats">
+              <div className="stat">
+                <span className="stat-value">{copy.tf.keep.days}</span>
+                <span className="stat-label">{copy.tf.keep.daysLabel}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-value">{copy.tf.keep.devices}</span>
+                <span className="stat-label">{copy.tf.keep.devicesLabel}</span>
+              </div>
+            </div>
+            <p className="keep-body">{copy.tf.keep.b}</p>
+          </div>
+        )}
+        {sideload && !testflight && (
           <div className="keep">
             <h3 className="how-title">{copy.keep.t}</h3>
             <div className="keep-stats">
@@ -266,6 +298,35 @@ function TerminalCard({ copy, platform }: { copy: InstallCopy; platform: Sideloa
           <a href={CIDER} target="_blank" rel="noreferrer">cider</a>
         </p>
         <CopyButton text={script} copy={copy} />
+      </div>
+    </div>
+  );
+}
+
+/** The TestFlight invite as a QR code to scan with an iPhone or iPad, or as a link when the visitor is already on one. */
+function TestFlightCard({ copy, platform, onDevice }: { copy: InstallCopy; platform: Sideload; onDevice: boolean }) {
+  const link = TESTFLIGHT[platform];
+  return (
+    <div className="run single">
+      <div className="run-card">
+        <span className="run-icon"><SFSymbol name="qrcode" /></span>
+        <h3>{onDevice ? copy.tf.hereT : copy.tf.t}</h3>
+        <p>{onDevice ? copy.tf.here[platform] : copy.tf.b[platform]}</p>
+        {!onDevice && (
+          <div className="tf-qr">
+            <img src={`/testflight/${platform}.svg`} alt={link} width={200} height={200} />
+          </div>
+        )}
+        <div className="copy-row">
+          <a className="copy-btn" href={link} target="_blank" rel="noreferrer">
+            <span>{copy.tf.open}</span>
+            <SFSymbol name="chevron.right" />
+          </a>
+          <a className="link-blue tf-app" href={TESTFLIGHT_APP} target="_blank" rel="noreferrer">
+            {copy.tf.app} <SFSymbol name="chevron.right" />
+          </a>
+        </div>
+        <p className="run-note">{link.replace("https://", "")}</p>
       </div>
     </div>
   );

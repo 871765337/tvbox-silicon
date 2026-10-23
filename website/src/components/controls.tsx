@@ -25,6 +25,16 @@ export const DOWNLOADS = {
   tv: "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-tvos.ipa",
 } as const;
 
+/** Public TestFlight invites (external testing), the recommended install for iPhone, iPad and Apple TV.
+ * Their QR codes are public/testflight/{ios,tv}.svg; rerun scripts/testflight-qr.py when a link changes. */
+export const TESTFLIGHT = {
+  ios: "https://testflight.apple.com/join/dU6UNbzp",
+  tv: "https://testflight.apple.com/join/SSgWEwSr",
+} as const;
+
+/** Apple's TestFlight app on the App Store (the same listing for iPhone, iPad and Apple TV). */
+export const TESTFLIGHT_APP = "https://apps.apple.com/app/testflight/id899247664";
+
 /** Sideloading tools, official sources only (iloader.site and plamimpactor.site are third-party mirrors). */
 export const CIDER = "https://github.com/Battzz/cider-cli";
 export const IMPACTOR = "https://github.com/claration/Impactor/releases";

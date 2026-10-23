@@ -216,7 +216,7 @@ h1, h2, h3, h4, p { margin: 0; }
 .keep-body { max-width: 38em; margin: 32px auto 0; font-size: 17px; color: var(--muted); text-wrap: pretty; }
 .keep .link-blue { display: inline-block; margin-top: 18px; }
 
-/* Install mode switcher: a segmented control under the Download button; AI agent is recommended. */
+/* Install mode switcher: a segmented control under the Download button; TestFlight is recommended. */
 .modes-wrap { margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .modes-label { font-size: 14px; color: var(--muted); }
 .modes { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 4px; border-radius: 999px; background: var(--card); }
@@ -259,6 +259,11 @@ h1, h2, h3, h4, p { margin: 0; }
 .copy-btn .sf { font-size: 15px; }
 .copy-btn:focus-visible { outline: 2px solid #0071e3; outline-offset: 2px; }
 :lang(ja) .run-card h3, :lang(ko) .run-card h3, :lang(zh-Hant) .run-card h3 { letter-spacing: 0; }
+/* TestFlight: the invite's QR code on a white tile (its quiet zone), then the link and the TestFlight app. */
+.tf-qr { align-self: flex-start; margin-top: 22px; padding: 18px; border-radius: 20px; background: #fff; }
+.tf-qr img { display: block; width: 200px; height: 200px; }
+.copy-btn .sf.sf { font-size: 12px; }
+.tf-app { font-size: 15px; }
 
 /* Motion */
 .headline.animate .w { opacity: 0; filter: blur(10px); transform: translateY(0.12em); animation: word-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: calc(var(--i) * 70ms + 80ms); }
