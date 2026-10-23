@@ -54,8 +54,13 @@ class Handler(BaseHTTPRequestHandler):
             ]})
         if path == '/empty-config.json': return self.send({'sites': [], 'lives': [{'name':'测试频道','url':base+'/live.m3u'}]})
         # A source whose video details never arrive, for Back while a page is still loading.
-        if path == '/stall-config.json': return self.send({'sites': [{'key':'qa-stall','name':'详情卡住 / Stalled','type':4,'api':base+'/stall'}], 'lives': []})
+        # Also one whose details fail, and one whose video has no episodes, for Back once the page has given up.
+        if path == '/stall-config.json': return self.send({'sites': [{'key':'qa-stall','name':'详情卡住 / Stalled','type':4,'api':base+'/stall'},
+            {'key':'qa-broken','name':'详情失败 / Broken','type':4,'api':base+'/stall?broken=1'},
+            {'key':'qa-no-episodes','name':'没有剧集 / No episodes','type':4,'api':base+'/stall?episodes=0'}], 'lives': []})
         if path == '/stall':
+            if 'ids' in q and q.get('broken') == '1': return self.send('Service unavailable',503,'text/plain')
+            if 'ids' in q and q.get('episodes') == '0': return self.send({'list': [{'vod_id':q['ids'],'vod_name':'测试影片 '+q['ids']}]})
             if 'ids' in q or 'play' in q: time.sleep(120); return self.send({'list': []})
             return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,
                 'list':[{'vod_id':str(i),'vod_name':f'测试影片 {i:02d}','vod_pic':base+'/poster.png','vod_remarks':'更新至 36 集'} for i in range(1,13)]})

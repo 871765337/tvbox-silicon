@@ -616,6 +616,10 @@ struct VideoDetailView: View {
             guard !Task.isCancelled else { return }
             Diagnostics.shared.failure("catalog", "detail \(client.reportContext)", error)
             self.error = error.localizedDescription
+            #if os(tvOS)
+            // The loading placeholder that held focus is gone: Retry in the hero takes it.
+            Task { try? await Task.sleep(for: .milliseconds(100)); playFocused = true }
+            #endif
         }
     }
     private var headerLayout: AnyLayout {
@@ -680,13 +684,39 @@ struct VideoDetailView: View {
                     HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: false) }
                     HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: true) }
                 }
+            } else {
+                #if os(tvOS)
+                // No episodes, so no Play: without a button here nothing on the page could take focus, and Back
+                // did nothing at all.
+                goBackButton(prominent: true).focused($playFocused)
+                #endif
             }
         } else if error == nil {
             // On Apple TV the hero fills the screen and the skeleton below it is off-screen: the
             // Play button's placeholder holds focus, so Back leaves the page instead of the app.
             SkeletonBlock(cornerRadius: 10).frame(width: 150, height: 40).loadingFocus(takeFocus: true) { dismiss() }
+        } else {
+            #if os(tvOS)
+            // The details failed. The error card's buttons are below the full-screen hero, out of the remote's reach,
+            // so the hero offers them too; they hold focus, and Back leaves the page again.
+            HStack(spacing: 10) {
+                Button { startRequest { await loadDetail() } } label: { Label(L10n.text("Retry"), systemImage: "arrow.clockwise") }
+                    .controlButton(prominent: true).tint(Brand.accent).controlSize(.large)
+                    .disabled(busy)
+                    .focused($playFocused)
+                    .accessibilityIdentifier("detail.retry")
+                goBackButton(prominent: false)
+            }
+            #endif
         }
     }
+    #if os(tvOS)
+    private func goBackButton(prominent: Bool) -> some View {
+        Button { dismiss() } label: { Label(L10n.text("Go back"), systemImage: "chevron.backward") }
+            .controlButton(prominent: prominent).controlSize(.large)
+            .accessibilityIdentifier("detail.goBack")
+    }
+    #endif
     private func playButton(_ episode: Episode) -> some View {
         Button { startRequest { await play(episode) } } label: {
             HStack(spacing: 8) {
