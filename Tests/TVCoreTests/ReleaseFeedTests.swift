@@ -86,6 +86,36 @@ private func release(_ version: String, platforms: [String] = ["macos", "ios", "
     }
 }
 
+/// The AltStore source the website publishes; Scripts/make-altstore-source.py adds each iOS release from its IPA.
+@Test func altStoreSourceListsReleasedIPAsNewestFirst() throws {
+    let site = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../website/public")
+    let feed = try JSONDecoder().decode(ReleaseFeed.self, from: Data(contentsOf: site.appending(path: "releases.json")))
+    let source = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: site.appending(path: "altstore.json"))) as? [String: Any])
+    let apps = try #require(source["apps"] as? [[String: Any]])
+    #expect(apps.count == 1)
+    let app = try #require(apps.first)
+    #expect((app["bundleIdentifier"] as? String)?.hasSuffix(".yingxia.ios") == true)
+    #expect(source["featuredApps"] as? [String] == [app["bundleIdentifier"] as? String].compactMap { $0 })
+    let permissions = try #require(app["appPermissions"] as? [String: Any])
+    #expect(permissions["entitlements"] is [Any] && permissions["privacy"] is [String: String])
+    let versions = try #require(app["versions"] as? [[String: Any]])
+    #expect(!versions.isEmpty)
+    let numbers = versions.compactMap { $0["version"] as? String }
+    #expect(numbers.count == versions.count)
+    #expect(numbers.map(AppVersion.init) == numbers.map(AppVersion.init).sorted(by: >), "versions are not newest first")
+    for version in versions {
+        let number = version["version"] as? String ?? ""
+        #expect(version["downloadURL"] as? String == "https://download.getmegaportal.com/yingxia/\(number)/Yingxia-\(number)-ios.ipa")
+        #expect((version["sha256"] as? String)?.wholeMatch(of: /[0-9a-f]{64}/) != nil, "\(number) has no SHA-256")
+        #expect((version["size"] as? Int ?? 0) > 0, "\(number) has no size")
+        for key in ["buildVersion", "date", "minOSVersion", "localizedDescription"] {
+            #expect(!(version[key] as? String ?? "").isEmpty, "\(number) has no \(key)")
+        }
+        #expect(feed.releases.contains { AppVersion($0.version) == AppVersion(number) && $0.links["ios"] != nil },
+                "\(number) is not an iOS release in releases.json")
+    }
+}
+
 private extension ReleaseFeed {
     func release(_ version: String) -> Release { releases.first { AppVersion($0.version) == AppVersion(version) }! }
 }
