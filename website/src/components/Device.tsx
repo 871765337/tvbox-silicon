@@ -17,6 +17,10 @@ const FRAMES: Record<DeviceKind, { w: number; h: number; screen: [number, number
   iphone: { w: 560, h: 1154, screen: [4.249, 1.767, 91.502, 96.503] },
 };
 
+// The screen runs this many image pixels under the bezel on every side: the opening's edge is antialiased and
+// falls between pixels, so a screen cut exactly to it leaves a hairline of the page showing through.
+const BLEED = 4;
+
 interface Props {
   kind: DeviceKind;
   /** What the screen shows, for screen readers. */
@@ -29,9 +33,11 @@ interface Props {
 export function Device({ kind, label, className, children }: Props) {
   const { w, h, screen } = FRAMES[kind];
   const [left, top, width, height] = screen;
+  const bx = (BLEED / w) * 100;
+  const by = (BLEED / h) * 100;
   return (
     <div className={`device device-${kind}${className ? ` ${className}` : ""}`} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
-      <div className={`screen screen-${kind}`} style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}>
+      <div className={`screen screen-${kind}`} style={{ left: `${left - bx}%`, top: `${top - by}%`, width: `${width + 2 * bx}%`, height: `${height + 2 * by}%` }}>
         {children}
       </div>
       <img className="device-frame" src={`/devices/${kind}.webp`} alt="" width={w} height={h} loading="lazy" />

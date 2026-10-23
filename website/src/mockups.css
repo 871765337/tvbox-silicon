@@ -4,6 +4,9 @@
 .device { position: relative; isolation: isolate; }
 .device-frame { position: relative; z-index: 1; display: block; width: 100%; height: auto; pointer-events: none; user-select: none; }
 .screen { position: absolute; overflow: hidden; container-type: inline-size; background: #1b1512; }
+/* Rounded like the displays, so the bleed under the bezel (Device.tsx) never shows past the device's own corners. */
+.screen-ipad { border-radius: 3% / 2.1%; }
+.screen-iphone { border-radius: 14% / 6.5%; }
 .screen > * {
   --pt: calc(100cqw / 1920);
   position: absolute; inset: 0; overflow: hidden;
