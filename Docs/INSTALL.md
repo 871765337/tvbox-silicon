@@ -118,6 +118,7 @@ If the app expires, sign and install the IPA again with the **same Apple account
 | [Impactor](https://github.com/claration/Impactor/releases) | macOS, Windows, Linux | iPhone, iPad, Apple TV | Desktop app (formerly PlumeImpactor); also `brew install --cask impactor`. cider is built on its code. |
 | [iloader](https://iloader.app) | macOS, Windows, Linux | iPhone, iPad | Desktop app; use **Import IPA**. |
 | [Sideloadly](https://sideloadly.io/) | macOS, Windows | iPhone, iPad; Apple TV from a Mac only | Steps below. |
+| [AltStore](https://altstore.io) or [SideStore](https://sidestore.io) | iPhone, iPad | iPhone, iPad | Add the Yingxia source to get updates in the app; steps below. |
 
 Download these only from the links above: the projects publish no other official sites.
 
@@ -128,6 +129,10 @@ Download these only from the links above: the projects publish no other official
 **Apple TV (Mac only):** put both on the same network, open **Settings → Remotes and Devices → Remote App and Devices** on the TV, click Sideloadly's **Re-Pair** button and type the PIN, then select the Apple TV, drag in the tvOS IPA, enter your Apple account email and click **Start**.
 
 Turn on **automatic app refreshing** in Sideloadly; it renews the signature only while your computer is running and the device is reachable.
+
+### AltStore and SideStore
+
+Yingxia has an AltStore source at `https://yingxia.getmegaportal.com/altstore.json`, which AltStore Classic and SideStore can also read. In AltStore or SideStore, open **Sources**, tap **+**, paste that address and tap **Add**, then install Yingxia from the source. New versions then show up under **Updates**. The source lists the iPhone and iPad app only: AltStore doesn't install on Apple TV.
 
 ## Troubleshooting
 
@@ -149,6 +154,7 @@ Turn on **automatic app refreshing** in Sideloadly; it renews the signature only
 ## Links
 
 - [cider](https://github.com/Battzz/cider-cli) and its [releases](https://github.com/Muonagi/cider-cli/releases)
-- [Impactor](https://github.com/claration/Impactor) · [iloader](https://iloader.app) · [Sideloadly](https://sideloadly.io/)
+- [Impactor](https://github.com/claration/Impactor) · [iloader](https://iloader.app) · [Sideloadly](https://sideloadly.io/) · [AltStore](https://altstore.io) · [SideStore](https://sidestore.io)
+- [Yingxia AltStore source](https://yingxia.getmegaportal.com/altstore.json)
 - [Install skill for AI agents](../.agents/skills/install-yingxia/SKILL.md)
 - [Yingxia website](https://yingxia.getmegaportal.com)

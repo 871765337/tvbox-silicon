@@ -1,0 +1,42 @@
+{
+  "name": "Yingxia 映匣",
+  "identifier": "com.jo32.yingxia.source",
+  "subtitle": "Free, native TVBox player",
+  "description": "免费的原生 TVBox 播放器：直播频道、点播片库，以及一次搜索所有片源。\n\nFree, native TVBox player for iPhone and iPad. Live channels, on-demand catalogs and one search across all your sources.",
+  "iconURL": "https://yingxia.getmegaportal.com/assets/icon-512.png",
+  "website": "https://yingxia.getmegaportal.com",
+  "featuredApps": [
+    "com.jo32.yingxia.ios"
+  ],
+  "apps": [
+    {
+      "name": "Yingxia 映匣",
+      "bundleIdentifier": "com.jo32.yingxia.ios",
+      "developerName": "jo32",
+      "subtitle": "Free, native TVBox player",
+      "localizedDescription": "免费的原生 TVBox 播放器：直播频道、点播片库，以及一次搜索所有片源。\n\nFree, native TVBox player for iPhone and iPad. Live channels, on-demand catalogs and one search across all your sources.\n\nhttps://github.com/jo32/tvbox-silicon",
+      "iconURL": "https://yingxia.getmegaportal.com/assets/icon-512.png",
+      "category": "entertainment",
+      "versions": [
+        {
+          "version": "1.7.8",
+          "buildVersion": "27",
+          "date": "2026-10-23",
+          "localizedDescription": "• 云盘文件：浏览云盘并直接播放\n• 在服务自己的页面登录\n• 更多视频和频道可以播放\n• 最新版 FTY 站点恢复正常\n• 适配 iPhone Duo\n• 会作为新应用安装\n\n• Cloud Files: browse your drives and play what’s there\n• Sign in on the service’s own page\n• More videos and channels play\n• The latest FTY sources work again\n• Ready for iPhone Duo\n• Installs next to your old Yingxia",
+          "downloadURL": "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-ios.ipa",
+          "size": 69748665,
+          "sha256": "1a95489b2848c8898cf2e5a19c0f5b8612351b72ba9036f34a18dc4f86a3f123",
+          "minOSVersion": "18.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSLocalNetworkUsageDescription": "Connect to the local media and subscription services you configure.",
+          "NSPhotoLibraryAddUsageDescription": "Saves a sign-in code to Photos, so the app on this phone can scan it."
+        }
+      }
+    }
+  ],
+  "news": []
+}
