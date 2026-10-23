@@ -19,6 +19,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "1.7.10",
+          "buildVersion": "29",
+          "date": "2026-10-24",
+          "localizedDescription": "• 红果短剧搜索恢复正常\n• 来自映匣的消息\n• “更多”中的消息\n\n• Hongguo search works again\n• Messages from Yingxia\n• Messages in More",
+          "downloadURL": "https://download.getmegaportal.com/yingxia/1.7.10/Yingxia-1.7.10-ios.ipa",
+          "size": 69950478,
+          "sha256": "73a52023cb471d2b4a09a9dfd1ef5acc65c7795fcb4c3dcccb5ffa0a3ce85769",
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "1.7.9",
           "buildVersion": "28",
           "date": "2026-10-23",

@@ -1,6 +1,66 @@
 {
   "releases": [
     {
+      "version": "1.7.10",
+      "date": "2026-10-24",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.10/Yingxia-1.7.10-macos-arm64.dmg",
+        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.10/Yingxia-1.7.10-macos-x86_64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "magnifyingglass",
+          "title": {
+            "en": "Hongguo search works again",
+            "zh-Hans": "红果短剧搜索恢复正常",
+            "zh-Hant": "紅果短劇搜尋恢復正常",
+            "ja": "Hongguo の検索が再び使えます"
+          },
+          "detail": {
+            "en": "Hongguo changed how its search page loads, so every search failed with “incomplete data”. Search works again, and the results now go on past the first ten.",
+            "zh-Hans": "红果更改了搜索页面的加载方式，导致每次搜索都提示“数据不完整”。现在搜索已恢复，结果也不再只有前十条。",
+            "zh-Hant": "紅果更改了搜尋頁面的載入方式，導致每次搜尋都提示「資料不完整」。現在搜尋已恢復，結果也不再只有前十筆。",
+            "ja": "Hongguo が検索ページの読み込み方を変えたため、検索のたびに「データが不完全」と表示されていました。検索が再び使えるようになり、結果も最初の 10 件より先まで表示されます。"
+          }
+        },
+        {
+          "symbol": "bell",
+          "title": {
+            "en": "Messages from Yingxia",
+            "zh-Hans": "来自映匣的消息",
+            "zh-Hant": "來自映匣的訊息",
+            "ja": "映匣からのメッセージ"
+          },
+          "detail": {
+            "en": "Important news, such as a source that stopped working or an update you need, now appears once in the app, never over a playing video.",
+            "zh-Hans": "重要通知（例如某个片源失效或需要更新）现在会在 App 中显示一次，不会打断正在播放的视频。",
+            "zh-Hant": "重要通知（例如某個片源失效或需要更新）現在會在 App 中顯示一次，不會打斷正在播放的影片。",
+            "ja": "ソースが使えなくなったときや必要なアップデートなどの大切なお知らせが、アプリ内に一度だけ表示されるようになりました。再生中のビデオの上には表示されません。"
+          }
+        },
+        {
+          "symbol": "tray",
+          "title": {
+            "en": "Messages in More",
+            "zh-Hans": "“更多”中的消息",
+            "zh-Hant": "「更多」中的訊息",
+            "ja": "「その他」のメッセージ"
+          },
+          "detail": {
+            "en": "On iPhone, More → Messages lists every current message, with a badge while one is unread. Pull down to check for new ones.",
+            "zh-Hans": "在 iPhone 上，“更多 → 消息”会列出所有当前消息，有未读消息时会显示标记。下拉即可检查新消息。",
+            "zh-Hant": "在 iPhone 上，「更多 → 訊息」會列出所有目前的訊息，有未讀訊息時會顯示標記。向下拉即可檢查新訊息。",
+            "ja": "iPhone では「その他 → メッセージ」に現在のメッセージがすべて並び、未読があるとバッジが付きます。下に引くと新しいメッセージを確認できます。"
+          },
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.9",
       "date": "2026-10-23",
       "links": {
