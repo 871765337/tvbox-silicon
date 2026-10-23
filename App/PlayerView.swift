@@ -16,8 +16,6 @@ struct PlaybackView: View {
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-    /// Where our buttons are, so a tap on them keeps the controls up wherever the row sits.
-    @State private var buttonsFrame = CGRect.zero
     #endif
 
     private var chromeVisible: Bool { showsChrome || session.error != nil || session.loading }
@@ -41,12 +39,11 @@ struct PlaybackView: View {
                     .accessibilityIdentifier("player.waiting")
             }
             #elseif os(iOS)
-            NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
-                             waiting: waitContent, enhancer: session.enhancer).ignoresSafeArea()
+            MobilePlayerView(channel: channel, session: session, showsDanmaku: $showsDanmaku, upscalesVideo: $upscalesVideo, smoothsVideo: $smoothsVideo,
+                             waiting: waitContent, chromeVisible: chromeVisible, toggleChrome: toggleChrome, poke: poke, hold: holdChrome,
+                             close: { dismiss() })
             #else
             NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision).ignoresSafeArea()
-            #endif
-            #if !os(tvOS)
             chrome.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
             #endif
             status
@@ -81,8 +78,7 @@ struct PlaybackView: View {
         #if !os(tvOS)
         .onContinuousHover { _ in poke() }
         #if os(iOS)
-        .simultaneousGesture(SpatialTapGesture(coordinateSpace: .global).onEnded { tapped(at: $0.location) })
-        // AVKit keeps its controls up while paused and starts its countdown again on play.
+        // The controls stay up while paused and start their countdown again on play.
         .onChange(of: session.paused) { _, paused in if paused { hideTask?.cancel() } else if showsChrome { scheduleHide() } }
         #else
         .simultaneousGesture(TapGesture().onEnded { poke() })
@@ -128,37 +124,19 @@ struct PlaybackView: View {
     #endif
 
     #if !os(tvOS)
+    #if os(macOS)
     private var chrome: some View {
-        // One row when it fits. On iPhone the title must fit whole, or the buttons move to the bottom centre above
-        // AVKit's progress bar and leave the top to the title and Close; elsewhere a long title truncates, and only when the
-        // buttons leave no room for any do they get a row of their own. (One copy of each view: ViewThatFits with a
-        // candidate per title width built every glass button many times over and stalled the main thread past the
-        // watchdog.)
-        #if os(iOS)
-        let row = ChromeRow(bottomRow: 48)
-        #else
-        let row = ChromeRow()
-        #endif
-        return row { chromeTitle; chromeButtons; chromeClose }
+        // One row when it fits: a long title truncates, and only when the buttons leave no room for any do they get
+        // a row of their own. (One copy of each view: ViewThatFits with a candidate per title width built every glass
+        // button many times over and stalled the main thread past the watchdog.) The iPhone and iPad player draws its
+        // own (MobilePlayerView).
+        ChromeRow { chromeTitle; chromeButtons; chromeClose }
             .padding(16)
-            #if os(iOS)
-            // Below VideoPlayer's own top row (Picture in Picture, volume), which would sit under the title.
-            .padding(.top, avKitTopRow)
-            #endif
             .frame(maxHeight: .infinity, alignment: .top)
         .sheet(isPresented: $showsDanmakuList) {
             DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
                 .danmakuListPresentation()
         }
-    }
-
-    /// Whether the picture menu has the smoothing and upscaling switches (iPhone and iPad on OS 26).
-    private var pictureSwitches: Bool {
-        #if os(iOS)
-        VideoEnhancement.canUpscale || VideoEnhancement.canSmooth
-        #else
-        false
-        #endif
     }
 
     private var chromeTitle: some View {
@@ -186,21 +164,11 @@ struct PlaybackView: View {
                 .accessibilityLabel(L10n.text("Next Episode")).help(next.name)
             }
             CatalogPlaybackActions(channel: channel, session: session)
-            // One button for the picture: the stream's quality, and on iPhone the smoothing and upscaling switches.
-            if session.qualities.count > 1 || pictureSwitches {
+            if session.qualities.count > 1 {
                 Menu {
-                    if session.qualities.count > 1 { QualityPicker(session: session) }
-                    #if os(iOS)
-                    if pictureSwitches {
-                        Section(L10n.text("Picture")) {
-                            if VideoEnhancement.canSmooth { Toggle(L10n.text("Smooth Motion (60 fps)"), isOn: $smoothsVideo) }
-                            if VideoEnhancement.canUpscale { Toggle(L10n.text("Sharper Picture"), isOn: $upscalesVideo) }
-                        }
-                    }
-                    #endif
+                    QualityPicker(session: session)
                 } label: {
                     Image(systemName: "sparkles.tv").font(.headline).frame(width: 22, height: 22)
-                        .symbolVariant(pictureSwitches && (upscalesVideo || smoothsVideo) ? .fill : .none)
                 }
                 .chromeButton()
                 .accessibilityLabel(L10n.text("Quality"))
@@ -216,23 +184,7 @@ struct PlaybackView: View {
                 .chromeButton()
                 .accessibilityLabel(L10n.text("Danmaku"))
             }
-            #if os(iOS)
-            // Turns the picture even with Portrait Orientation Lock on, the way the system's own rotation can't.
-            // Only on a phone-sized screen: iPhone Duo's inner display (regular both ways) ignores orientations.
-            if PlayerOrientation.available, horizontalSizeClass == .compact || verticalSizeClass == .compact {
-                let landscape = verticalSizeClass == .compact
-                Button { PlayerOrientation.set(landscape: !landscape) } label: {
-                    Image(systemName: landscape ? "rectangle.portrait.rotate" : "rectangle.landscape.rotate").font(.headline).frame(width: 22, height: 22)
-                }
-                .chromeButton()
-                .accessibilityLabel(L10n.text(landscape ? "Rotate to Portrait" : "Rotate to Landscape"))
-                .accessibilityIdentifier("player.rotate")
-            }
-            #endif
         }
-        #if os(iOS)
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { buttonsFrame = $0 }
-        #endif
     }
 
     private var chromeClose: some View {
@@ -242,6 +194,7 @@ struct PlaybackView: View {
             .accessibilityIdentifier("player.close")
             .keyboardShortcut(.cancelAction)
     }
+    #endif
 
     private func poke() {
         showsChrome = true
@@ -255,8 +208,9 @@ struct PlaybackView: View {
         if UserDefaults.standard.bool(forKey: "qaPlayerControls") { return }
         #endif
         #if os(iOS)
-        // AVKit's controls stay while paused and leave about three seconds into playback; ours go with them.
-        guard !session.paused else { return }
+        // The controls stay while paused, and while VoiceOver runs, which can't reach controls that have faded out;
+        // otherwise they leave about three seconds into playback.
+        guard !session.paused, !UIAccessibility.isVoiceOverRunning else { return }
         let delay = 3.0
         #else
         let delay = 3.5
@@ -268,26 +222,20 @@ struct PlaybackView: View {
     }
 
     #if os(iOS)
-    /// The room AVKit's own top row (AirPlay, Picture in Picture, volume) takes above our bar. Where the screen is
-    /// regular both ways (iPad, iPhone Duo's inner display) its buttons are bigger and sit lower: on iPhone Duo they
-    /// reach 71 pt from the top, past the 60 pt where our bar began, and the mute button covered Close.
-    private var avKitTopRow: CGFloat { horizontalSizeClass == .regular && verticalSizeClass == .regular ? 64 : 44 }
+    /// A tap on the picture shows the controls, or hides them at once.
+    private func toggleChrome() {
+        #if DEBUG
+        // UI tests tap the picture to reach the controls, which `-qaPlayerControls` keeps up.
+        if UserDefaults.standard.bool(forKey: "qaPlayerControls") { return poke() }
+        #endif
+        guard showsChrome else { return poke() }
+        hideTask?.cancel()
+        withAnimation(.smooth(duration: 0.25)) { showsChrome = false }
+    }
 
-    /// Our bar can't read whether AVKit's controls are showing (iOS has no API for it), so it follows their
-    /// rules: a tap on the picture shows both or hides both, and a tap on a control (AVKit's top row, the
-    /// centre play and skip buttons, the scrubber, or our own bar) keeps both up.
-    private func tapped(at point: CGPoint) {
-        guard let window = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.keyWindow else { return poke() }
-        let size = window.bounds.size, insets = window.safeAreaInsets
-        let onControl = point.y < insets.top + 71 + avKitTopRow
-            || point.y > size.height - insets.bottom - 80
-            || (abs(point.y - size.height / 2) < 44 && abs(point.x - size.width / 2) < 130)
-            || buttonsFrame.insetBy(dx: -8, dy: -8).contains(point)
-        if onControl || !showsChrome { poke() }
-        else {
-            hideTask?.cancel()
-            withAnimation(.smooth(duration: 0.25)) { showsChrome = false }
-        }
+    /// The seek bar is held: the controls stay until it is let go, then count down again.
+    private func holdChrome(_ holding: Bool) {
+        if holding { showsChrome = true; hideTask?.cancel() } else { scheduleHide() }
     }
     #endif
     #else
@@ -380,28 +328,23 @@ extension PlaybackWaitContent {
 #if !os(tvOS)
 /// The player's title bar: the title, the buttons and Close share one row, the title truncating to leave the others
 /// their width; when that would leave the title less than `minimumTitle`, the buttons and Close take a row of their
-/// own, right-aligned. With `bottomRow` (iPhone) the title must fit whole instead, or the buttons go to the bottom
-/// centre and the top row keeps the title and Close.
+/// own, right-aligned.
 private struct ChromeRow: SwiftUI.Layout {
     var spacing: CGFloat = 12
     var rowSpacing: CGFloat = 10
     /// Between the buttons and Close, as between the buttons themselves.
     var buttonSpacing: CGFloat = 10
     var minimumTitle: CGFloat = 110
-    /// How far above the bottom edge buttons that leave the title no room sit, at the centre (iPhone, clear of
-    /// AVKit's progress bar); nil puts them on a row of their own under the title.
-    var bottomRow: CGFloat? = nil
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
         guard subviews.count == 3 else { return .zero }
         let buttons = subviews[1].sizeThatFits(.unspecified), close = subviews[2].sizeThatFits(.unspecified)
         let tail = tailSize(buttons, close)
         let width = proposal.width ?? subviews[0].sizeThatFits(.unspecified).width + spacing + tail.width
-        if let room = titleRoom(width, tail: tail, title: subviews[0]) {
+        if let room = titleRoom(width, tail: tail) {
             let title = subviews[0].sizeThatFits(ProposedViewSize(width: room, height: nil))
             return CGSize(width: width, height: max(title.height, tail.height))
         }
-        if bottomRow != nil, let height = proposal.height, height.isFinite { return CGSize(width: width, height: height) }
         let title = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
         return CGSize(width: width, height: title.height + rowSpacing + tail.height)
     }
@@ -410,23 +353,12 @@ private struct ChromeRow: SwiftUI.Layout {
         guard subviews.count == 3 else { return }
         let buttons = subviews[1].sizeThatFits(.unspecified), close = subviews[2].sizeThatFits(.unspecified)
         let tail = tailSize(buttons, close)
-        if let room = titleRoom(bounds.width, tail: tail, title: subviews[0]) {
+        if let room = titleRoom(bounds.width, tail: tail) {
             let title = subviews[0].sizeThatFits(ProposedViewSize(width: room, height: nil))
             let row = max(title.height, tail.height)
             subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY + (row - title.height) / 2), proposal: ProposedViewSize(width: room, height: title.height))
             placeTail(buttons, close, right: bounds.maxX, middle: bounds.minY + row / 2, subviews)
             return
-        }
-        if let bottomRow {
-            let room = bounds.width - spacing - close.width
-            let title = subviews[0].sizeThatFits(ProposedViewSize(width: room, height: nil))
-            let row = max(title.height, close.height)
-            if bounds.height >= row + rowSpacing + bottomRow + buttons.height {
-                subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY + (row - title.height) / 2), proposal: ProposedViewSize(width: room, height: title.height))
-                subviews[2].place(at: CGPoint(x: bounds.maxX - close.width, y: bounds.minY + (row - close.height) / 2), proposal: .unspecified)
-                subviews[1].place(at: CGPoint(x: bounds.midX - buttons.width / 2, y: bounds.maxY - bottomRow - buttons.height), proposal: .unspecified)
-                return
-            }
         }
         let title = subviews[0].sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
         subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: title.height))
@@ -443,10 +375,9 @@ private struct ChromeRow: SwiftUI.Layout {
         subviews[1].place(at: CGPoint(x: right - close.width - buttonSpacing - buttons.width, y: middle - buttons.height / 2), proposal: .unspecified)
     }
 
-    private func titleRoom(_ width: CGFloat, tail: CGSize, title: LayoutSubview) -> CGFloat? {
+    private func titleRoom(_ width: CGFloat, tail: CGSize) -> CGFloat? {
         let room = width - tail.width - spacing
-        let needed = bottomRow == nil ? minimumTitle : title.sizeThatFits(.unspecified).width
-        return room >= needed ? room : nil
+        return room >= minimumTitle ? room : nil
     }
 }
 #endif
@@ -560,30 +491,6 @@ private struct PlayerSurface: NSViewRepresentable {
     func updateNSView(_ view: AVPlayerView, context: Context) { view.player = player }
 }
 #elseif os(iOS)
-private struct NativePlayerView: View {
-    let player: AVPlayer
-    let comments: [Danmaku]
-    @Binding var showsDanmaku: Bool
-    var opacity = 0.9
-    var revision = ""
-    var waiting: PlaybackWaitContent? = nil
-    var enhancer: VideoEnhancer? = nil
-    var body: some View {
-        // The overlay sits between the video and the playback controls.
-        VideoPlayer(player: player) {
-            ZStack {
-                // The enhanced picture covers AVKit's own, under everything else.
-                if let enhancer { EnhancedVideoSurface(enhancer: enhancer) }
-                if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision) }
-                // The artwork dissolves into the first frame.
-                if let waiting { waiting.view.transition(.opacity) }
-            }
-            .animation(.easeInOut(duration: 0.7), value: waiting == nil)
-            .animation(.easeInOut(duration: 0.4), value: waiting?.starting)
-        }
-    }
-}
-
 /// The iPhone player's rotate button. While it holds landscape the app allows landscape only, so the phone
 /// held upright (or Portrait Orientation Lock) doesn't turn it back; the button or closing the player does.
 @MainActor enum PlayerOrientation {
@@ -1059,7 +966,7 @@ private final class PassthroughHostingView<Content: View>: NSHostingView<Content
 
 #if !os(tvOS)
 /// Automatic, or one of the stream's qualities, best first.
-private struct QualityPicker: View {
+struct QualityPicker: View {
     let session: PlaybackSession
     var body: some View {
         Picker(L10n.text("Quality"), selection: Binding(get: { session.quality ?? 0 }, set: { session.choose(quality: $0 == 0 ? nil : $0) })) {
