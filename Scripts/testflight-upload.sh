@@ -72,6 +72,11 @@ for platform in iOS tvOS; do
   want="$bundle $TESTFLIGHT_VERSION $BUILD"
   [ "$got" = "$want" ] || { echo "archive is \"$got\", expected \"$want\"" >&2; exit 1; }
 
+  # The embedded JVM looks up its own functions by name, so a binary stripped of global symbols crashes on the
+  # first plugin call (1.7.7 (27)). STRIP_STYLE in project.yml keeps them.
+  nm -gU "$archive/Products/Applications/$scheme.app/$scheme" | grep ' _JIMAGE_Open$' >/dev/null ||
+    { echo "$scheme does not export JIMAGE_Open: its global symbols were stripped" >&2; exit 1; }
+
   echo "== $platform: export"
   cat >"$OUT/$platform-export.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
