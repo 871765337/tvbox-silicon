@@ -1076,6 +1076,7 @@
 				OTHER_LDFLAGS = "$(inherited) -Wl,-force_load,$(SRCROOT)/build/AppleRuntime/$(PLATFORM_NAME)/lib/libTVAppleRuntime.a -Wl,-export_dynamic -lc++ -lz -liconv -framework Security -framework CoreGraphics";
 				PRODUCT_BUNDLE_IDENTIFIER = com.jo32.yingxia.ios;
 				SDKROOT = iphoneos;
+				STRIP_STYLE = "non-global";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1097,6 +1098,7 @@
 				OTHER_LDFLAGS = "$(inherited) -Wl,-force_load,$(SRCROOT)/build/AppleRuntime/$(PLATFORM_NAME)/lib/libTVAppleRuntime.a -Wl,-export_dynamic -lc++ -lz -liconv -framework Security -framework CoreGraphics";
 				PRODUCT_BUNDLE_IDENTIFIER = com.jo32.yingxia.tv;
 				SDKROOT = appletvos;
+				STRIP_STYLE = "non-global";
 				TARGETED_DEVICE_FAMILY = 3;
 			};
 			name = Release;
@@ -1118,6 +1120,7 @@
 				OTHER_LDFLAGS = "$(inherited) -Wl,-force_load,$(SRCROOT)/build/AppleRuntime/$(PLATFORM_NAME)/lib/libTVAppleRuntime.a -Wl,-export_dynamic -lc++ -lz -liconv -framework Security -framework CoreGraphics";
 				PRODUCT_BUNDLE_IDENTIFIER = com.jo32.yingxia.ios;
 				SDKROOT = iphoneos;
+				STRIP_STYLE = "non-global";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -1139,6 +1142,7 @@
 				OTHER_LDFLAGS = "$(inherited) -Wl,-force_load,$(SRCROOT)/build/AppleRuntime/$(PLATFORM_NAME)/lib/libTVAppleRuntime.a -Wl,-export_dynamic -lc++ -lz -liconv -framework Security -framework CoreGraphics";
 				PRODUCT_BUNDLE_IDENTIFIER = com.jo32.yingxia.tv;
 				SDKROOT = appletvos;
+				STRIP_STYLE = "non-global";
 				TARGETED_DEVICE_FAMILY = 3;
 			};
 			name = Debug;
