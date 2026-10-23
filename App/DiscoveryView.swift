@@ -22,6 +22,11 @@ struct GlobalSearchView: View {
     /// Whether the end of the results is on screen, so finished pages can ask for the next.
     @State private var endVisible = false
     @AppStorage("videoSearchHistory") private var historyData = Data()
+    #if os(tvOS)
+    /// Titles iQiyi suggests for the draft, and 360kan's chart for an empty field (`SearchSuggestions`).
+    @State private var suggested: [String] = []
+    @State private var trending: [String] = []
+    #endif
     private var model: SearchModel { store.searchModel }
     private var history: [String] { (try? JSONDecoder().decode([String].self, from: historyData)) ?? [] }
     /// First pages in source order, then later pages as they arrive, so loading more only adds at the end.
@@ -54,10 +59,14 @@ struct GlobalSearchView: View {
         searchResults
             .searchable(text: $model.draft, prompt: Text(L10n.text("Search videos")))
             .searchSuggestions {
-                ForEach(Array(history.filter { model.draft.isEmpty || $0.localizedCaseInsensitiveContains(model.draft) }.prefix(6)), id: \.self) { query in
+                // Past searches first, then titles for what is typed: a remote spells "xyj" and picks 西游记, as on
+                // FongMi's TV search. A completion only fills the field; the Search button below still starts the search.
+                let past = Array(history.filter { model.draft.isEmpty || $0.localizedCaseInsensitiveContains(model.draft) }.prefix(6))
+                ForEach(past + (model.draft.isEmpty ? trending : suggested).filter { !past.contains($0) }, id: \.self) { query in
                     Text(query).searchCompletion(query)
                 }
             }
+            .task(id: model.draft) { await suggest(model.draft) }
             .onSubmit(of: .search) { if let config = store.subscription { submit(config) } }
             .screenBackdrop()
             .sheet(isPresented: $showFailures) { failureDetails }
@@ -416,6 +425,23 @@ struct GlobalSearchView: View {
         guard !keyword.isEmpty else { return }
         historyData = (try? JSONEncoder().encode(Array(([keyword] + history.filter { $0 != keyword }).prefix(20)))) ?? Data()
     }
+
+    #if os(tvOS)
+    /// A quarter second after typing stops, so a word spelled out key by key on the remote asks once; a newer draft
+    /// cancels the wait and the answer.
+    private func suggest(_ draft: String) async {
+        let typed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !typed.isEmpty else {
+            suggested = []
+            if trending.isEmpty { trending = await SearchSuggestions.trending() }
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(250))
+        guard !Task.isCancelled else { return }
+        let titles = await SearchSuggestions.titles(for: typed)
+        if !Task.isCancelled { suggested = titles }
+    }
+    #endif
 
     private func submit(_ config: Subscription) {
         let keyword = model.draft.trimmingCharacters(in: .whitespacesAndNewlines)
