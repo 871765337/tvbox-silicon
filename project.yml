@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: '6.0'
-    MARKETING_VERSION: '1.7.8'
-    CURRENT_PROJECT_VERSION: '27'
+    MARKETING_VERSION: '1.7.9'
+    CURRENT_PROJECT_VERSION: '28'
     GENERATE_INFOPLIST_FILE: YES
     INFOPLIST_KEY_CFBundleDisplayName: Yingxia
     INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.entertainment

@@ -1,6 +1,125 @@
 {
   "releases": [
     {
+      "version": "1.7.9",
+      "date": "2026-10-23",
+      "links": {
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "play.rectangle",
+          "title": {
+            "en": "A new player on iPhone and iPad",
+            "zh-Hans": "iPhone 和 iPad 的全新播放器",
+            "zh-Hant": "iPhone 和 iPad 的全新播放器",
+            "ja": "iPhone と iPad の新しいプレーヤー"
+          },
+          "detail": {
+            "en": "Back and the title sit on the left, the buttons on the right and the seek bar along the bottom, with a new Picture in Picture button. Picture in Picture also starts when you leave the app while a video plays. The seek bar moves smoothly, and dragging it jumps once when you let go.",
+            "zh-Hans": "返回和标题在左边，按钮在右边，进度条在底部，还新增了画中画按钮。播放时离开 App 也会自动进入画中画。进度条移动更流畅，拖动时松手才跳转。",
+            "zh-Hant": "返回和標題在左邊，按鈕在右邊，進度列在底部，還新增了子母畫面按鈕。播放時離開 App 也會自動進入子母畫面。進度列移動更流暢，拖動時放開才跳轉。",
+            "ja": "戻るとタイトルは左、ボタンは右、シークバーは下に並び、ピクチャ・イン・ピクチャのボタンが加わりました。再生中にアプリを離れてもピクチャ・イン・ピクチャになります。シークバーは滑らかに動き、ドラッグして指を離したときに一度だけ移動します。"
+          },
+          "platforms": [
+            "ios"
+          ]
+        },
+        {
+          "symbol": "magnifyingglass",
+          "title": {
+            "en": "Search suggestions on Apple TV",
+            "zh-Hans": "Apple TV 搜索联想",
+            "zh-Hant": "Apple TV 搜尋建議",
+            "ja": "Apple TV の検索候補"
+          },
+          "detail": {
+            "en": "Type a few letters, pinyin initials such as xyj, or part of a title, and matching titles appear under the search field; with nothing typed, it shows what’s popular. Your past searches stay at the top.",
+            "zh-Hans": "输入几个字、拼音首字母（例如 xyj）或片名的一部分，搜索框下方就会出现相关片名；没有输入时显示热门内容。你的搜索记录仍排在最前面。",
+            "zh-Hant": "輸入幾個字、拼音首字母（例如 xyj）或片名的一部分，搜尋欄下方就會出現相關片名；沒有輸入時顯示熱門內容。你的搜尋紀錄仍排在最前面。",
+            "ja": "数文字やピンインの頭文字（xyj など）、タイトルの一部を入力すると、検索フィールドの下に候補のタイトルが表示されます。何も入力していないときは人気の作品が並びます。過去の検索は先頭に残ります。"
+          },
+          "platforms": [
+            "tvos"
+          ]
+        },
+        {
+          "symbol": "appletv",
+          "title": {
+            "en": "Runs on tvOS 17 and 18",
+            "zh-Hans": "支持 tvOS 17 和 18",
+            "zh-Hant": "支援 tvOS 17 和 18",
+            "ja": "tvOS 17 と 18 に対応"
+          },
+          "detail": {
+            "en": "Yingxia for Apple TV no longer needs tvOS 26: it runs on tvOS 17 and later. On tvOS 17 the tab bar keeps the sections that don’t fit under More.",
+            "zh-Hans": "Apple TV 版不再要求 tvOS 26，tvOS 17 及以上即可运行。在 tvOS 17 上，放不下的栏目会收在标签栏的“更多”中。",
+            "zh-Hant": "Apple TV 版不再要求 tvOS 26，tvOS 17 以上即可執行。在 tvOS 17 上，放不下的欄目會收在標籤列的「更多」中。",
+            "ja": "Apple TV 版は tvOS 26 が不要になり、tvOS 17 以降で動作します。tvOS 17 では、タブバーに収まらないセクションは「その他」にまとめられます。"
+          },
+          "platforms": [
+            "tvos"
+          ]
+        },
+        {
+          "symbol": "chevron.backward",
+          "title": {
+            "en": "Back always leaves a video page",
+            "zh-Hans": "视频页面总能返回",
+            "zh-Hant": "影片頁面總能返回",
+            "ja": "ビデオのページから必ず戻れます"
+          },
+          "detail": {
+            "en": "When a video’s details failed to load or it had no episodes, nothing on the page could be selected and Back did nothing. The page now offers Retry and Go Back.",
+            "zh-Hans": "当视频详情加载失败或没有剧集时，页面上没有可选的内容，按返回键也没有反应。现在页面会提供“重试”和“返回”。",
+            "zh-Hant": "當影片詳情載入失敗或沒有劇集時，頁面上沒有可選的內容，按返回鍵也沒有反應。現在頁面會提供「重試」和「返回」。",
+            "ja": "ビデオの詳細を読み込めなかったときやエピソードがないとき、ページに選べるものがなく、戻るボタンが効きませんでした。今は「再試行」と「戻る」が表示されます。"
+          },
+          "platforms": [
+            "tvos"
+          ]
+        },
+        {
+          "symbol": "checkmark.seal",
+          "title": {
+            "en": "Public beta on TestFlight",
+            "zh-Hans": "可通过 TestFlight 公开测试版获取",
+            "zh-Hant": "可透過 TestFlight 公開測試版取得",
+            "ja": "TestFlight でパブリックベータ"
+          },
+          "detail": {
+            "en": "Yingxia for iPhone, iPad and Apple TV is also in public beta on TestFlight, Apple’s app for betas: it installs without a computer and updates itself. The links are on the website.",
+            "zh-Hans": "iPhone、iPad 和 Apple TV 版现在也在 Apple 的测试版 App TestFlight 公开测试：无需电脑即可安装，并会自动更新。链接见官网。",
+            "zh-Hant": "iPhone、iPad 和 Apple TV 版現在也在 Apple 的測試版 App TestFlight 公開測試：不需要電腦即可安裝，並會自動更新。連結請見官網。",
+            "ja": "iPhone、iPad、Apple TV 版は、Apple のベータ版アプリ TestFlight でもパブリックベータを公開中です。パソコンなしでインストールでき、自動でアップデートされます。リンクは Web サイトにあります。"
+          },
+          "platforms": [
+            "ios",
+            "tvos"
+          ]
+        },
+        {
+          "symbol": "square.and.arrow.down",
+          "title": {
+            "en": "Install and update with AltStore or SideStore",
+            "zh-Hans": "可用 AltStore 或 SideStore 安装和更新",
+            "zh-Hant": "可用 AltStore 或 SideStore 安裝和更新",
+            "ja": "AltStore や SideStore でインストール・アップデート"
+          },
+          "detail": {
+            "en": "Add https://yingxia.getmegaportal.com/altstore.json as a source in AltStore or SideStore to install Yingxia and get new versions there.",
+            "zh-Hans": "在 AltStore 或 SideStore 中添加源 https://yingxia.getmegaportal.com/altstore.json，即可安装映匣并在其中获取新版本。",
+            "zh-Hant": "在 AltStore 或 SideStore 中加入來源 https://yingxia.getmegaportal.com/altstore.json，即可安裝映匣並在其中取得新版本。",
+            "ja": "AltStore または SideStore にソース https://yingxia.getmegaportal.com/altstore.json を追加すると、映匣をインストールし、新しいバージョンをそこで受け取れます。"
+          },
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.8",
       "date": "2026-10-23",
       "links": {
