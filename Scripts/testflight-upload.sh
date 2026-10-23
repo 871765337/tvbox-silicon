@@ -29,7 +29,22 @@ ISSUER=cc097225-575e-4c18-837b-b44d6f57024f
 KEY=$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8
 OUT=build/testflight/$TESTFLIGHT_VERSION-$BUILD
 [ -f "$KEY" ] || { echo "missing App Store Connect key $KEY" >&2; exit 1; }
+# Xcode builds the working tree: refuse uncommitted changes (another session's edits) unless ALLOW_DIRTY=1.
+if [ -n "$(git status --porcelain --untracked-files=no)" ] && [ "${ALLOW_DIRTY:-}" != 1 ]; then
+  git status --short --untracked-files=no >&2
+  echo "uncommitted changes would be uploaded; commit them or set ALLOW_DIRTY=1" >&2
+  exit 1
+fi
 mkdir -p "$OUT"
+git rev-parse HEAD >"$OUT/commit.txt"
+
+# Xcode embeds build/AppleRuntime/<platform>/Resources/JavaHost as it is (check-java-host.sh only catches an
+# older converter), so rebuild the Java host from this checkout first.
+echo "== Java host"
+if ! { Scripts/build-java-host.sh && Scripts/sync-apple-javahost.sh iphoneos appletvos; } >"$OUT/java-host.log" 2>&1; then
+  tail -20 "$OUT/java-host.log"
+  exit 1
+fi
 
 for platform in iOS tvOS; do
   scheme=TVBox-$platform
