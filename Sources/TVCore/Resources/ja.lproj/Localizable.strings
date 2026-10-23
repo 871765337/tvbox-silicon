@@ -928,3 +928,11 @@
 "Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "Quark と UC は公式ページでサインインします。映匣はログイン情報をこの Mac に保存します。";
 "Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "ドライブの公式ページでサインインするか、別のスマートフォンのドライブアプリでコードをスキャンします。映匣はログイン情報をこのデバイスに保存します。";
 "Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "ドライブのスマートフォンアプリでコードをスキャンしてサインインします。映匣はログイン情報をこのデバイスに保存します。";
+"Picture in Picture" = "ピクチャ・イン・ピクチャ";
+"Playing in Picture in Picture" = "ピクチャ・イン・ピクチャで再生中";
+"Audio" = "オーディオ";
+"Subtitles" = "字幕";
+"Playback Speed" = "再生速度";
+"Fill Screen" = "画面いっぱいに表示";
+"Back 10 seconds" = "10 秒戻る";
+"Forward 10 seconds" = "10 秒進む";

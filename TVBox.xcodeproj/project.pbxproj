@@ -98,6 +98,7 @@
 		5F2A9E2F9145EE979E5AA1F0 /* WebSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367AD12D73554C3C3667315D /* WebSignInView.swift */; };
 		5FD81EA27FB5E3FEFB92C731 /* MusicMiniPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBED9BDC96E5249DBA0BFDB0 /* MusicMiniPlayer.swift */; };
 		6012B7CF185E20A26CC68CD0 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7E929CDDC1F085C6B55693 /* HomeView.swift */; };
+		633726D6D289775DF1910809 /* MobilePlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D7BF6713A8519BEED17EE3 /* MobilePlayer.swift */; };
 		635ADE133C7284D6EF1677C8 /* OpenJDK.txt in Resources */ = {isa = PBXBuildFile; fileRef = BD71FD8B3E72803C426D91CC /* OpenJDK.txt */; };
 		67E6A7CC3D496FB46C963AC7 /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 559683A9A4BDFA11A4A9FE67 /* FeedbackView.swift */; };
 		697B344C9CEF446CDD596DDB /* MusicPlaybackSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F15799E2A2FB8B88DCF8E4 /* MusicPlaybackSession.swift */; };
@@ -118,11 +119,13 @@
 		72448F6E6FFCC74EE5950C1A /* Keystone-GPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 084C8344E2997DB3ED8FE974 /* Keystone-GPL2.txt */; };
 		7283989DBA1B1F0E96A2C383 /* LiveRoomsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 675EA4CF000337C94DF5B1D3 /* LiveRoomsView.swift */; };
 		731566BD0371FFCF447852DD /* DouyinAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7347843C885A97DFE397DD /* DouyinAccountView.swift */; };
+		74CAE612DB09FB67343FE8B4 /* MobilePlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D7BF6713A8519BEED17EE3 /* MobilePlayer.swift */; };
 		762AAE7DEDF6675A62474B19 /* CatalogPlaybackActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */; };
 		78CE336AE6714726DFDFDB43 /* CatalogPlaybackActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */; };
 		7C7B124A35FE1D0AA83DCE0B /* MusicMacBrowse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D442D4FB2D2EB656FBBCB2C /* MusicMacBrowse.swift */; };
 		7E01798F392A21C413011284 /* MusicRemoteControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E59EDBC7BE62078557E781 /* MusicRemoteControl.swift */; };
 		7EF594A9192339C8A03FB054 /* MusicTVPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5733BA144503E76421BCFD /* MusicTVPlayer.swift */; };
+		7F3C4D27F233572323FAA9A4 /* MobilePlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D7BF6713A8519BEED17EE3 /* MobilePlayer.swift */; };
 		7FB9AB1705559DD6C22EEFAE /* LiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7459A3EBEF2E7C346B508738 /* LiveView.swift */; };
 		80FEC451B80F610A45D9D139 /* MusicTVPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5733BA144503E76421BCFD /* MusicTVPlayer.swift */; };
 		8253F7BDC07638BD6F654962 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A90392B70C28DA6CC7497B9F /* Assets.xcassets */; };
@@ -230,6 +233,7 @@
 		06D9469858E5C5A118DED875 /* libffi.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = libffi.txt; sourceTree = "<group>"; };
 		084C8344E2997DB3ED8FE974 /* Keystone-GPL2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Keystone-GPL2.txt"; sourceTree = "<group>"; };
 		08B7C43C763200E67A22E365 /* Capstone-LLVM.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Capstone-LLVM.txt"; sourceTree = "<group>"; };
+		08D7BF6713A8519BEED17EE3 /* MobilePlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobilePlayer.swift; sourceTree = "<group>"; };
 		181C983C0018A97F2A086298 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
 		2075419FEF0E1C161A31A9F0 /* RuntimeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeView.swift; sourceTree = "<group>"; };
 		2278608DE7AE2FEA27EB51C9 /* TVBox-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TVBox-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -403,6 +407,7 @@
 				675EA4CF000337C94DF5B1D3 /* LiveRoomsView.swift */,
 				7459A3EBEF2E7C346B508738 /* LiveView.swift */,
 				2ACBC18014BA7190EBA2EDD7 /* MacUpdater.swift */,
+				08D7BF6713A8519BEED17EE3 /* MobilePlayer.swift */,
 				31D1816B8ED53D49478FD843 /* MoreView.swift */,
 				3F678BCB59DDEA3AD1329B11 /* MusicDownloadsView.swift */,
 				3D442D4FB2D2EB656FBBCB2C /* MusicMacBrowse.swift */,
@@ -778,6 +783,7 @@
 				300BD932FDBD4DD407F37374 /* LiveRoomsView.swift in Sources */,
 				7FB9AB1705559DD6C22EEFAE /* LiveView.swift in Sources */,
 				CDC78CAFF04C2753B881F19A /* MacUpdater.swift in Sources */,
+				74CAE612DB09FB67343FE8B4 /* MobilePlayer.swift in Sources */,
 				3ED898D04E49F78F4DD57109 /* MoreView.swift in Sources */,
 				556C5D64B9A97EFB038F0747 /* MusicDownloadsView.swift in Sources */,
 				E8A225058F954A38DDAE052A /* MusicMacBrowse.swift in Sources */,
@@ -835,6 +841,7 @@
 				7283989DBA1B1F0E96A2C383 /* LiveRoomsView.swift in Sources */,
 				E64F015590BDBE0DFC8A216E /* LiveView.swift in Sources */,
 				AC043E4B83A36550FA487318 /* MacUpdater.swift in Sources */,
+				633726D6D289775DF1910809 /* MobilePlayer.swift in Sources */,
 				545F29F3323EB776FED1A94E /* MoreView.swift in Sources */,
 				C8FF9AAC3D77145A907102ED /* MusicDownloadsView.swift in Sources */,
 				3A6251EF1A83DCA0F38A1235 /* MusicMacBrowse.swift in Sources */,
@@ -893,6 +900,7 @@
 				03EDA66F1A059D8515CE0C80 /* LiveRoomsView.swift in Sources */,
 				F90D633F45956BEB583BB3C8 /* LiveView.swift in Sources */,
 				46F7F61F8B890B4EABC32C70 /* MacUpdater.swift in Sources */,
+				7F3C4D27F233572323FAA9A4 /* MobilePlayer.swift in Sources */,
 				0120B7D5C3369E0579B5D973 /* MoreView.swift in Sources */,
 				C505C16C48F9D001FF7BF6AE /* MusicDownloadsView.swift in Sources */,
 				7C7B124A35FE1D0AA83DCE0B /* MusicMacBrowse.swift in Sources */,

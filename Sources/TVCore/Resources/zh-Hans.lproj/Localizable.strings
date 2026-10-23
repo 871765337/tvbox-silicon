@@ -928,3 +928,11 @@
 "Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "夸克和 UC 在官方页面登录。映匣会将登录信息保存在这台 Mac 上。";
 "Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "在网盘官方页面登录，或用另一台手机上的网盘 App 扫码登录。映匣会将登录信息保存在这台设备上。";
 "Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "用网盘的手机 App 扫码登录。映匣会将登录信息保存在这台设备上。";
+"Picture in Picture" = "画中画";
+"Playing in Picture in Picture" = "正在以画中画播放";
+"Audio" = "音频";
+"Subtitles" = "字幕";
+"Playback Speed" = "播放速度";
+"Fill Screen" = "填满屏幕";
+"Back 10 seconds" = "后退 10 秒";
+"Forward 10 seconds" = "前进 10 秒";
