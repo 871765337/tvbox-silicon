@@ -105,7 +105,7 @@ export function Install() {
     setJump({ mode: next, at: Date.now() });
   };
 
-  const steps = !sideload ? copy.steps.mac : mode === "testflight" ? copy.tf.steps[platform] : mode === "agent" ? copy.agentSteps[platform] : mode === "app" ? copy.appSteps[platform] : copy.steps[platform];
+  const steps = !sideload ? copy.steps.mac : mode === "agent" ? copy.agentSteps[platform] : mode === "app" ? copy.appSteps[platform] : copy.steps[platform];
 
   return (
     <section className="section install" id="install">
@@ -182,44 +182,49 @@ export function Install() {
           )}
         </div>
 
-        <div className={sideload ? "how split" : "how"} ref={howRef}>
+        <div className={sideload && !testflight ? "how split" : "how"} ref={howRef}>
           <h3 className="how-title">{copy.how}</h3>
-          {/* Sideloads show the steps on the left and the selected mode's card beside them. */}
-          <div className="how-grid">
-            <ol className={`steps n${steps.length}`} key={`${platform}-${mode}`}>
-              {steps.map((step, i) => (
-                <li className="step" key={i}>
-                  <span className="step-n">{i + 1}</span>
-                  <h4>{step.t}</h4>
-                  <p>{step.b}</p>
-                </li>
-              ))}
-            </ol>
+          {testflight ? (
+            <TestFlightPanel copy={copy} platform={platform} onDevice={onDevice} />
+          ) : (
+            <>
+              {/* Sideloads show the steps on the left and the selected mode's card beside them. */}
+              <div className="how-grid">
+                <ol className={`steps n${steps.length}`} key={`${platform}-${mode}`}>
+                  {steps.map((step, i) => (
+                    <li className="step" key={i}>
+                      <span className="step-n">{i + 1}</span>
+                      <h4>{step.t}</h4>
+                      <p>{step.b}</p>
+                    </li>
+                  ))}
+                </ol>
 
-            {sideload && mode === "agent" && (
-              <div className="run single">
-                <div className="run-card" ref={promptRef}>
-                  <span className="run-icon"><SFSymbol name="sparkles" /></span>
-                  <h3>{copy.agent.t}</h3>
-                  <p>{copy.agent.b}</p>
-                  <div className="agents">
-                    <span className="agents-label">{copy.agent.works}</span>
-                    {AGENTS.map((agent) => (
-                      <a key={agent.name} className="agent-chip" href={agent.href} target="_blank" rel="noreferrer">
-                        {(lang === "ja" || lang === "zh-Hant") && agent.cjk ? agent.cjk : agent.name}
-                      </a>
-                    ))}
+                {sideload && mode === "agent" && (
+                  <div className="run single">
+                    <div className="run-card" ref={promptRef}>
+                      <span className="run-icon"><SFSymbol name="sparkles" /></span>
+                      <h3>{copy.agent.t}</h3>
+                      <p>{copy.agent.b}</p>
+                      <div className="agents">
+                        <span className="agents-label">{copy.agent.works}</span>
+                        {AGENTS.map((agent) => (
+                          <a key={agent.name} className="agent-chip" href={agent.href} target="_blank" rel="noreferrer">
+                            {(lang === "ja" || lang === "zh-Hant") && agent.cjk ? agent.cjk : agent.name}
+                          </a>
+                        ))}
+                      </div>
+                      <p className="code prompt">{agentPrompt(copy, platform)}</p>
+                      <CopyButton text={agentPrompt(copy, platform)} copy={copy} flash={autoCopied} note={copy.copiedPrompt} />
+                      <p className="run-note">{copy.agent.web}</p>
+                    </div>
                   </div>
-                  <p className="code prompt">{agentPrompt(copy, platform)}</p>
-                  <CopyButton text={agentPrompt(copy, platform)} copy={copy} flash={autoCopied} note={copy.copiedPrompt} />
-                  <p className="run-note">{copy.agent.web}</p>
-                </div>
+                )}
+                {sideload && mode === "cli" && <TerminalCard copy={copy} platform={platform} />}
+                {sideload && mode === "app" && <AppsCard copy={copy} />}
               </div>
-            )}
-            {testflight && <TestFlightCard copy={copy} platform={platform} onDevice={onDevice} />}
-            {sideload && mode === "cli" && <TerminalCard copy={copy} platform={platform} />}
-            {sideload && mode === "app" && <AppsCard copy={copy} />}
-          </div>
+            </>
+          )}
         </div>
 
         {testflight && (
@@ -303,30 +308,44 @@ function TerminalCard({ copy, platform }: { copy: InstallCopy; platform: Sideloa
   );
 }
 
-/** The TestFlight invite as a QR code to scan with an iPhone or iPad, or as a link when the visitor is already on one. */
-function TestFlightCard({ copy, platform, onDevice }: { copy: InstallCopy; platform: Sideload; onDevice: boolean }) {
+/** TestFlight: the invite's QR code (with the app icon in the middle) beside the steps.
+ * On an iPhone or iPad there's nothing to scan, so it shows the steps and the link. */
+function TestFlightPanel({ copy, platform, onDevice }: { copy: InstallCopy; platform: Sideload; onDevice: boolean }) {
   const link = TESTFLIGHT[platform];
   return (
-    <div className="run single">
-      <div className="run-card">
-        <span className="run-icon"><SFSymbol name="qrcode" /></span>
-        <h3>{onDevice ? copy.tf.hereT : copy.tf.t}</h3>
-        <p>{onDevice ? copy.tf.here[platform] : copy.tf.b[platform]}</p>
-        {!onDevice && (
+    <div className={onDevice ? "tf-panel here" : "tf-panel"} key={platform}>
+      {!onDevice && (
+        <div className="tf-scan">
           <div className="tf-qr">
-            <img src={`/testflight/${platform}.svg`} alt={link} width={200} height={200} />
+            <img className="tf-code" src={`/testflight/${platform}.svg`} alt={link} width={232} height={232} />
+            <img className="tf-logo" src="/assets/icon-192.png" alt="" width={52} height={52} />
           </div>
-        )}
-        <div className="copy-row">
-          <a className="copy-btn" href={link} target="_blank" rel="noreferrer">
-            <span>{copy.tf.open}</span>
-            <SFSymbol name="chevron.right" />
+          <p className="tf-scan-title">
+            <SFSymbol name="qrcode" />
+            {copy.tf.t}
+          </p>
+          <p className="tf-url">{link.replace("https://", "")}</p>
+        </div>
+      )}
+      <div className="tf-side">
+        <ol className="tf-steps">
+          {copy.tf.steps[platform].map((step, i) => (
+            <li key={i}>
+              <span className="step-n">{i + 1}</span>
+              <h4>{step.t}</h4>
+              <p>{step.b}</p>
+            </li>
+          ))}
+        </ol>
+        {onDevice && <p className="tf-here">{copy.tf.here[platform]}</p>}
+        <div className="tf-actions">
+          <a className="btn-blue" href={link} target="_blank" rel="noreferrer">
+            {copy.tf.open}
           </a>
-          <a className="link-blue tf-app" href={TESTFLIGHT_APP} target="_blank" rel="noreferrer">
+          <a className="link-blue" href={TESTFLIGHT_APP} target="_blank" rel="noreferrer">
             {copy.tf.app} <SFSymbol name="chevron.right" />
           </a>
         </div>
-        <p className="run-note">{link.replace("https://", "")}</p>
       </div>
     </div>
   );
