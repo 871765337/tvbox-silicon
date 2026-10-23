@@ -3,6 +3,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build
 swift test
+# The apps embed build/JavaHost: it must be the sources' version, and its own tests must pass.
+Scripts/check-java-host.sh build/JavaHost/host.jar
+Scripts/test-java-host.sh > build/verify-java.log 2>&1 || { tail -40 build/verify-java.log; exit 1; }
+echo "Java host tests passed (build/verify-java.log)"
 for entry in 'macOS|platform=macOS|mac' 'iOS|generic/platform=iOS|ios' 'tvOS|generic/platform=tvOS|tv'; do
   IFS='|' read -r platform destination folder <<< "$entry"
   xcodebuild -project TVBox.xcodeproj -scheme "TVBox-$platform" \

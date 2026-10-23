@@ -34,6 +34,9 @@ public enum PluginFailure {
             if let missing { return L10n.text("This source needs an Android feature that isn't supported yet: %@.", missing, language: language) }
             return L10n.text("This source requires Android features that the plugin runtime does not support yet.", language: language)
         case "class_conversion":
+            if let broken = envelope["brokenClass"]?.string {
+                return L10n.text("This plugin couldn't be prepared on this device (%@ could not be converted).", broken, language: language)
+            }
             return L10n.text("This plugin couldn't be prepared on this device (missing %@).", missing ?? detail, language: language)
         case "plugin_crash":
             return L10n.text("The source's plugin crashed. The site may have changed; try another source.", language: language)
@@ -54,10 +57,20 @@ public enum PluginFailure {
         }
     }
 
-    public static func diagnostic(source: String, _ envelope: [String: JSONValue]) -> String {
-        var line = "source=\(source) code=\(envelope["errorCode"]?.string ?? "unclassified") \(envelope["error"]?.string ?? "")"
+    /// The first line names the failure, so reports group by it; `archive` is the plugin's SHA-256.
+    public static func diagnostic(source: String, _ envelope: [String: JSONValue], archive: String? = nil) -> String {
+        let error = envelope["error"]?.string ?? ""
+        let summary = error.prefix { $0 != "\n" }
+        var line = "source=\(source) code=\(envelope["errorCode"]?.string ?? "unclassified") \(summary)"
         if let missing = envelope["missingClass"]?.string { line += " missingClass=\(missing)" }
-        if let trace = envelope["trace"]?.string, !trace.isEmpty { line += "\n" + trace }
+        if let broken = envelope["brokenClass"]?.string { line += " brokenClass=\(broken)" }
+        let trace = envelope["trace"]?.string ?? ""
+        // The trace repeats the rest of a multi-line error (a VerifyError's bytecode details).
+        if trace.isEmpty, summary.endIndex < error.endIndex { line += error[summary.endIndex...] }
+        // Which runtime and which archive: a stale host or a changed plugin explains many failures.
+        let build = [envelope["host"]?.string.map { "host=\($0)" }, archive.map { "archive=\($0.prefix(12))" }].compactMap { $0 }
+        if !build.isEmpty { line += "\n" + build.joined(separator: " ") }
+        if !trace.isEmpty { line += "\n" + trace }
         return line
     }
 }

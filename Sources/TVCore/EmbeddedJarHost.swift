@@ -170,7 +170,7 @@ public actor EmbeddedJarHost {
         }
         if let login = CloudDriveLoginRequired(envelope: envelope) { throw login }
         if let message = PluginFailure.message(envelope) {
-            Diagnostics.shared.record(.error, "jar.request", PluginFailure.diagnostic(source: site.key, envelope))
+            Diagnostics.shared.record(.error, "jar.request", PluginFailure.diagnostic(source: site.key, envelope, archive: digest))
             if let name = envelope["error"]?.string.flatMap(PluginClassMissing.className(in:)) {
                 throw PluginClassMissing(className: name, message: message)
             }
@@ -179,7 +179,12 @@ public actor EmbeddedJarHost {
         }
         guard let result = envelope["result"]?.string else { throw TVError.unsupported("The plugin returned no content.") }
         Diagnostics.shared.record(.info, "jar.request", "source=\(site.key) \(kind) completed bytes=\(result.utf8.count)")
-        return try JSONDecoder().decode([String: JSONValue].self, from: Data(result.utf8))
+        let answer = try JSONDecoder().decode([String: JSONValue].self, from: Data(result.utf8))
+        // An empty page from a source that recently had content is a failure the plugin swallowed.
+        if let age = PluginAnswers.shared.record(source: SourceHealth.key(site, origin: configurationOrigin), params: params, answer: answer) {
+            Diagnostics.shared.record(.error, "jar.empty", "source=\(site.key) \(kind) answered empty after answering with content\nlastContent=\(Int(age / 3600))h ago archive=\(digest.prefix(12))")
+        }
+        return answer
     }
 
     static func adoptPluginAccounts(in folder: URL) {
