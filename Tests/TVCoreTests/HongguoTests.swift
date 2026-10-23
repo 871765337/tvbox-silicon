@@ -30,21 +30,29 @@ struct HongguoTests {
         const player = page({ isSuccess: true, series_id: sid, vid: vids[3], seriesDetail: series });
         export default { async home() {
             const checks = {};
+            let rejected;
             spider.init({ episode: 'Episode %@', name: 'Hongguo' });
             const parsed = detail(player, sid).list[0];
             checks.complete = parsed.vod_play_url.split('#').length === 4 && parsed.vod_play_url.endsWith(sid + '/' + vids[3]);
             checks.identity = parsed.vod_id === sid && parsed.vod_name === series.series_name;
             checks.noEval = !globalThis.untrusted;
-            checks.empty = search(page({ isSuccess: true, searchList: [], totalCount: '0' })).list.length === 0;
-            const results = search(page({ isSuccess: true, searchList: [{ video_data: { ...series, series_name: undefined, series_title: 'Search title' } }], totalCount: '100' }));
-            checks.search = results.list[0].vod_name === 'Search title' && results.pagecount === 1;
+            checks.empty = search(JSON.stringify({ searchList: [], totalCount: '0', hasMore: false }), 1).list.length === 0;
+            const results = search(JSON.stringify({ searchList: [{ doc_type: 23, keyword: sid, video_data: { ...series, series_name: undefined, series_title: 'Search title' } }], totalCount: '30', pageNum: 1, totalPages: 3, hasMore: true }), 1);
+            checks.search = results.list[0].vod_name === 'Search title' && results.page === 1 && results.pagecount === 3;
+            checks.lastPage = search(JSON.stringify({ searchList: [], pageNum: 3, totalPages: 3, hasMore: false }), 3).pagecount === 3;
+            rejected = false; try { search(page({ isSuccess: true, searchList: [] }), 1); } catch { rejected = true; }
+            checks.searchShell = rejected;
+            let searched;
+            globalThis.req = url => { searched = url; return { code: 200, content: JSON.stringify({ searchList: [], hasMore: false }) }; };
+            spider.search(' 总裁 ', false, '2');
+            checks.searchRequest = searched === 'https://hongguoduanju.com/api/search/result?query=%E6%80%BB%E8%A3%81&page=2';
             const list = catalog(page({ isSuccess: true, categoryRoute: { contentType: 'real-drama' }, recommendList: [series, series], pagination: { totalPages: 3 } }), 'real-drama', 2);
             checks.catalog = list.list.length === 1 && list.page === 2 && list.pagecount === 3;
             const rank = `<article><span>1</span><h2 id="rank-title-${sid}">Title</h2><a href="/detail?series_id=${sid}"><img src="https://example.com/a.jpg"></a></article><nav aria-label="榜单分页"><a href="/rank/hot-drama?page=3">3</a></nav>`;
             checks.ranking = catalog(rank, 'hot-drama', 1).pagecount === 3;
             const seo = '<script type="application/ld+json">' + JSON.stringify({ '@type': 'VideoObject', contentUrl: `https://hongguoduanju.com/video/public/${vids[0]}/360p.mp4` }) + '</script>';
             checks.noWrongVideo = webMedia(player + seo, sid, vids[3]) === null;
-            let rejected = false; try { routerData('<script>window._ROUTER_DATA = {broken</script>'); } catch { rejected = true; }
+            rejected = false; try { routerData('<script>window._ROUTER_DATA = {broken</script>'); } catch { rejected = true; }
             checks.malformed = rejected;
             checks.sm3 = sm3('abc').toString('hex') === '66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0';
             checks.sha512 = crypto.createHash('sha512').update('abc').digest('hex').startsWith('ddaf35a193617aba');
@@ -93,7 +101,7 @@ struct HongguoTests {
         let envelope = try await session.call([:])
         let json = try #require(envelope["result"]?.string, "\(envelope)")
         let checks = try #require(JSONDecoder().decode([String: JSONValue].self, from: Data(json.utf8))["checks"]?.object)
-        #expect(checks.count == 17)
+        #expect(checks.count == 20)
         for (name, result) in checks { #expect(result == .bool(true), "\(name)") }
     }
 
