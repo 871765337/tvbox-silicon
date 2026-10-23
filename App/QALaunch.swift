@@ -20,6 +20,7 @@ enum QALaunch {
         case "files": .files
         case "history": .history
         case "settings": .settings
+        case "messages": .messages
         case "more": .more
         default: nil
         }

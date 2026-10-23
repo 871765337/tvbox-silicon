@@ -3,6 +3,8 @@ import TVCore
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case home = "Watch Now", live = "Live TV", music = "Music", search = "Global Search", sites = "Sources", files = "Cloud Files", favorites = "Favorites", history = "Playback History", downloads = "Downloads", settings = "Settings", more = "More"
+    /// Messages from the website (App/Announcements.swift); only the phone lists it, in More.
+    case messages = "Messages"
     /// Apple TV's sidebar item for the song playing, first while one is loaded; it opens the player.
     case nowPlaying = "Now Playing"
     var id: String { rawValue }
@@ -21,6 +23,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .downloads: "arrow.down.circle.fill"
         case .history: "clock.arrow.circlepath"
         case .settings: "slider.horizontal.3"
+        case .messages: "megaphone.fill"
         case .more: "ellipsis"
         case .nowPlaying: "waveform"
         }
@@ -271,6 +274,7 @@ struct RootView: View {
         case .downloads: DownloadsView()
         case .history: PlaybackHistoryView()
         case .settings: SettingsView()
+        case .messages: MessagesView()
         case .nowPlaying: EmptyView()
         case .more:
             // Only the phone's tab bar and tvOS 17's have a More tab.

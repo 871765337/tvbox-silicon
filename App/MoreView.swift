@@ -13,7 +13,7 @@ struct PhoneTabs: Equatable {
     static func slots(horizontal: UserInterfaceSizeClass?, vertical: UserInterfaceSizeClass?) -> Int {
         horizontal == .regular && vertical == .regular ? wideBarSlots : barSlots
     }
-    static let standard = PhoneTabs(bar: [.home, .live, .music, .search], more: [.sites, .files, .history, .favorites, .downloads, .settings])
+    static let standard = PhoneTabs(bar: [.home, .live, .music, .search], more: [.sites, .files, .history, .favorites, .downloads, .messages, .settings])
     var bar: [AppSection]
     var more: [AppSection]
 
@@ -56,6 +56,7 @@ extension AppSection {
         case .history: Brand.amber
         case .favorites: Brand.rose
         case .downloads: Brand.teal
+        case .messages: Color(red: 1.0, green: 0.60, blue: 0.20)
         case .files: Color(red: 0.25, green: 0.62, blue: 0.98)
         case .settings, .more: Color(white: 0.56)
         }
@@ -104,6 +105,7 @@ struct TabBarPreview: View {
 struct MoreView: View {
     @Environment(Store.self) private var store
     @Environment(Updates.self) private var updates
+    @Environment(Announcements.self) private var announcements
     @AppStorage(PhoneTabs.storageKey) private var storedTabs = ""
     @State private var editing = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -121,7 +123,7 @@ struct MoreView: View {
                             let row = tabs.more[start..<min(start + 2, tabs.more.count)]
                             ForEach(row) { section in
                                 MoreTile(section: section, count: count(section),
-                                         badge: section == .settings && !updates.available.isEmpty, wide: row.count == 1)
+                                         badge: badge(section), wide: row.count == 1)
                             }
                         }
                         .fixedSize(horizontal: false, vertical: true)
@@ -143,8 +145,17 @@ struct MoreView: View {
         #endif
     }
 
+    private func badge(_ section: AppSection) -> Bool {
+        switch section {
+        case .settings: !updates.available.isEmpty
+        case .messages: !announcements.unread.isEmpty
+        default: false
+        }
+    }
+
     private func count(_ section: AppSection) -> Int? {
         switch section {
+        case .messages: announcements.all.count
         case .sites: store.subscription.map { store.orderedSites($0).count }
         case .history: store.playbackHistory.entries.count
         case .favorites: store.favorites.count

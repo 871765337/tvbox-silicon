@@ -335,7 +335,7 @@ QA (Debug builds): `-qaReleaseFeed <url>` reads another feed (a `file://` path w
 
 ### Messages to users
 
-To tell people something without a release, add a message to `website/public/messages.json` and deploy the website. Every build from the first one with this feature reads it, App Store and TestFlight builds included (`App/Announcements.swift`, model `Sources/TVCore/MessageFeed.swift`). Each message shows once per device, in an alert, after any update sheet and never over a playing video:
+To tell people something without a release, add a message to `website/public/messages.json` and deploy the website. Every build from the first one with this feature reads it, App Store and TestFlight builds included (`App/Announcements.swift`, model `Sources/TVCore/MessageFeed.swift`). Each message shows once per device, in an alert, after any update sheet and never over a playing video. On iPhone, More → Messages lists every live message for the device, with a count on its tile and a New badge while one is unread; opening it counts as reading them, so they no longer pop up:
 
 ```json
 {
@@ -355,7 +355,7 @@ To tell people something without a release, add a message to `website/public/mes
 }
 ```
 
-Only `id`, `title` and `body` are required. Texts are keyed `en`, `zh-Hans`, `zh-Hant` and `ja`; a missing language shows English, and a plain string counts as English. A device remembers the IDs it showed, so a new message needs a new ID, and editing a shown message does not show it again. Optional limits: `platforms` (`macos`, `ios`, `tvos`), `channels` (`direct` for downloads and sideloading, `appstore` for App Store and TestFlight), `minVersion`/`maxVersion` and `minBuild`/`maxBuild` (inclusive; TestFlight builds all carry version 1.7.7, so use build numbers there), and `start`/`end` as ISO 8601 times or dates (a date is midnight UTC). `link` adds a button, titled Learn More unless `linkTitle` says otherwise; Apple TV can't open web pages and leaves it out. Messages show in the file's order. `MessageFeedTests` checks the published file, so run `swift test` before deploying: a file that doesn't decode hides every message.
+Only `id`, `title` and `body` are required. Texts are keyed `en`, `zh-Hans`, `zh-Hant` and `ja`; a missing language shows English, and a plain string counts as English. A device remembers the IDs it showed, so a new message needs a new ID, and editing a shown message does not show it again. Optional limits: `platforms` (`macos`, `ios`, `tvos`), `channels` (`direct` for downloads and sideloading, `appstore` for App Store and TestFlight), `minVersion`/`maxVersion` and `minBuild`/`maxBuild` (inclusive; TestFlight builds all carry version 1.7.7, so use build numbers there), and `start`/`end` as ISO 8601 times or dates (a date is midnight UTC). `link` adds a button, titled Learn More unless `linkTitle` says otherwise; Apple TV can't open web pages and leaves it out. Messages show in the file's order, as alerts and on the Messages page, so keep the newest at the top. `MessageFeedTests` checks the published file, so run `swift test` before deploying: a file that doesn't decode hides every message.
 
 The app asks at launch and whenever it becomes active, at most every 15 minutes. It sends back the `ETag` (and `Last-Modified`, if present) of the copy it saved, so an unchanged file costs a `304 Not Modified` without a body; the website serves the file with `cache-control: max-age=0, must-revalidate`, so a deploy reaches devices at their next check.
 
