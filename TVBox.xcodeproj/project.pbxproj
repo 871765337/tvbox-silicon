@@ -543,6 +543,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 429EE12CD839980B47636EAD /* Build configuration list for PBXNativeTarget "TVBox-macOS" */;
 			buildPhases = (
+				38AA9476BEF00D4E183306B5 /* Check the bundled Java host */,
 				DE668986064D1052747B0516 /* Sources */,
 				330684913FA5953506D1EE47 /* Resources */,
 				0AAE1912A8D2D5FA12914BEC /* Frameworks */,
@@ -716,6 +717,28 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		38AA9476BEF00D4E183306B5 /* Check the bundled Java host */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/check-java-host.sh",
+				"$(SRCROOT)/Runtime/JavaHost/src/main/java/tvbox/runtime/BytecodeCompatibility.java",
+				"$(SRCROOT)/build/JavaHost/host.jar",
+			);
+			name = "Check the bundled Java host";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/java-host-checked",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/check-java-host.sh\" \"$SRCROOT/build/JavaHost/host.jar\" && touch \"$DERIVED_FILE_DIR/java-host-checked\"";
+		};
 		539926191BD98FAA6485B217 /* Embed on-device Java runtime */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -733,7 +756,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\nrsync -a --delete \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
+			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\n\"$SRCROOT/Scripts/check-java-host.sh\" \"$RUNTIME/Resources/JavaHost/host.jar\"\nrsync -a --delete \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
 		};
 		A4DF47F9E069B67C04C29D12 /* Embed on-device Java runtime */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -752,7 +775,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\nrsync -a --delete \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
+			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\n\"$SRCROOT/Scripts/check-java-host.sh\" \"$RUNTIME/Resources/JavaHost/host.jar\"\nrsync -a --delete \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
