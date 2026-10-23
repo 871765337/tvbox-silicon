@@ -268,8 +268,8 @@ struct MobilePlayerView: View {
                 Spacer(minLength: 0)
             }
         } else if session.hasTimeline {
-            SeekBar(clock: clock, hold: hold, sought: sought)
-                .simultaneousGesture(TapGesture().onEnded { poke() })
+            // Dragging holds the controls up itself (`hold`); a tap gesture here would compete with the scrubber's drag.
+            SeekBar(clock: clock, moving: chromeVisible && !session.paused, hold: hold, sought: sought)
         }
     }
 
@@ -295,13 +295,24 @@ struct MobilePlayerView: View {
 /// of its own, so only it redraws as the position moves.
 private struct SeekBar: View {
     let clock: PlayerClock
+    /// Playing with the controls showing: the scrubber follows the player every frame.
+    let moving: Bool
     let hold: (Bool) -> Void
     let sought: () -> Void
 
     var body: some View {
+        // Every display frame while it plays, as AVKit's scrubber does; the clock's quarter-second ticks alone made
+        // the thumb jump. Paused, held or hidden, it redraws only when the clock changes.
+        let follows = moving && clock.scrubbing == nil
+        TimelineView(.animation(paused: !follows)) { _ in
+            bar(clock.scrubbing ?? (follows ? clock.currentPosition : clock.position))
+        }
+    }
+
+    private func bar(_ position: Double) -> some View {
         let duration = clock.duration
-        let value = min(clock.scrubbing ?? clock.position, duration)
-        VStack(alignment: .leading, spacing: 4) {
+        let value = min(max(0, position), duration)
+        return VStack(alignment: .leading, spacing: 4) {
             Text(Self.format(value) + " / " + Self.format(duration))
                 .font(.footnote.monospacedDigit().weight(.medium))
                 .padding(.horizontal, 10).padding(.vertical, 5)
@@ -495,17 +506,46 @@ private struct PlayerLayerView: UIViewRepresentable {
         token = nil
     }
 
-    /// While dragging, quick seeks to the nearest frame AVFoundation can show, so the picture follows the finger.
-    func scrub(to seconds: Double) {
-        scrubbing = seconds
-        player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
+    /// The player's position now, read without waiting for the next tick.
+    var currentPosition: Double {
+        let seconds = player?.currentTime().seconds ?? 0
+        return seconds.isFinite ? seconds : position
     }
 
-    /// Let go: an exact seek to where the finger stopped.
+    /// A seek on its way, and where the finger has moved since it began.
+    @ObservationIgnored private var seeking = false
+    @ObservationIgnored private var chase: (seconds: Double, exact: Bool)?
+
+    /// While dragging, the thumb follows the finger at once and the picture follows by chasing it: one quick seek at
+    /// a time, each to wherever the finger is when the last one lands (Apple's QA1820). A seek per drag event queued
+    /// up behind each other and left both the picture and the thumb lagging.
+    func scrub(to seconds: Double) {
+        scrubbing = seconds
+        chase = (seconds, false)
+        seekToChase()
+    }
+
+    /// Let go: an exact seek to where the finger stopped, once the quick one on its way lands.
     func endScrub() {
-        guard let target = scrubbing, let player else { scrubbing = nil; return }
-        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
-            Task { @MainActor [weak self] in if self?.scrubbing == target { self?.scrubbing = nil } }
+        guard let target = scrubbing else { return }
+        chase = (target, true)
+        seekToChase()
+    }
+
+    private func seekToChase() {
+        guard !seeking, let player, let (seconds, exact) = chase else { return }
+        chase = nil
+        seeking = true
+        let time = CMTime(seconds: seconds, preferredTimescale: 600)
+        let tolerance: CMTime = exact ? .zero : .positiveInfinity
+        player.seek(to: time, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.seeking = false
+                if self.chase != nil { self.seekToChase() }
+                // The exact seek landed and nothing newer is held: the scrubber follows the player again.
+                else if exact, self.scrubbing == seconds { self.position = seconds; self.scrubbing = nil }
+            }
         }
     }
 
