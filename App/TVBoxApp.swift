@@ -9,6 +9,7 @@ import TVCore
     @State private var store = Store()
     #endif
     @State private var updates = Updates()
+    @State private var announcements = Announcements()
     #if os(iOS)
     /// An Apple TV's Douyin code, scanned with the Camera.
     @State private var douyinHandoff: DouyinHandoff.Link?
@@ -27,7 +28,7 @@ import TVCore
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environment(store).environment(updates)
+            RootView().environment(store).environment(updates).environment(announcements)
                 #if !os(tvOS)
                 // tvOS draws plain buttons and section links in the tint, so it keeps the neutral default.
                 .tint(Brand.accent)
@@ -46,6 +47,12 @@ import TVCore
                     #endif
                     // Builds before 1.1 recorded no version, so earlier use shows as a saved subscription.
                     await updates.launched(returning: UserDefaults.standard.string(forKey: "subscriptionAddress") != nil)
+                }
+                .task {
+                    #if DEBUG
+                    if QALaunch.section != nil, UserDefaults.standard.string(forKey: "qaMessageFeed") == nil { return }
+                    #endif
+                    await announcements.check()
                 }
                 #if os(tvOS) || os(macOS)
                 .task { BilibiliCastController.shared.start(store) }
@@ -72,7 +79,7 @@ import TVCore
                     if phase == .active { DownloadsLifecycle.becameActive() }
                     #endif
                     // Apple TV and Mac sessions run for days; look again when the app comes back.
-                    if phase == .active { Task { await updates.check() } }
+                    if phase == .active { Task { await updates.check(); await announcements.check() } }
                 }
                 #if os(tvOS)
                 .preferredColorScheme(.dark)

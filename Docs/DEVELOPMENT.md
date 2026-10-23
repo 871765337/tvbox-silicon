@@ -153,7 +153,7 @@ Subscription-provided source names, channel names, categories, and video titles 
 | `Tests/` | Core tests and controlled Java/DEX fixtures |
 | `Scripts/` | Build, verification, and inspection tools |
 | `Docs/` | Install guide, runtime status, plans, and dependency notes |
-| `website/` | The website at yingxia.getmegaportal.com, including `public/releases.json` and the AltStore source `public/altstore.json` |
+| `website/` | The website at yingxia.getmegaportal.com, including `public/releases.json`, the messages to users in `public/messages.json` and the AltStore source `public/altstore.json` |
 | `project.yml` | XcodeGen project definition |
 
 ## Verification
@@ -332,3 +332,31 @@ The Mac updates itself with [Sparkle](https://sparkle-project.org) 2.10 (`App/Ma
 To release: add the new version's entry at the top of `releases.json` before building, so the build bundles its own notes, then deploy the website after the downloads are uploaded; publishing the entry is what tells existing users. On the Mac, run `Scripts/make-appcast.sh <version>` after `Scripts/package-mac-release.sh`: it adds both DMGs to their appcasts and writes delta updates (`Yingxia<build>-<old build>-<arch>.delta`) next to them, made from the DMGs of earlier releases that it keeps in `build/appcast/`. Upload the deltas with the DMGs before deploying. For iPhone and iPad, run `Scripts/make-altstore-source.py <version>` once the iOS IPA in `build/release-apple/<version>/` is final: it adds the version to `website/public/altstore.json`, the AltStore source, with the IPA's size, SHA-256, minimum iOS and privacy usage descriptions, which AltStore checks against the download. It signs with `~/.sparkle/yingxia_ed25519.key` (mode 600, never in git), which only the release Mac has: keep a backup, since installed apps accept only updates signed with it. To pull a release, delete its `<item>` from both appcasts, sign them again with `build/sparkle-2.10.0/bin/sign_update --ed-key-file ~/.sparkle/yingxia_ed25519.key <appcast>`, and deploy; apps that already downloaded it install it on quit.
 
 QA (Debug builds): `-qaReleaseFeed <url>` reads another feed (a `file://` path works on simulators), `-qaVersion 1.0.1` pretends to be another version, and launch-argument defaults such as `-updates.lastVersion 1.0.1` or `-updates.announcedVersion 1.1` set the recorded state for one run. With `-qaSection`, update checks only run when `-qaReleaseFeed` is given. Debug Mac builds leave Sparkle off, so an update can't replace a build in DerivedData; `-qaAppcast <url>` turns it on against another appcast (a local `python3 -m http.server` works), and `-qaInstallUpdate 1` presses Install and Relaunch four seconds after launch. Run such a build from a copy outside DerivedData, as the update replaces it.
+
+### Messages to users
+
+To tell people something without a release, add a message to `website/public/messages.json` and deploy the website. Every build from the first one with this feature reads it, App Store and TestFlight builds included (`App/Announcements.swift`, model `Sources/TVCore/MessageFeed.swift`). Each message shows once per device, in an alert, after any update sheet and never over a playing video:
+
+```json
+{
+  "messages": [
+    {
+      "id": "2026-10-24-search-crash",
+      "title": { "en": "Search crash fixed", "zh-Hans": "搜索闪退已修复" },
+      "body": { "en": "Update to build 28 in TestFlight.", "zh-Hans": "请在 TestFlight 中更新到 28 版本。" },
+      "link": "https://yingxia.getmegaportal.com/",
+      "linkTitle": { "en": "Open Website", "zh-Hans": "打开网站" },
+      "platforms": ["ios", "tvos"],
+      "channels": ["appstore"],
+      "maxBuild": 27,
+      "end": "2026-11-30"
+    }
+  ]
+}
+```
+
+Only `id`, `title` and `body` are required. Texts are keyed `en`, `zh-Hans`, `zh-Hant` and `ja`; a missing language shows English, and a plain string counts as English. A device remembers the IDs it showed, so a new message needs a new ID, and editing a shown message does not show it again. Optional limits: `platforms` (`macos`, `ios`, `tvos`), `channels` (`direct` for downloads and sideloading, `appstore` for App Store and TestFlight), `minVersion`/`maxVersion` and `minBuild`/`maxBuild` (inclusive; TestFlight builds all carry version 1.7.7, so use build numbers there), and `start`/`end` as ISO 8601 times or dates (a date is midnight UTC). `link` adds a button, titled Learn More unless `linkTitle` says otherwise; Apple TV can't open web pages and leaves it out. Messages show in the file's order. `MessageFeedTests` checks the published file, so run `swift test` before deploying: a file that doesn't decode hides every message.
+
+The app asks at launch and whenever it becomes active, at most every 15 minutes. It sends back the `ETag` (and `Last-Modified`, if present) of the copy it saved, so an unchanged file costs a `304 Not Modified` without a body; the website serves the file with `cache-control: max-age=0, must-revalidate`, so a deploy reaches devices at their next check.
+
+QA (Debug builds): `-qaMessageFeed <url>` reads another feed (a `file://` path works on simulators), `-qaVersion` and `-qaBuild` pretend to be another build, and `-qaAppStore 1` acts as an App Store build. With `-qaSection`, the launch check only runs when `-qaMessageFeed` is given. Shown IDs are in the defaults key `messages.seen`.
