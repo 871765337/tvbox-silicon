@@ -5,10 +5,14 @@ copies What to Test from the version's previous build, adds the build to the pub
 group and submits it for Beta App Review. Apple often approves a later build of an approved version at
 once; otherwise it waits for review while testers keep the previous build.
 
-usage: uv run --with 'pyjwt[crypto]' --with requests Scripts/testflight-publish.py <version> <build> [--dry-run]
+usage: uv run --with 'pyjwt[crypto]' --with requests Scripts/testflight-publish.py <version> <build> [--dry-run | --announce]
 --dry-run only reads: the builds of <version>, the group and its public link.
+--announce, once the build is live on the public link: sets "testflight" in website/public/releases.json to it, so
+TestFlight builds of the app announce the release (deploy the website afterwards). A platform whose build isn't
+live yet keeps its previous build.
 """
 
+import json
 import re
 import sys
 import time
@@ -21,7 +25,10 @@ KEY_ID = "JFADGLA7XZ"
 ISSUER = "cc097225-575e-4c18-837b-b44d6f57024f"
 API = "https://api.appstoreconnect.apple.com/v1"
 GROUP = "Cloud Drive Browsing"
-APPS = {"iOS": "6825717102", "tvOS": "6825717931"}  # com.jo32.yingxia.ios / .tv
+APPS = {"iOS": "6825717102", "tvOS": "6825717931"}
+FEED_KEYS = {"iOS": "ios", "tvOS": "tvos"}  # ReleaseFeed.platform
+FEED = Path(__file__).resolve().parent.parent / "website/public/releases.json"
+LIVE = ("IN_BETA_TESTING", "BETA_APPROVED")  # com.jo32.yingxia.ios / .tv
 
 
 def call(path, method="GET", data=None, ok=()):
@@ -69,16 +76,47 @@ def what_to_test(previous, version, build):
     return {}, None
 
 
+def public_group(platform, app):
+    group = next((g for g in call(f"/apps/{app}/betaGroups")["data"] if g["attributes"]["name"] == GROUP), None)
+    if not group:
+        raise RuntimeError(f"{platform}: no beta group named {GROUP}")
+    return group
+
+
+def announce(version, build):
+    """Records <build> as the one testers can install, per platform where it is in the group and live."""
+    feed = json.loads(FEED.read_text())
+    if not any(r.get("build") == build for r in feed["releases"]):
+        print(f"   note: no release in releases.json has build {build}; testers only hear of releases with builds up to it")
+    testflight = feed.get("testflight", {})
+    for platform, app in APPS.items():
+        group = public_group(platform, app)
+        in_group = {b["id"] for b in call(f"/betaGroups/{group['id']}/builds?limit=200")["data"]}
+        b = next((b for b in builds(app, version) if b["attributes"]["version"] == str(build)), None)
+        state = b["beta"].get("externalBuildState") if b else "NOT_UPLOADED"
+        key, before = FEED_KEYS[platform], testflight.get(FEED_KEYS[platform], {}).get("build")
+        if not b or b["id"] not in in_group or state not in LIVE:
+            print(f"== {platform}: {version} ({build}) is {state}" + ("" if b and b["id"] in in_group else f", not in {GROUP}") + f"; keeping {before}")
+        elif before and before > build:
+            print(f"== {platform}: releases.json already has build {before}; keeping it")
+        else:
+            testflight[key] = {"build": build, "link": group["attributes"]["publicLink"]}
+            print(f"== {platform}: {version} ({build}) {state}, announced (was {before})")
+    feed["testflight"] = testflight
+    FEED.write_text(json.dumps(feed, indent=2, ensure_ascii=False) + "\n")
+    print(f"   wrote {FEED}; commit it and deploy the website")
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     dry = "--dry-run" in sys.argv
     if len(args) != 2:
         sys.exit(__doc__)
     version, build = args
+    if "--announce" in sys.argv:
+        return announce(version, int(build))
     for platform, app in APPS.items():
-        group = next((g for g in call(f"/apps/{app}/betaGroups")["data"] if g["attributes"]["name"] == GROUP), None)
-        if not group:
-            raise RuntimeError(f"{platform}: no beta group named {GROUP}")
+        group = public_group(platform, app)
         print(f"== {platform}: {GROUP} {group['attributes'].get('publicLink')}")
         if dry:
             for b in builds(app, version):
@@ -115,6 +153,7 @@ def main():
         state = next(x for x in builds(app, version) if x["id"] == b["id"])["beta"].get("externalBuildState")
         meaning = {"BETA_APPROVED": "approved, live on the public link", "IN_BETA_TESTING": "live on the public link", "WAITING_FOR_BETA_REVIEW": "waiting for Beta App Review (testers keep the previous build meanwhile)", "IN_BETA_REVIEW": "in Beta App Review"}
         print(f"   {version} ({build}): {state}, {meaning.get(state, 'check App Store Connect')}")
+    print(f"Once both builds are live, tell TestFlight builds of the app: {sys.argv[0]} {version} {build} --announce, then deploy the website.")
 
 
 if __name__ == "__main__":

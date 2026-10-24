@@ -35,6 +35,32 @@ struct MobilePlayerView: View {
     @State private var fillsScreen = false
     @State private var speed: Float = 1
     @State private var showsDanmakuList = false
+    /// Devices with Yingxia open, for the Play On button; and the one the video was sent to.
+    @State private var tvBrowser = PlayOnBrowser()
+    @State private var playingOn: String?
+    /// Touching and holding the picture plays faster while the finger is down, or after sliding down kept it.
+    @State private var boost: SpeedBoost?
+    @State private var holding = false
+    @AppStorage(SpeedBoost.key) private var holdSpeed = SpeedBoost.standard
+    /// Double taps on a side skip (YouTube); the run's total shows on that side for a moment.
+    @State private var taps = PictureTaps()
+    @State private var skipped: (forward: Bool, total: Double)?
+    @State private var skippedTask: Task<Void, Never>?
+    /// Controls a tap just brought up let a second tap through to the picture, which may be a double tap.
+    @State private var settling = false
+    @State private var settleTask: Task<Void, Never>?
+    /// Sliding sideways across the picture: where the slide began.
+    @State private var swipeStart: Double?
+    /// Sliding up or down: the brightness on the left, the volume on the right, from where the slide began.
+    @AppStorage(PictureLevel.key) private var slidesLevels = true
+    @State private var level: (volume: Bool, start: Double, value: Double)?
+    @State private var leveling = false
+    @State private var levelTask: Task<Void, Never>?
+    /// The system's volume slider, on screen only around a slide, which keeps the system's own volume overlay away.
+    @State private var systemVolume = MusicVolumeSlider.SystemSlider()
+    @State private var mountsVolume = false
+    /// The screen's brightness before the first slide changed it, put back when the player closes.
+    @State private var brightnessBefore: CGFloat?
 
     var body: some View {
         ZStack {
@@ -48,11 +74,28 @@ struct MobilePlayerView: View {
             // The artwork dissolves into the first frame.
             if let waiting { waiting.view.ignoresSafeArea().transition(.opacity) }
             if pip.active { pipPlaceholder }
+            if playingOn != nil { Color.black.ignoresSafeArea() }
             // A tap on the picture shows or hides the controls; a tap on a control keeps them up (see `rows`).
-            Color.clear.contentShape(Rectangle()).ignoresSafeArea()
-                .onTapGesture(perform: toggleChrome)
-                .accessibilityHidden(true)
-            controls.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
+            // Two taps on a side skip, touching and holding plays faster, and sliding sideways seeks.
+            PictureGestures(tap: tapped, hold: held, swipe: swiped, levels: slidesLevels) { wider in
+                withAnimation(.easeInOut(duration: 0.25)) { fillsScreen = wider }
+            }
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+            if mountsVolume {
+                MusicVolumeSlider.HiddenVolumeView(system: systemVolume).frame(width: 1, height: 1).opacity(0.01).allowsHitTesting(false)
+            }
+            boostLabel
+            skippedLabel
+            swipeLabel
+            levelLabel
+            if let playingOn {
+                PlayOnPlaceholder(receiver: playingOn) {
+                    self.playingOn = nil
+                    if session.paused { session.togglePlayback() }
+                }
+            }
+            controls.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible && !settling)
         }
         .animation(.easeInOut(duration: 0.7), value: waiting == nil)
         .animation(.easeInOut(duration: 0.4), value: waiting?.starting)
@@ -61,9 +104,23 @@ struct MobilePlayerView: View {
             speed = session.player.defaultRate
             nowPlaying.start(session)
             nowPlaying.update(title: channel.name, session: session)
+            tvBrowser.start()
         }
-        .onDisappear { clock.detach(); nowPlaying.stop() }
+        .onDisappear {
+            clock.detach(); nowPlaying.stop(); tvBrowser.stop()
+            if let brightnessBefore { screen?.brightness = brightnessBefore }
+        }
+        // Played here again (the Lock Screen, say): the other device no longer has it to itself.
+        .onChange(of: session.paused) { _, paused in if !paused { playingOn = nil } }
         .onChange(of: nowPlayingState, initial: true) { nowPlaying.update(title: channel.name, session: session) }
+        // Pausing ends the faster speed in the session; another episode or quality plays at the chosen one.
+        .onChange(of: session.boost == nil) { _, ended in if ended { boost = nil } }
+        .onChange(of: clock.item) { endBoost() }
+        .sensoryFeedback(trigger: boost) { old, new in
+            guard let new else { return nil }
+            guard let old else { return .impact(weight: .light) }
+            return new.locked != old.locked ? .impact(weight: .medium) : new.rate != old.rate ? .selection : nil
+        }
         .task(id: clock.item.map(ObjectIdentifier.init)) { await tracks.load(clock.item) }
         .sheet(isPresented: $showsDanmakuList) {
             DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
@@ -79,11 +136,247 @@ struct MobilePlayerView: View {
         var timeline: Bool
         var duration: Double
         var speed: Float
+        var boost: Float?
     }
 
     private var nowPlayingState: NowPlayingState {
         NowPlayingState(title: channel.name, paused: session.paused, live: session.isLive, timeline: session.hasTimeline,
-                        duration: clock.duration, speed: speed)
+                        duration: clock.duration, speed: speed, boost: session.boost)
+    }
+
+    // MARK: Taps and slides
+
+    private func tapped(_ x: CGFloat, _ width: CGFloat) {
+        let zone = PictureTaps.zone(x: x, width: width, seekable: seekable && showsTransport && playingOn == nil && !pip.active)
+        switch taps.tap(at: ProcessInfo.processInfo.systemUptime, in: zone) {
+        case .toggleControls:
+            let showing = !chromeVisible
+            toggleChrome()
+            if showing { settle(); clearLabels() }
+        case .togglePlayback:
+            toggleChrome()
+            session.togglePlayback()
+        case .skip(let seconds, let total, _):
+            // Hidden whether the first tap showed the controls or hid them.
+            hideChrome()
+            session.skip(seconds)
+            nowPlaying.update(title: channel.name, session: session)
+            skipped = (seconds > 0, total)
+            skippedTask?.cancel()
+            skippedTask = Task {
+                try? await Task.sleep(for: .seconds(PictureTaps.streak + 0.1))
+                if !Task.isCancelled { skipped = nil }
+            }
+        }
+    }
+
+    /// For as long as a second tap would make a double tap, it reaches the picture rather than the controls it showed.
+    private func settle() {
+        settling = true
+        settleTask?.cancel()
+        settleTask = Task {
+            try? await Task.sleep(for: .seconds(PictureTaps.interval))
+            if !Task.isCancelled { settling = false }
+        }
+    }
+
+    /// A gesture's label has the picture to itself: the controls make way, unless loading or a failure keeps them up.
+    private func hideChrome() {
+        if chromeVisible && showsTransport { toggleChrome() }
+    }
+
+    /// The controls a tap brings up replace the labels a skip or a slide leaves for a moment.
+    private func clearLabels() {
+        skippedTask?.cancel(); skipped = nil
+        guard !leveling else { return }
+        levelTask?.cancel(); level = nil; mountsVolume = false
+    }
+
+    private var screen: UIScreen? { (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen }
+
+    private func swiped(_ phase: PictureGestures.Swipe) {
+        switch phase {
+        case .began(.seek):
+            guard showsTransport, seekable, clock.duration > 0, playingOn == nil, !pip.active else { return }
+            let start = clock.currentPosition
+            swipeStart = start
+            clock.scrub(to: start)
+            hideChrome()
+        case .began(let slide):
+            let volume = slide == .volume
+            guard volume || screen != nil else { return }
+            let start = volume ? Double(AVAudioSession.sharedInstance().outputVolume) : Double(screen?.brightness ?? 0)
+            if !volume, brightnessBefore == nil { brightnessBefore = screen?.brightness }
+            levelTask?.cancel()
+            if volume { mountsVolume = true }
+            level = (volume, start, start)
+            leveling = true
+            hideChrome()
+        case .moved(let moved, let size):
+            if let swipeStart {
+                clock.scrub(to: PictureSeek.target(from: swipeStart, moved: moved.width, width: size.width, duration: clock.duration))
+            } else if leveling, var level {
+                level.value = PictureLevel.value(from: level.start, moved: moved.height, height: size.height)
+                self.level = level
+                if level.volume { systemVolume.set(level.value) } else { screen?.brightness = CGFloat(level.value) }
+            }
+        case .ended:
+            if swipeStart != nil {
+                swipeStart = nil
+                clock.endScrub()
+                nowPlaying.update(title: channel.name, session: session)
+            }
+            if leveling {
+                leveling = false
+                levelTask = Task {
+                    try? await Task.sleep(for: .seconds(0.8))
+                    guard !Task.isCancelled else { return }
+                    level = nil; mountsVolume = false
+                }
+            }
+        }
+    }
+
+    /// The brightness or the volume a slide up or down sets, in the middle.
+    @ViewBuilder private var levelLabel: some View {
+        if let level {
+            HStack(spacing: 12) {
+                Image(systemName: level.volume ? (level.value <= 0 ? "speaker.slash.fill" : "speaker.wave.2.fill") : "sun.max.fill")
+                    .frame(width: 26)
+                Capsule().fill(.white.opacity(0.3)).frame(width: 150, height: 6)
+                    .overlay(alignment: .leading) { Capsule().fill(.white).frame(width: 150 * level.value, height: 6) }
+            }
+            .font(.headline)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 18).padding(.vertical, 14)
+            .glassSurface(.regular, in: Capsule())
+            .environment(\.colorScheme, .dark)
+            .allowsHitTesting(false)
+            .transition(.opacity)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L10n.text(level.volume ? "Volume" : "Brightness"))
+            .accessibilityValue(Text(level.value, format: .percent.precision(.fractionLength(0))))
+            .accessibilityIdentifier("player.level")
+        }
+    }
+
+    /// How far a run of double taps skipped, on its side.
+    @ViewBuilder private var skippedLabel: some View {
+        if let skipped {
+            VStack(spacing: 6) {
+                Image(systemName: skipped.forward ? "goforward" : "gobackward").font(.title)
+                Text((skipped.forward ? "+" : "\u{2212}") + L10n.text("%lld s", Int(skipped.total)))
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+            }
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.5), radius: 6)
+            .frame(width: 120, height: 120)
+            .background(.black.opacity(0.25), in: Circle())
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: skipped.forward ? .trailing : .leading)
+            .padding(.horizontal, 40)
+            .allowsHitTesting(false)
+            .transition(.opacity)
+            .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("player.tapSkip")
+            .accessibilityValue("\(skipped.forward ? "+" : "-")\(Int(skipped.total))")
+        }
+    }
+
+    /// Where a slide across the picture will seek to: the frame there, the time and how far it moves.
+    @ViewBuilder private var swipeLabel: some View {
+        if let swipeStart {
+            let target = clock.scrubbing ?? swipeStart
+            let moved = target - swipeStart
+            VStack(spacing: 10) {
+                if let preview = clock.preview {
+                    Image(decorative: preview, scale: 1).resizable().aspectRatio(contentMode: .fit)
+                        .frame(width: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                Text(SeekBar.format(target) + " / " + SeekBar.format(clock.duration))
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                Text((moved < 0 ? "\u{2212}" : "+") + SeekBar.format(abs(moved)))
+                    .font(.subheadline.monospacedDigit()).foregroundStyle(.white.opacity(0.75))
+            }
+            .foregroundStyle(.white)
+            .padding(16)
+            .glassSurface(.regular, in: RoundedRectangle(cornerRadius: 20))
+            .environment(\.colorScheme, .dark)
+            .allowsHitTesting(false)
+            .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("player.swipeSeek")
+            .accessibilityValue("\(Int(target))")
+        }
+    }
+
+    // MARK: Touch and hold
+
+    /// Only while a video with a timeline plays here.
+    private var boosts: Bool { showsTransport && seekable && !session.paused && playingOn == nil && !pip.active }
+
+    private func held(_ phase: PictureGestures.Hold) {
+        switch phase {
+        case .began:
+            guard boosts else { return }
+            // A new hold replaces a kept speed: it ends with the finger unless slid down again.
+            let started = SpeedBoost(rate: holdSpeed)
+            boost = started; holding = true
+            session.setBoost(Float(started.rate))
+            // The picture to itself, as in YouTube and Douyin.
+            hideChrome()
+        case .moved(let offset):
+            guard holding, var moved = boost else { return }
+            moved.moved(x: offset.width, y: offset.height)
+            guard moved != boost else { return }
+            if moved.rate != boost?.rate { session.setBoost(Float(moved.rate)) }
+            boost = moved
+        case .ended:
+            guard holding else { return }
+            holding = false
+            if boost?.locked != true { endBoost() }
+        }
+    }
+
+    private func endBoost() {
+        boost = nil; holding = false
+        session.setBoost(nil)
+    }
+
+    /// The faster speed at the top, as in Douyin and YouTube; once kept, a tap on it goes back to the chosen speed.
+    @ViewBuilder private var boostLabel: some View {
+        if let boost {
+            let rate = session.boost ?? Float(boost.rate)
+            VStack(spacing: 8) {
+                Button(action: endBoost) {
+                    HStack(spacing: 6) {
+                        if boost.locked { Image(systemName: "lock.fill") }
+                        Text(Self.speedLabel(rate))
+                        Image(systemName: "forward.fill")
+                    }
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .glassSurface(.regular, in: Capsule())
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .allowsHitTesting(boost.locked)
+                .accessibilityLabel(L10n.text("Back to Normal Speed"))
+                .accessibilityValue(Self.speedLabel(rate))
+                .accessibilityIdentifier("player.boost")
+                if holding && !boost.locked {
+                    Text(L10n.text("Slide sideways to change the speed, or down to keep it"))
+                        .font(.caption).shadow(color: .black.opacity(0.6), radius: 4)
+                        .accessibilityHidden(true)
+                }
+            }
+            .foregroundStyle(.white)
+            .environment(\.colorScheme, .dark)
+            // Below the top row when the controls show.
+            .padding(.top, chromeVisible ? 112 : 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .animation(.easeOut(duration: 0.2), value: chromeVisible)
+            .transition(.opacity)
+        }
     }
 
     /// Play, skip and the seek bar wait for the stream: while it connects or after it fails, only the top row shows.
@@ -132,10 +425,18 @@ struct MobilePlayerView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
-            AirPlayButton()
-                .frame(width: 44, height: 44)
-                .glassSurface(.regular.interactive(), in: Circle())
-                .contentShape(Circle())
+            // With Yingxia found on an Apple TV or Mac, one menu holds those and AirPlay.
+            if tvBrowser.receivers.isEmpty {
+                AirPlayButton()
+                    .frame(width: 44, height: 44)
+                    .glassSurface(.regular.interactive(), in: Circle())
+                    .contentShape(Circle())
+            } else {
+                PlayOnButton(channel: channel, session: session, browser: tvBrowser) { receiver in
+                    session.player.pause()
+                    playingOn = receiver
+                }
+            }
             if pip.supported {
                 Button { pip.toggle() } label: {
                     Image(systemName: pip.active ? "pip.exit" : "pip.enter").font(.headline).frame(width: 22, height: 22)
@@ -220,7 +521,7 @@ struct MobilePlayerView: View {
         .accessibilityIdentifier("player.options")
     }
 
-    private static let speeds: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
+    private static let speeds: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4]
     private static func speedLabel(_ speed: Float) -> String {
         Double(speed).formatted(.number.precision(.fractionLength(0...2))) + "×"
     }
@@ -506,6 +807,93 @@ private struct AirPlayButton: UIViewRepresentable {
     func updateUIView(_ view: AVRoutePickerView, context: Context) {}
 }
 
+/// The picture's own gestures, in UIKit: taps, a touch and hold followed while the finger moves, slides and a pinch.
+/// SwiftUI's long press ends where a drag would begin, and a tap beside it can fire as the held finger lifts.
+private struct PictureGestures: UIViewRepresentable {
+    enum Hold { case began, moved(CGSize), ended }
+    /// Sideways seeks; up or down sets the brightness on the left half and the volume on the right.
+    enum Slide { case seek, brightness, volume }
+    enum Swipe { case began(Slide), moved(CGSize, in: CGSize), ended }
+    /// Where the tap landed across the picture, and the picture's width.
+    let tap: (CGFloat, CGFloat) -> Void
+    let hold: (Hold) -> Void
+    let swipe: (Swipe) -> Void
+    /// Whether slides up or down set the brightness and the volume.
+    var levels = true
+    /// Pinched out (true) or in, as in YouTube: fill the screen or fit the picture.
+    let pinch: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pressed(_:)))
+        press.minimumPressDuration = 0.35
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped(_:)))
+        // A touch that lifts before the hold begins is a tap, at once; each tap of a double tap comes on its own.
+        tap.require(toFail: press)
+        // A finger that moves before the hold begins slides instead.
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.panned(_:)))
+        pan.maximumNumberOfTouches = 1
+        pan.delegate = context.coordinator
+        let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinched(_:)))
+        for recognizer in [press, tap, pan, pinch] { view.addGestureRecognizer(recognizer) }
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) { context.coordinator.parent = self }
+
+    @MainActor final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var parent: PictureGestures?
+        private var start = CGPoint.zero
+        private var slide = Slide.seek
+
+        @objc func tapped(_ tap: UITapGestureRecognizer) {
+            guard let view = tap.view else { return }
+            parent?.tap(tap.location(in: view).x, view.bounds.width)
+        }
+
+        @objc func pressed(_ press: UILongPressGestureRecognizer) {
+            let location = press.location(in: press.view)
+            switch press.state {
+            case .began: start = location; parent?.hold(.began)
+            case .changed: parent?.hold(.moved(CGSize(width: location.x - start.x, height: location.y - start.y)))
+            case .ended, .cancelled, .failed: parent?.hold(.ended)
+            default: break
+            }
+        }
+
+        @objc func panned(_ pan: UIPanGestureRecognizer) {
+            guard let view = pan.view else { return }
+            switch pan.state {
+            case .began: parent?.swipe(.began(slide))
+            case .changed:
+                let moved = pan.translation(in: view)
+                parent?.swipe(.moved(CGSize(width: moved.x, height: moved.y), in: view.bounds.size))
+            case .ended, .cancelled, .failed: parent?.swipe(.ended)
+            default: break
+            }
+        }
+
+        @objc func pinched(_ pinch: UIPinchGestureRecognizer) {
+            guard pinch.state == .ended, abs(pinch.scale - 1) > 0.1 else { return }
+            parent?.pinch(pinch.scale > 1)
+        }
+
+        /// Sideways anywhere; up or down only away from the edges that Notification Center, Control Center and the
+        /// Home indicator use.
+        func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer, let view = pan.view else { return true }
+            let velocity = pan.velocity(in: view)
+            if abs(velocity.x) > abs(velocity.y) { slide = .seek; return true }
+            let location = pan.location(in: view)
+            guard parent?.levels == true, PictureLevel.slides(fromY: location.y, height: view.bounds.height) else { return false }
+            slide = location.x < view.bounds.width / 2 ? .brightness : .volume
+            return true
+        }
+    }
+}
+
 /// The picture in an AVPlayerLayer, which Picture in Picture takes over while it runs.
 private struct PlayerLayerView: UIViewRepresentable {
     let player: AVPlayer
@@ -761,7 +1149,7 @@ private struct PlayerLayerView: UIViewRepresentable {
             MPMediaItemPropertyTitle: self.title,
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.video.rawValue,
             MPNowPlayingInfoPropertyIsLiveStream: session.isLive,
-            MPNowPlayingInfoPropertyPlaybackRate: session.paused ? 0.0 : Double(player.defaultRate),
+            MPNowPlayingInfoPropertyPlaybackRate: session.paused ? 0.0 : Double(session.boost ?? player.defaultRate),
             MPNowPlayingInfoPropertyDefaultPlaybackRate: Double(player.defaultRate),
         ]
         let elapsed = player.currentTime().seconds

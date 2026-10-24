@@ -17,6 +17,7 @@ import TVCore
     let playbackDefaults: UserDefaults
     let pinnedSources: PinnedSources
     let hiddenSources: HiddenSources
+    let sourceOrder: SourceOrder
     /// The history entry being resumed; another entry, or leaving the page, replaces or cancels it.
     private(set) var resumingHistoryID: String?
     private var resumeTask: Task<Void, Never>?
@@ -76,6 +77,7 @@ import TVCore
         #endif
         pinnedSources = PinnedSources(defaults: playbackDefaults)
         hiddenSources = HiddenSources(defaults: playbackDefaults)
+        sourceOrder = SourceOrder(defaults: playbackDefaults)
         favorites = Favorites(defaults: defaults)
         SourceHideReports.report = { [hiddenSources] site, origin, error in
             hiddenSources.note(site, origin: origin, error: error, health: .shared)
@@ -104,6 +106,7 @@ import TVCore
             defaults.removeObject(forKey: "subscription")
         }
         rebuildSubscription(resetting: false)
+        searchModel.order = sourceOrder
         DownloadLibrary.shared.resolver = { [weak self] item in
             guard let self else { throw CancellationError() }
             return try await self.resolveDownload(item)
@@ -307,7 +310,6 @@ import TVCore
               let site = config.sites.first(where: { $0.origin(or: config.origin) == video.origin && $0.sourceKey == video.sourceKey }) else { return nil }
         return CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL)
     }
-
     func reportMissingFavoriteSource() {
         error = L10n.text("This favorite's source is no longer in the current subscription. Restore that subscription to open it.")
     }
@@ -327,9 +329,32 @@ import TVCore
         playFile(cloud, in: CloudFilesFolder(drive: drive, id: file.folderID, name: file.folderName, files: [cloud]))
     }
 
+    /// The sources to show, in the viewer's own order while it is on.
     func orderedSites(_ config: Subscription) -> [Site] {
+        let sites = automaticSites(config)
+        return sourceOrder.enabled ? sourceOrder.arrange(sites, origin: config.origin) : sites
+    }
+
+    /// The order the app picks: built-in sources, then `SourceStrategy`'s, with pinned sources first. Hidden sources stay out.
+    func automaticSites(_ config: Subscription) -> [Site] {
         let sites = SourceLists.browsable(config.sites, jarURL: config.spiderURL) { hiddenSources.contains($0, origin: config.origin) }
         return pinnedSources.arrange(sites.filter(\.isBuiltIn) + sites.filter { !$0.isBuiltIn }, origin: config.origin)
+    }
+
+    /// Turns the viewer's own source order on or off. The first time, it starts from the order on
+    /// screen, so nothing jumps.
+    func setCustomSourceOrder(_ enabled: Bool) {
+        if enabled, sourceOrder.isEmpty, let config = subscription { sourceOrder.save(automaticSites(config), origin: config.origin) }
+        sourceOrder.enabled = enabled
+    }
+
+    /// Moves a source within the viewer's order; `offset` is a position in `orderedSites`, as `move(fromOffsets:toOffset:)` takes it.
+    func moveSource(_ site: Site, to offset: Int) {
+        guard let config = subscription else { return }
+        var sites = orderedSites(config)
+        guard let index = sites.firstIndex(where: { $0.id == site.id }) else { return }
+        sites.move(fromOffsets: [index], toOffset: max(0, min(offset, sites.count)))
+        sourceOrder.save(sites, origin: config.origin)
     }
 
     /// The sources page's sections: pinned, built-in, then one per subscription.
@@ -525,6 +550,18 @@ enum Distribution {
         return false
         #endif
     }
+
+    /// An App Store build installed from TestFlight, which leaves a sandbox receipt. A build promoted to the
+    /// App Store gets a production receipt, so it stops sending people to TestFlight. `-qaTestFlight 1` in debug builds.
+    static let isTestFlight: Bool = {
+        #if APPSTORE
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #elseif DEBUG
+        return UserDefaults.standard.bool(forKey: "qaTestFlight")
+        #else
+        return false
+        #endif
+    }()
 }
 
 // MARK: Cloud Files

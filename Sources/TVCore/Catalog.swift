@@ -23,6 +23,11 @@ public struct Video: Identifiable, Hashable, Sendable, Codable {
     public let remarks: String
     public let synopsis: String
     public let episodes: [Episode]
+    public init(id: String, name: String, poster: URL? = nil, posterHeaders: [String: String] = [:], year: String? = nil,
+                remarks: String = "", synopsis: String = "", episodes: [Episode] = []) {
+        self.id = id; self.name = name; self.poster = poster; self.posterHeaders = posterHeaders
+        self.year = year; self.remarks = remarks; self.synopsis = synopsis; self.episodes = episodes
+    }
     public init?(json: [String: JSONValue], origin: URL) {
         guard let id = json["vod_id"]?.string, !id.isEmpty else { return nil }
         self.id = id; name = json["vod_name"]?.string.map(HTMLText.name).flatMap { $0.isEmpty ? nil : $0 } ?? id

@@ -106,6 +106,58 @@ final class LibraryUITests: XCTestCase {
         wait(app.staticTexts["player.qa.position"], "value.doubleValue >= %@.doubleValue", "35")
         XCTAssertEqual(app.alerts.count, 0)
     }
+    @MainActor func testHoldingThePicturePlaysFasterAndSlidingDownKeepsIt() {
+        continueAfterFailure = false
+        let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1"])
+        let position = app.staticTexts["player.qa.position"]
+        wait(position, "value.doubleValue >= %@.doubleValue", "1")
+        let picture = app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.55))
+        let boost = app.buttons["player.boost"]
+        // Letting go goes back to the chosen speed.
+        picture.press(forDuration: 1)
+        XCTAssertFalse(boost.waitForExistence(timeout: 1))
+        // Sliding down keeps it.
+        picture.press(forDuration: 1, thenDragTo: picture.withOffset(CGVector(dx: 0, dy: 120)))
+        XCTAssertTrue(boost.waitForExistence(timeout: 5))
+        XCTAssertEqual(boost.value as? String, "2×")
+        let start = Double(position.value as? String ?? "") ?? 0
+        sleep(4)
+        let end = Double(position.value as? String ?? "") ?? 0
+        XCTAssertGreaterThan(end - start, 6)
+        boost.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: boost)
+        waitForExpectations(timeout: 5)
+    }
+    @MainActor func testDoubleTappingASideSkipsAndSlidingAcrossSeeks() {
+        continueAfterFailure = false
+        let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1", "-qaStartAt", "60"])
+        let position = app.staticTexts["player.qa.position"]
+        wait(position, "value.doubleValue >= %@.doubleValue", "60")
+        func now() -> Double { Double(position.value as? String ?? "") ?? 0 }
+        let before = now()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.55)).doubleTap()
+        wait(position, "value.doubleValue <= %@.doubleValue", String(before - 5), timeout: 5)
+        // Half the picture's width is 90 seconds of this five-minute video.
+        let from = now()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.55))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.55)))
+        wait(position, "value.doubleValue >= %@.doubleValue", String(from + 80))
+        XCTAssertFalse(app.descendants(matching: .any)["player.swipeSeek"].exists)
+    }
+    @MainActor func testSlidingUpOrDownSetsTheBrightnessOrTheVolume() {
+        continueAfterFailure = false
+        let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1"])
+        wait(app.staticTexts["player.qa.position"], "value.doubleValue >= %@.doubleValue", "1")
+        // The level shows for under a second after the finger lifts, less than a query takes to arrive: read the
+        // hierarchy captured at once instead.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.7))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.45)))
+        XCTAssertTrue(app.debugDescription.contains("identifier: 'player.level', label: '亮度'"))
+        sleep(2)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.45))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.7)))
+        XCTAssertTrue(app.debugDescription.contains("identifier: 'player.level', label: '音量'"))
+    }
     @MainActor func testNativePlayerAutomaticallyAdvancesToNextEpisode() {
         continueAfterFailure = false
         let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1", "-qaStartAt", "296", "-autoPlayNextEpisode", "1"])

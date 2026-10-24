@@ -778,6 +778,9 @@ private struct DesktopPlaybackView: View {
     @State private var showsDanmakuList = false
     @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
     @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
+    /// Devices with Yingxia open, for the Play On button; and the one the video was sent to.
+    @State private var tvBrowser = PlayOnBrowser()
+    @State private var playingOn: String?
 
     private var showsChrome: Bool { idle.visible || session.error != nil }
     private var waitContent: PlaybackWaitContent? { .make(session, channel: channel, store: store, linesHint: true) }
@@ -800,6 +803,13 @@ private struct DesktopPlaybackView: View {
                     .padding(24).frame(maxWidth: 440)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18)).padding()
                 }
+                if let playingOn {
+                    Color.black
+                    PlayOnPlaceholder(receiver: playingOn) {
+                        self.playingOn = nil
+                        if session.paused { session.togglePlayback() }
+                    }
+                }
             }
             topBar
                 .opacity(showsChrome ? 1 : 0)
@@ -811,12 +821,14 @@ private struct DesktopPlaybackView: View {
         .onChange(of: session.catalogDanmaku.enabled) { _, value in showsDanmaku = value }
         .onChange(of: floats) { _, value in window.level = value ? .floating : .normal }
         .onChange(of: showsChrome) { _, value in setTrafficLights(visible: value) }
-        .onAppear { floats = window.level == .floating; idle.attach(window) }
+        .onAppear { floats = window.level == .floating; idle.attach(window); tvBrowser.start() }
+        // Played here again (Space, say): the other device no longer has it to itself.
+        .onChange(of: session.paused) { _, paused in if !paused { playingOn = nil } }
         .sheet(isPresented: $showsDanmakuList) {
             DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
                 .danmakuListPresentation()
         }
-        .onDisappear { idle.detach() }
+        .onDisappear { idle.detach(); tvBrowser.stop() }
     }
 
     /// Title on the left (beside the traffic lights), actions on the right, over a soft scrim.
@@ -843,6 +855,12 @@ private struct DesktopPlaybackView: View {
                     if let next = store.step(back: false, from: channel, session: session) {
                         barButton("forward.end.fill", L10n.text("Next Episode"), help: next.name) { next.go() }
                             .disabled(next.busy)
+                    }
+                    if !tvBrowser.receivers.isEmpty {
+                        PlayOnButton(channel: channel, session: session, browser: tvBrowser) { receiver in
+                            session.player.pause()
+                            playingOn = receiver
+                        }
                     }
                     CatalogPlaybackActions(channel: channel, session: session)
                     optionsMenu
@@ -941,7 +959,7 @@ private struct DesktopNativePlayer: NSViewRepresentable {
         view.showsFullScreenToggleButton = true
         view.allowsPictureInPicturePlayback = true
         view.showsSharingServiceButton = false
-        view.speeds = [0.5, 0.75, 1, 1.25, 1.5, 2].map { AVPlaybackSpeed(rate: Float($0), localizedName: "\($0)×") }
+        view.speeds = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4].map { AVPlaybackSpeed(rate: Float($0), localizedName: "\($0)×") }
         return view
     }
     func updateNSView(_ view: AVPlayerView, context: Context) {

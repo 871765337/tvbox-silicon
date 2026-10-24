@@ -1,7 +1,121 @@
 {
   "releases": [
     {
+      "version": "1.7.11",
+      "build": 30,
+      "date": "2026-10-24",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-macos-arm64.dmg",
+        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-macos-x86_64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "airplayvideo",
+          "title": {
+            "en": "Play On",
+            "zh-Hans": "在其他设备上播放",
+            "zh-Hant": "在其他裝置上播放",
+            "ja": "ほかのデバイスで再生"
+          },
+          "detail": {
+            "en": "Like AirPlay: send what's playing on your iPhone, iPad or Mac to Yingxia on an Apple TV or another Mac on the same network. It picks up at the same spot, with the episode list and Next.",
+            "zh-Hans": "类似隔空播放：把 iPhone、iPad 或 Mac 上正在播放的内容发送到同一网络中 Apple TV 或另一台 Mac 上的映匣，从同一位置继续播放，剧集列表和下一集也都可用。",
+            "zh-Hant": "類似 AirPlay：把 iPhone、iPad 或 Mac 上正在播放的內容傳送到同一網路中 Apple TV 或另一台 Mac 上的映匣，從同一位置繼續播放，劇集列表和下一集也都可用。",
+            "ja": "AirPlay のように、iPhone・iPad・Mac で再生中のものを、同じネットワーク上の Apple TV や別の Mac の映匣に送れます。同じ位置から続きを再生し、エピソード一覧や「次へ」も使えます。"
+          }
+        },
+        {
+          "symbol": "heart",
+          "title": {
+            "en": "Favorite shows",
+            "zh-Hans": "收藏剧集",
+            "zh-Hant": "收藏劇集",
+            "ja": "番組をお気に入りに"
+          },
+          "detail": {
+            "en": "Favorites used to hold only live channels. Tap the heart on a show's page to save a series or film; saved shows appear in Favorites and in a row on Watch Now.",
+            "zh-Hans": "以前收藏只能保存直播频道。现在点按剧集页面上的爱心即可收藏剧集或电影，收藏的内容会显示在“收藏”和“现在观看”的一行中。",
+            "zh-Hant": "以前收藏只能保存直播頻道。現在點按劇集頁面上的愛心即可收藏劇集或電影，收藏的內容會顯示在「收藏」和「立即觀看」的一列中。",
+            "ja": "これまでお気に入りにはライブチャンネルしか保存できませんでした。番組ページのハートをタップすると、シリーズや映画を保存でき、「お気に入り」と「今すぐ観る」の一列に表示されます。"
+          }
+        },
+        {
+          "symbol": "arrow.up.arrow.down",
+          "title": {
+            "en": "Your own search order",
+            "zh-Hans": "自定义搜索顺序",
+            "zh-Hant": "自訂搜尋順序",
+            "ja": "検索の順番を自分で決める"
+          },
+          "detail": {
+            "en": "Turn on Custom Search Order on the Sources page and arrange your sources. Search asks them from the top down and lists their results in that order.",
+            "zh-Hans": "在“点播源”页面打开“自定义搜索顺序”并排列片源，搜索会从上到下依次询问片源，并按此顺序列出结果。",
+            "zh-Hant": "在「隨選來源」頁面開啟「自訂搜尋順序」並排列片源，搜尋會從上到下依序詢問片源，並按此順序列出結果。",
+            "ja": "「配信ソース」ページで「カスタム検索順」をオンにしてソースを並べ替えると、検索は上から順にソースに問い合わせ、その順番で結果を表示します。"
+          }
+        },
+        {
+          "symbol": "hand.tap",
+          "title": {
+            "en": "Player gestures",
+            "zh-Hans": "播放器手势",
+            "zh-Hant": "播放器手勢",
+            "ja": "プレーヤーのジェスチャ"
+          },
+          "detail": {
+            "en": "Touch and hold the picture to play faster, double-tap a side to skip 10 seconds, slide across to seek, slide up or down for brightness and volume, and pinch to fill the screen.",
+            "zh-Hans": "按住画面即可加速播放，双击左右两侧可跳过 10 秒，左右滑动可拖动进度，上下滑动可调节亮度和音量，捏合可铺满屏幕。",
+            "zh-Hant": "按住畫面即可加速播放，點兩下左右兩側可跳過 10 秒，左右滑動可拖動進度，上下滑動可調整亮度和音量，捏合可填滿螢幕。",
+            "ja": "画面を長押しすると速く再生し、左右をダブルタップすると 10 秒スキップ、横にスライドするとシーク、上下にスライドすると明るさと音量を調整、ピンチで画面いっぱいに表示します。"
+          },
+          "platforms": [
+            "ios"
+          ]
+        },
+        {
+          "symbol": "gauge.with.dots.needle.67percent",
+          "title": {
+            "en": "Speeds from 0.5x to 4x",
+            "zh-Hans": "0.5 至 4 倍速",
+            "zh-Hant": "0.5 至 4 倍速",
+            "ja": "0.5〜4 倍速"
+          },
+          "detail": {
+            "en": "The speed menu now goes up to 3x and 4x.",
+            "zh-Hans": "倍速菜单现在增加了 3 倍和 4 倍。",
+            "zh-Hant": "倍速選單現在增加了 3 倍和 4 倍。",
+            "ja": "速度メニューに 3 倍と 4 倍が加わりました。"
+          },
+          "platforms": [
+            "ios",
+            "macos"
+          ]
+        },
+        {
+          "symbol": "circle.lefthalf.filled",
+          "title": {
+            "en": "Dark and tinted icons",
+            "zh-Hans": "深色与着色图标",
+            "zh-Hant": "深色與著色圖像",
+            "ja": "ダークと色付きのアイコン"
+          },
+          "detail": {
+            "en": "Yingxia's Home Screen icon now follows the Dark and Tinted icon styles.",
+            "zh-Hans": "映匣的主屏幕图标现在会跟随“深色”和“着色”图标样式。",
+            "zh-Hant": "映匣的主畫面圖像現在會跟隨「深色」和「著色」圖像樣式。",
+            "ja": "ホーム画面の映匣のアイコンが「ダーク」と「色付き」のスタイルに対応しました。"
+          },
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.10",
+      "build": 29,
       "date": "2026-10-24",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.10/Yingxia-1.7.10-macos-arm64.dmg",
@@ -62,6 +176,7 @@
     },
     {
       "version": "1.7.9",
+      "build": 28,
       "date": "2026-10-23",
       "links": {
         "ios": "https://yingxia.getmegaportal.com/#install-ios",
@@ -181,6 +296,7 @@
     },
     {
       "version": "1.7.8",
+      "build": 27,
       "date": "2026-10-23",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-arm64.dmg",
@@ -329,6 +445,7 @@
     },
     {
       "version": "1.7.6",
+      "build": 23,
       "date": "2026-10-22",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.6/Yingxia-1.7.6-macos-arm64.dmg",
@@ -404,6 +521,7 @@
     },
     {
       "version": "1.7.5",
+      "build": 22,
       "date": "2026-10-20",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.5/Yingxia-1.7.5-macos-arm64.dmg",
@@ -515,6 +633,7 @@
     },
     {
       "version": "1.7.3",
+      "build": 21,
       "date": "2026-10-19",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-arm64.dmg",
@@ -632,6 +751,7 @@
     },
     {
       "version": "1.7.2",
+      "build": 20,
       "date": "2026-10-17",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-macos-arm64.dmg",
@@ -688,6 +808,7 @@
     },
     {
       "version": "1.7.1",
+      "build": 19,
       "date": "2026-10-17",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.1/Yingxia-1.7.1-macos-arm64.dmg",
@@ -714,6 +835,7 @@
     },
     {
       "version": "1.7.0",
+      "build": 18,
       "date": "2026-10-16",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.0/Yingxia-1.7.0-macos-arm64.dmg",
@@ -785,6 +907,7 @@
     },
     {
       "version": "1.6.5",
+      "build": 16,
       "date": "2026-10-16",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.5/Yingxia-1.6.5-macos-arm64.dmg",
@@ -811,6 +934,7 @@
     },
     {
       "version": "1.6.4",
+      "build": 15,
       "date": "2026-10-15",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.4/Yingxia-1.6.4-macos-arm64.dmg",
@@ -897,6 +1021,7 @@
     },
     {
       "version": "1.6.3",
+      "build": 14,
       "date": "2026-10-15",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.3/Yingxia-1.6.3-macos-arm64.dmg",
@@ -998,6 +1123,7 @@
     },
     {
       "version": "1.6.2",
+      "build": 13,
       "date": "2026-10-14",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.2/Yingxia-1.6.2-macos-arm64.dmg",
@@ -1024,6 +1150,7 @@
     },
     {
       "version": "1.6.1",
+      "build": 12,
       "date": "2026-10-14",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.1/Yingxia-1.6.1-macos-arm64.dmg",
@@ -1050,6 +1177,7 @@
     },
     {
       "version": "1.6",
+      "build": 11,
       "date": "2026-10-14",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6/Yingxia-1.6-macos-arm64.dmg",
@@ -1154,6 +1282,7 @@
     },
     {
       "version": "1.5.1",
+      "build": 10,
       "date": "2026-10-13",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.5.1/Yingxia-1.5.1-macos-arm64.dmg",
@@ -1213,6 +1342,7 @@
     },
     {
       "version": "1.5",
+      "build": 9,
       "date": "2026-10-13",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.5/Yingxia-1.5-macos-arm64.dmg",
@@ -1332,6 +1462,7 @@
     },
     {
       "version": "1.3",
+      "build": 8,
       "date": "2026-10-13",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.3/Yingxia-1.3-macos-arm64.dmg",
@@ -1439,6 +1570,7 @@
     },
     {
       "version": "1.2.2",
+      "build": 7,
       "date": "2026-10-12",
       "links": {
         "ios": "https://yingxia.getmegaportal.com/#install-ios",
@@ -1468,6 +1600,7 @@
     },
     {
       "version": "1.2.1",
+      "build": 6,
       "date": "2026-10-12",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.2.1/Yingxia-1.2.1-macos-arm64.dmg",
@@ -1515,6 +1648,7 @@
     },
     {
       "version": "1.2",
+      "build": 5,
       "date": "2026-10-12",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.2/Yingxia-1.2-macos-arm64.dmg",
@@ -1580,6 +1714,7 @@
     },
     {
       "version": "1.1.5",
+      "build": 4,
       "date": "2026-10-11",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.1.5/Yingxia-1.1.5-macos-arm64.dmg",
@@ -1703,6 +1838,7 @@
     },
     {
       "version": "1.1",
+      "build": 3,
       "date": "2026-10-11",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-macos-arm64.dmg",
@@ -1823,6 +1959,7 @@
     },
     {
       "version": "1.0.1",
+      "build": 2,
       "date": "2026-10-09",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.0.1/Yingxia-1.0.1-macos-arm64.dmg",
@@ -1867,11 +2004,22 @@
     },
     {
       "version": "1.0",
+      "build": 1,
       "date": "2026-10-08",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.0/Yingxia-1.0-macos-arm64.dmg"
       },
       "features": []
     }
-  ]
+  ],
+  "testflight": {
+    "ios": {
+      "build": 30,
+      "link": "https://testflight.apple.com/join/dU6UNbzp"
+    },
+    "tvos": {
+      "build": 30,
+      "link": "https://testflight.apple.com/join/SSgWEwSr"
+    }
+  }
 }

@@ -158,15 +158,35 @@ struct FavoriteDocument: Codable {
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        guard let data = defaults.data(forKey: Self.storageKey) else { return }
-        if let document = try? JSONDecoder().decode(FavoriteDocument.self, from: data), document.version == 2 {
-            items = document.items
-            return
+        var migrated = false
+        if let data = defaults.data(forKey: Self.storageKey) {
+            if let document = try? JSONDecoder().decode(FavoriteDocument.self, from: data), document.version == 2 {
+                items = document.items
+            } else if let channels = try? JSONDecoder().decode([Channel].self, from: data) {
+                items = channels.map { .live($0) }
+                migrated = true
+            }
         }
-        if let channels = try? JSONDecoder().decode([Channel].self, from: data) {
-            items = channels.map { .live($0) }
-            persist()
+        if adoptVideoFavorites() { migrated = true }
+        if migrated { persist() }
+    }
+
+    /// Shows saved by the earlier favorites list, once. Unfavoriting one afterwards stays removed.
+    private func adoptVideoFavorites() -> Bool {
+        let adopted = "videoFavorites.adopted.v1"
+        guard !defaults.bool(forKey: adopted) else { return false }
+        defaults.set(true, forKey: adopted)
+        guard let data = defaults.data(forKey: "videoFavorites"),
+              let shows = try? JSONDecoder().decode([VideoFavorite].self, from: data) else { return false }
+        var added = false
+        for show in shows.reversed() {
+            let video = FavoriteVideo(origin: show.origin, sourceKey: show.sourceKey, sourceName: show.sourceName, videoID: show.videoID, videoName: show.name, poster: show.poster, posterHeaders: show.posterHeaders ?? [:], year: show.year)
+            let item = FavoriteItem.video(video)
+            guard !items.contains(where: { $0.matches(item) }) else { continue }
+            items.insert(item, at: 0)
+            added = true
         }
+        return added
     }
 
     public func contains(_ item: FavoriteItem) -> Bool { items.contains { $0.matches(item) } }

@@ -37,9 +37,11 @@ import Observation
     }
     private var cache: [String: Cached] = [:]
     private var subscriptionID: String?
-    /// Each source's position in `SourceStrategy` order; matches are listed in this order.
+    /// Each source's position in `SourceStrategy` order, or the viewer's own; matches are listed in this order.
     private var rank: [String: Int] = [:]
     private var excluded: @MainActor (Site) -> Bool = { _ in false }
+    /// The viewer's source order; while it is on, it replaces `SourceStrategy`'s.
+    public var order: SourceOrder?
     public init(http: HTTPClient = HTTPClient()) { self.http = http }
 
     public var failures: [SearchSourceResult] { results.filter { $0.error != nil } }
@@ -163,7 +165,7 @@ import Observation
         let sites = Self.eligible(config.sites, jarURL: config.spiderURL, excluding: hidden)
         let preferred = UserDefaults.standard.string(forKey: Self.sourceKey)
         selectedSource = sites.contains { $0.id == preferred } ? preferred : nil; scrollID = nil
-        rank = Dictionary(SourceStrategy.arrange(sites, where: { _ in true }, failing: failing(config)).enumerated().map { ($1.id, $0) }) { first, _ in first }
+        rank = Dictionary(arrange(sites, config: config, failing: failing(config)).enumerated().map { ($1.id, $0) }) { first, _ in first }
         total = sites.count
         if let hit = cache[value], Date().timeIntervalSince(hit.created) < 300 {
             results = Self.visible(hit.results, excluding: hidden)
@@ -199,11 +201,12 @@ import Observation
             warm = await LocalJarHost.shared.reusableSourceKeys()
             #endif
             let failing = self.failing(config)
-            let arranged = SourceStrategy.arrange(sites, where: { _ in true }, failing: failing)
+            let arranged = self.arrange(sites, config: config, failing: failing)
             // Built-in sources answer first: they are quick and the ones most often filtered to.
+            // The viewer's own order is asked as it is, top first.
             // Sources that keep failing go last, warm or not, so they never hold up the rest.
-            let preferred = (arranged.filter { warm.contains($0.key) } + arranged.filter { !warm.contains($0.key) })
-                .enumerated().sorted { ($0.element.isBuiltIn ? 0 : 1, $0.offset) < ($1.element.isBuiltIn ? 0 : 1, $1.offset) }.map(\.element)
+            let preferred = self.order?.enabled == true ? arranged
+                : (arranged.filter { warm.contains($0.key) } + arranged.filter { !warm.contains($0.key) }).enumerated().sorted { ($0.element.isBuiltIn ? 0 : 1, $0.offset) < ($1.element.isBuiltIn ? 0 : 1, $1.offset) }.map(\.element)
             let ordered = preferred.filter { !failing($0) } + preferred.filter(failing)
             guard self.generation == token else { return }
             await GlobalSearch.search(sites: ordered, origin: config.origin, jarURL: config.spiderURL, query: keyword, http: self.http) { result in
@@ -218,7 +221,15 @@ import Observation
         }
     }
 
-    /// Sources in a `SourceHealth` cooldown, asked and listed after the others.
+    /// `SourceStrategy` order, or the viewer's own while it is on (sources it doesn't list yet follow).
+    private func arrange(_ sites: [Site], config: Subscription, failing: (Site) -> Bool) -> [Site] {
+        let automatic = SourceStrategy.arrange(sites, where: { _ in true }, failing: failing)
+        guard let order, order.enabled else { return automatic }
+        return order.arrange(automatic, origin: config.origin)
+    }
+
+    /// Sources in a `SourceHealth` cooldown, asked after the others (and listed after them unless
+    /// the viewer's own order is on).
     private func failing(_ config: Subscription) -> @Sendable (Site) -> Bool {
         let now = Date()
         let down = Set(config.sites.filter { SourceHealth.shared.deprioritized($0, origin: config.origin, now: now) }.map(\.id))

@@ -267,8 +267,20 @@ import TVCore
     }
 
     func setSpeed(_ speed: Float) {
+        boost = nil
         player.defaultRate = speed
         if player.rate != 0 { player.rate = speed }
+    }
+
+    /// Another rate while the picture is held (`SpeedBoost`); nil plays at the chosen speed again. It never becomes
+    /// the chosen speed, so the speed menu and a later play keep the one picked there. Pausing ends it.
+    /// Up to 4× even where the item says it can't fast-forward: an HLS stream without I-frame playlists says so, yet
+    /// plays at 3× and 4× in full, as the menu's speeds do.
+    private(set) var boost: Float?
+    func setBoost(_ rate: Float?) {
+        guard rate == nil || !paused else { return }
+        boost = rate
+        if player.rate != 0 { player.rate = boost ?? player.defaultRate }
     }
     private var generation = UUID()
     init() {
@@ -464,6 +476,7 @@ import TVCore
                 guard let self, self.generation == activeGeneration else { return }
                 self.buffering = waiting
                 self.paused = paused
+                if paused { self.boost = nil }
                 // The first frame lands a beat after playback starts; keep the artwork until then, so no black flashes between.
                 if playing, !self.showsPicture {
                     Task { @MainActor [weak self] in
@@ -584,7 +597,7 @@ import TVCore
         saveHistory()
         discardUpcoming()
         upcomingAttempted = false; skipsToUpcoming = false; advanced = nil
-        upcomingEpisode = nil; onAdvance = nil; playsOn = { false }
+        upcomingEpisode = nil; onAdvance = nil; playsOn = { false }; boost = nil
         if let url = playing?.url { HongguoStreams.stop(url) }
         if let automatic { CloudStreams.stop(automatic) }
         if playing != nil { ErrorReports.shared.stoppedPlaying() }
