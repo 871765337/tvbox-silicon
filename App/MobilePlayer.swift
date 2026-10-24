@@ -161,11 +161,11 @@ struct MobilePlayerView: View {
             hideChrome()
             session.skip(seconds)
             nowPlaying.update(title: channel.name, session: session)
-            skipped = (seconds > 0, total)
+            withAnimation(.snappy(duration: 0.25)) { skipped = (seconds > 0, total) }
             skippedTask?.cancel()
             skippedTask = Task {
                 try? await Task.sleep(for: .seconds(PictureTaps.streak + 0.1))
-                if !Task.isCancelled { skipped = nil }
+                if !Task.isCancelled { withAnimation(.easeOut(duration: 0.2)) { skipped = nil } }
             }
         }
     }
@@ -263,19 +263,23 @@ struct MobilePlayerView: View {
     /// How far a run of double taps skipped, on its side.
     @ViewBuilder private var skippedLabel: some View {
         if let skipped {
-            VStack(spacing: 6) {
-                Image(systemName: skipped.forward ? "goforward" : "gobackward").font(.title)
+            // Glass like the other gesture labels, with the skip buttons' symbol; it bounces on each further tap.
+            VStack(spacing: 4) {
+                Image(systemName: skipped.forward ? "goforward.10" : "gobackward.10")
+                    .font(.system(size: 30, weight: .medium))
+                    .symbolEffect(.bounce, value: skipped.total)
                 Text((skipped.forward ? "+" : "\u{2212}") + L10n.text("%lld s", Int(skipped.total)))
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .font(.footnote.weight(.semibold).monospacedDigit())
+                    .contentTransition(.numericText(value: skipped.total))
             }
             .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.5), radius: 6)
-            .frame(width: 120, height: 120)
-            .background(.black.opacity(0.25), in: Circle())
+            .frame(width: 96, height: 96)
+            .glassSurface(.regular, in: Circle())
+            .environment(\.colorScheme, .dark)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: skipped.forward ? .trailing : .leading)
-            .padding(.horizontal, 40)
+            .padding(.horizontal, 48)
             .allowsHitTesting(false)
-            .transition(.opacity)
+            .transition(.scale(scale: 0.8, anchor: skipped.forward ? .trailing : .leading).combined(with: .opacity))
             .accessibilityElement(children: .ignore)
             .accessibilityIdentifier("player.tapSkip")
             .accessibilityValue("\(skipped.forward ? "+" : "-")\(Int(skipped.total))")
