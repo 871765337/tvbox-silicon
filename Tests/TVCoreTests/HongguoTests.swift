@@ -46,6 +46,16 @@ struct HongguoTests {
             globalThis.req = url => { searched = url; return { code: 200, content: JSON.stringify({ searchList: [], hasMore: false }) }; };
             spider.search(' 总裁 ', false, '2');
             checks.searchRequest = searched === 'https://hongguoduanju.com/api/search/result?query=%E6%80%BB%E8%A3%81&page=2';
+            let answers = [502, 502, 200], asked = 0;
+            const answer = code => ({ code, content: code === 200 ? JSON.stringify({ searchList: [{ video_data: series }], hasMore: false }) : '{"code":"upstream_unavailable"}' });
+            globalThis.req = () => answer(answers[asked++]);
+            checks.retry = spider.search('总裁', false, '1').list.length === 1 && asked === 3;
+            answers = [502, 502, 502, 200]; asked = 0; rejected = false;
+            try { spider.search('总裁', false, '1'); } catch { rejected = true; }
+            const gaveUp = rejected && asked === 3;
+            answers = [404, 200]; asked = 0; rejected = false;
+            try { spider.search('总裁', false, '1'); } catch { rejected = true; }
+            checks.retryLimit = gaveUp && rejected && asked === 1;
             const list = catalog(page({ isSuccess: true, categoryRoute: { contentType: 'real-drama' }, recommendList: [series, series], pagination: { totalPages: 3 } }), 'real-drama', 2);
             checks.catalog = list.list.length === 1 && list.page === 2 && list.pagecount === 3;
             const rank = `<article><span>1</span><h2 id="rank-title-${sid}">Title</h2><a href="/detail?series_id=${sid}"><img src="https://example.com/a.jpg"></a></article><nav aria-label="榜单分页"><a href="/rank/hot-drama?page=3">3</a></nav>`;
@@ -101,7 +111,7 @@ struct HongguoTests {
         let envelope = try await session.call([:])
         let json = try #require(envelope["result"]?.string, "\(envelope)")
         let checks = try #require(JSONDecoder().decode([String: JSONValue].self, from: Data(json.utf8))["checks"]?.object)
-        #expect(checks.count == 20)
+        #expect(checks.count == 22)
         for (name, result) in checks { #expect(result == .bool(true), "\(name)") }
     }
 
