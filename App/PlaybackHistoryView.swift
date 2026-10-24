@@ -134,6 +134,7 @@ struct HistoryCard: View {
     var details = false
     /// Replaces resuming, for managing.
     var action: (() -> Void)? = nil
+    @State private var hovering = false
     var body: some View {
         // The heart is a sibling of the poster button, so a click does not resume or change the selection.
         ZStack(alignment: .topLeading) {
@@ -143,6 +144,23 @@ struct HistoryCard: View {
                 .padding(8)
                 .allowsHitTesting(drag?.active != true)
         }
+        .overlay(alignment: .topTrailing) {
+            if details, selection == nil, hovering { historyRemove.padding(8).transition(.opacity) }
+        }
+        .onHover { hovering = $0 }
+        .animation(.smooth(duration: 0.15), value: hovering)
+    }
+
+    /// Red remove control on the history page. A pointer shows it; the context menu stays for touch and the remote.
+    private var historyRemove: some View {
+        Button { store.playbackHistory.remove(entry.id) } label: {
+            Image(systemName: "xmark").font(.system(size: 9, weight: .bold)).foregroundStyle(.black.opacity(0.8))
+                .frame(width: 22, height: 22)
+                .background(Brand.rose, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L10n.text("Remove from history"))
     }
 
     private var posterButton: some View {

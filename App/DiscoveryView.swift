@@ -357,16 +357,29 @@ struct GlobalSearchView: View {
                 }
                 VStack(spacing: 0) {
                     ForEach(Array(history.enumerated()), id: \.element) { index, item in
-                        Button { model.draft = item; if let config = store.subscription { submit(config) } } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: "clock.arrow.circlepath").font(.body).foregroundStyle(.secondary).frame(width: 24)
-                                Text(item).font(.body).lineLimit(1)
-                                Spacer(minLength: 0)
-                                Image(systemName: "arrow.up.left").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                        HStack(spacing: 0) {
+                            Button { useHistory(item) } label: {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "clock.arrow.circlepath").font(.body).foregroundStyle(.secondary).frame(width: 24)
+                                    Text(item).font(.body).lineLimit(1)
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.leading, 18).frame(minHeight: 52).frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                            Button { removeSearch(item) } label: {
+                                Image(systemName: "xmark").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                                    .frame(width: 36, height: 52)
+                                    .contentShape(Rectangle())
                             }
-                            .padding(.horizontal, 18).frame(minHeight: 52).frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }.buttonStyle(.plain)
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("Remove"))
+                            Button { useHistory(item) } label: {
+                                Image(systemName: "arrow.up.left").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                                    .padding(.trailing, 18).frame(height: 52)
+                                    .contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                        }
                         if index < history.count - 1 { Divider().padding(.leading, 56) }
                     }
                 }
@@ -418,6 +431,15 @@ struct GlobalSearchView: View {
         #elseif os(tvOS)
         .frame(width: 1000, height: 650)
         #endif
+    }
+
+    private func useHistory(_ item: String) {
+        model.draft = item
+        if let config = store.subscription { submit(config) }
+    }
+
+    private func removeSearch(_ item: String) {
+        historyData = (try? JSONEncoder().encode(history.filter { $0 != item })) ?? historyData
     }
 
     private func rememberQuery(_ query: String? = nil) {
