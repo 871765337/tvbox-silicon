@@ -39,6 +39,10 @@
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "TVBox JSON 配信設定、M3U / TXT ライブ再生リスト、type 1 / type 4 の標準 JSON API に対応しています。メディア形式はデバイスによって異なります。Mac のローカル JavaScript と Python プラグイン、およびすべてのプラットフォームの JAR プラグインは試験対応で、互換性は配信元によって異なります。";
 "No Favorites Yet" = "お気に入りはまだありません";
 "Tap the heart next to a live channel to save it on this device." = "ライブチャンネルの横にあるハートを押すと、このデバイスに保存できます。";
+"Films" = "作品";
+"Saved Episodes" = "エピソード";
+"Save a live channel, a video, an episode, a song, or a cloud file with the heart." = "ライブ、作品の詳細、エピソード、再生履歴、曲、クラウドのファイルでハートを押せます。";
+"Unable to save favorites: %@" = "お気に入りを保存できません：%@";
 "Remove %@ from favorites" = "%@ をお気に入りから削除";
 "Add %@ to favorites" = "%@ をお気に入りに追加";
 "Connect a Live Subscription" = "ライブ配信設定を追加";

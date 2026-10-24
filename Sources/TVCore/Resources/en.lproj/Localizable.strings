@@ -39,6 +39,10 @@
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source.";
 "No Favorites Yet" = "No Favorites Yet";
 "Tap the heart next to a live channel to save it on this device." = "Tap the heart next to a live channel to save it on this device.";
+"Films" = "Films";
+"Saved Episodes" = "Saved Episodes";
+"Save a live channel, a video, an episode, a song, or a cloud file with the heart." = "Save a live channel, a video, an episode, a song, or a cloud file with the heart.";
+"Unable to save favorites: %@" = "Unable to save favorites: %@";
 "Remove %@ from favorites" = "Remove %@ from favorites";
 "Add %@ to favorites" = "Add %@ to favorites";
 "Connect a Live Subscription" = "Connect a Live Subscription";

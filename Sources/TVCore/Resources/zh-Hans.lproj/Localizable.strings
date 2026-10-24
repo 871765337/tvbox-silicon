@@ -39,6 +39,10 @@
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "支持 TVBox JSON 订阅、M3U / TXT 直播列表与 type 1 / type 4 标准 JSON 接口。媒体格式取决于设备。Mac 版提供实验性本地 JavaScript 和 Python 插件支持，所有平台均提供实验性 JAR 插件支持，兼容情况因视频源而异。";
 "No Favorites Yet" = "还没有收藏";
 "Tap the heart next to a live channel to save it on this device." = "在直播频道旁点爱心，收藏会保存在这台设备上。";
+"Films" = "影片";
+"Saved Episodes" = "剧集";
+"Save a live channel, a video, an episode, a song, or a cloud file with the heart." = "可以在直播、影片详情、某一集、历史记录、歌曲和网盘文件上点心形收藏。";
+"Unable to save favorites: %@" = "收藏保存失败：%@";
 "Remove %@ from favorites" = "取消收藏 %@";
 "Add %@ to favorites" = "收藏 %@";
 "Connect a Live Subscription" = "连接直播订阅";
