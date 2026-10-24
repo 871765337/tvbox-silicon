@@ -144,6 +144,20 @@ final class LibraryUITests: XCTestCase {
         wait(position, "value.doubleValue >= %@.doubleValue", String(from + 80))
         XCTAssertFalse(app.descendants(matching: .any)["player.swipeSeek"].exists)
     }
+    @MainActor func testSlidingUpOrDownSetsTheBrightnessOrTheVolume() {
+        continueAfterFailure = false
+        let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1"])
+        wait(app.staticTexts["player.qa.position"], "value.doubleValue >= %@.doubleValue", "1")
+        // The level shows for under a second after the finger lifts, less than a query takes to arrive: read the
+        // hierarchy captured at once instead.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.7))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.45)))
+        XCTAssertTrue(app.debugDescription.contains("identifier: 'player.level', label: '亮度'"))
+        sleep(2)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.45))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.7)))
+        XCTAssertTrue(app.debugDescription.contains("identifier: 'player.level', label: '音量'"))
+    }
     @MainActor func testNativePlayerAutomaticallyAdvancesToNextEpisode() {
         continueAfterFailure = false
         let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1", "-qaStartAt", "296", "-autoPlayNextEpisode", "1"])

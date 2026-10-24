@@ -969,3 +969,6 @@
 "Slide sideways to change the speed, or down to keep it" = "左右にスライドで速度を変更、下にスライドで固定";
 "Back to Normal Speed" = "通常の速度に戻す";
 "%lld s" = "%lld 秒";
+"Brightness" = "明るさ";
+"Slide for Brightness and Volume" = "スライドで明るさと音量を調整";
+"Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "動画の左側を上下にスライドすると明るさ、右側では音量を調整できます。";

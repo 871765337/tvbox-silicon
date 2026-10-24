@@ -969,3 +969,6 @@
 "Slide sideways to change the speed, or down to keep it" = "Slide sideways to change the speed, or down to keep it";
 "Back to Normal Speed" = "Back to Normal Speed";
 "%lld s" = "%lld s";
+"Brightness" = "Brightness";
+"Slide for Brightness and Volume" = "Slide for Brightness and Volume";
+"Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "Slide up or down on the left of the video to change the brightness, or on the right to change the volume.";

@@ -51,6 +51,16 @@ struct MobilePlayerView: View {
     @State private var settleTask: Task<Void, Never>?
     /// Sliding sideways across the picture: where the slide began.
     @State private var swipeStart: Double?
+    /// Sliding up or down: the brightness on the left, the volume on the right, from where the slide began.
+    @AppStorage(PictureLevel.key) private var slidesLevels = true
+    @State private var level: (volume: Bool, start: Double, value: Double)?
+    @State private var leveling = false
+    @State private var levelTask: Task<Void, Never>?
+    /// The system's volume slider, on screen only around a slide, which keeps the system's own volume overlay away.
+    @State private var systemVolume = MusicVolumeSlider.SystemSlider()
+    @State private var mountsVolume = false
+    /// The screen's brightness before the first slide changed it, put back when the player closes.
+    @State private var brightnessBefore: CGFloat?
 
     var body: some View {
         ZStack {
@@ -67,11 +77,18 @@ struct MobilePlayerView: View {
             if playingOn != nil { Color.black.ignoresSafeArea() }
             // A tap on the picture shows or hides the controls; a tap on a control keeps them up (see `rows`).
             // Two taps on a side skip, touching and holding plays faster, and sliding sideways seeks.
-            PictureGestures(tap: tapped, hold: held, swipe: swiped).ignoresSafeArea()
-                .accessibilityHidden(true)
+            PictureGestures(tap: tapped, hold: held, swipe: swiped, levels: slidesLevels) { wider in
+                withAnimation(.easeInOut(duration: 0.25)) { fillsScreen = wider }
+            }
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+            if mountsVolume {
+                MusicVolumeSlider.HiddenVolumeView(system: systemVolume).frame(width: 1, height: 1).opacity(0.01).allowsHitTesting(false)
+            }
             boostLabel
             skippedLabel
             swipeLabel
+            levelLabel
             if let playingOn {
                 PlayOnPlaceholder(receiver: playingOn) {
                     self.playingOn = nil
@@ -89,7 +106,10 @@ struct MobilePlayerView: View {
             nowPlaying.update(title: channel.name, session: session)
             tvBrowser.start()
         }
-        .onDisappear { clock.detach(); nowPlaying.stop(); tvBrowser.stop() }
+        .onDisappear {
+            clock.detach(); nowPlaying.stop(); tvBrowser.stop()
+            if let brightnessBefore { screen?.brightness = brightnessBefore }
+        }
         // Played here again (the Lock Screen, say): the other device no longer has it to itself.
         .onChange(of: session.paused) { _, paused in if !paused { playingOn = nil } }
         .onChange(of: nowPlayingState, initial: true) { nowPlaying.update(title: channel.name, session: session) }
@@ -159,22 +179,70 @@ struct MobilePlayerView: View {
         }
     }
 
+    private var screen: UIScreen? { (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen }
+
     private func swiped(_ phase: PictureGestures.Swipe) {
         switch phase {
-        case .began:
+        case .began(.seek):
             guard showsTransport, seekable, clock.duration > 0, playingOn == nil, !pip.active else { return }
             let start = clock.currentPosition
             swipeStart = start
             clock.scrub(to: start)
             if chromeVisible { toggleChrome() }
-        case .moved(let x, let width):
-            guard let swipeStart else { return }
-            clock.scrub(to: PictureSeek.target(from: swipeStart, moved: x, width: width, duration: clock.duration))
+        case .began(let slide):
+            let volume = slide == .volume
+            guard volume || screen != nil else { return }
+            let start = volume ? Double(AVAudioSession.sharedInstance().outputVolume) : Double(screen?.brightness ?? 0)
+            if !volume, brightnessBefore == nil { brightnessBefore = screen?.brightness }
+            levelTask?.cancel()
+            if volume { mountsVolume = true }
+            level = (volume, start, start)
+            leveling = true
+        case .moved(let moved, let size):
+            if let swipeStart {
+                clock.scrub(to: PictureSeek.target(from: swipeStart, moved: moved.width, width: size.width, duration: clock.duration))
+            } else if leveling, var level {
+                level.value = PictureLevel.value(from: level.start, moved: moved.height, height: size.height)
+                self.level = level
+                if level.volume { systemVolume.set(level.value) } else { screen?.brightness = CGFloat(level.value) }
+            }
         case .ended:
-            guard swipeStart != nil else { return }
-            swipeStart = nil
-            clock.endScrub()
-            nowPlaying.update(title: channel.name, session: session)
+            if swipeStart != nil {
+                swipeStart = nil
+                clock.endScrub()
+                nowPlaying.update(title: channel.name, session: session)
+            }
+            if leveling {
+                leveling = false
+                levelTask = Task {
+                    try? await Task.sleep(for: .seconds(0.8))
+                    guard !Task.isCancelled else { return }
+                    level = nil; mountsVolume = false
+                }
+            }
+        }
+    }
+
+    /// The brightness or the volume a slide up or down sets, in the middle.
+    @ViewBuilder private var levelLabel: some View {
+        if let level {
+            HStack(spacing: 12) {
+                Image(systemName: level.volume ? (level.value <= 0 ? "speaker.slash.fill" : "speaker.wave.2.fill") : "sun.max.fill")
+                    .frame(width: 26)
+                Capsule().fill(.white.opacity(0.3)).frame(width: 150, height: 6)
+                    .overlay(alignment: .leading) { Capsule().fill(.white).frame(width: 150 * level.value, height: 6) }
+            }
+            .font(.headline)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 18).padding(.vertical, 14)
+            .glassSurface(.regular, in: Capsule())
+            .environment(\.colorScheme, .dark)
+            .allowsHitTesting(false)
+            .transition(.opacity)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L10n.text(level.volume ? "Volume" : "Brightness"))
+            .accessibilityValue(Text(level.value, format: .percent.precision(.fractionLength(0))))
+            .accessibilityIdentifier("player.level")
         }
     }
 
@@ -725,15 +793,21 @@ private struct AirPlayButton: UIViewRepresentable {
     func updateUIView(_ view: AVRoutePickerView, context: Context) {}
 }
 
-/// The picture's own gestures, in UIKit: taps, a touch and hold followed while the finger moves, and a sideways slide.
+/// The picture's own gestures, in UIKit: taps, a touch and hold followed while the finger moves, slides and a pinch.
 /// SwiftUI's long press ends where a drag would begin, and a tap beside it can fire as the held finger lifts.
 private struct PictureGestures: UIViewRepresentable {
     enum Hold { case began, moved(CGSize), ended }
-    enum Swipe { case began, moved(x: CGFloat, width: CGFloat), ended }
+    /// Sideways seeks; up or down sets the brightness on the left half and the volume on the right.
+    enum Slide { case seek, brightness, volume }
+    enum Swipe { case began(Slide), moved(CGSize, in: CGSize), ended }
     /// Where the tap landed across the picture, and the picture's width.
     let tap: (CGFloat, CGFloat) -> Void
     let hold: (Hold) -> Void
     let swipe: (Swipe) -> Void
+    /// Whether slides up or down set the brightness and the volume.
+    var levels = true
+    /// Pinched out (true) or in, as in YouTube: fill the screen or fit the picture.
+    let pinch: (Bool) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -748,7 +822,8 @@ private struct PictureGestures: UIViewRepresentable {
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.panned(_:)))
         pan.maximumNumberOfTouches = 1
         pan.delegate = context.coordinator
-        for recognizer in [press, tap, pan] { view.addGestureRecognizer(recognizer) }
+        let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinched(_:)))
+        for recognizer in [press, tap, pan, pinch] { view.addGestureRecognizer(recognizer) }
         return view
     }
 
@@ -757,6 +832,7 @@ private struct PictureGestures: UIViewRepresentable {
     @MainActor final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var parent: PictureGestures?
         private var start = CGPoint.zero
+        private var slide = Slide.seek
 
         @objc func tapped(_ tap: UITapGestureRecognizer) {
             guard let view = tap.view else { return }
@@ -776,18 +852,30 @@ private struct PictureGestures: UIViewRepresentable {
         @objc func panned(_ pan: UIPanGestureRecognizer) {
             guard let view = pan.view else { return }
             switch pan.state {
-            case .began: parent?.swipe(.began)
-            case .changed: parent?.swipe(.moved(x: pan.translation(in: view).x, width: view.bounds.width))
+            case .began: parent?.swipe(.began(slide))
+            case .changed:
+                let moved = pan.translation(in: view)
+                parent?.swipe(.moved(CGSize(width: moved.x, height: moved.y), in: view.bounds.size))
             case .ended, .cancelled, .failed: parent?.swipe(.ended)
             default: break
             }
         }
 
-        /// Only sideways slides; up and down are left to the system's edges and the controls.
+        @objc func pinched(_ pinch: UIPinchGestureRecognizer) {
+            guard pinch.state == .ended, abs(pinch.scale - 1) > 0.1 else { return }
+            parent?.pinch(pinch.scale > 1)
+        }
+
+        /// Sideways anywhere; up or down only away from the edges that Notification Center, Control Center and the
+        /// Home indicator use.
         func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
-            guard let pan = recognizer as? UIPanGestureRecognizer else { return true }
-            let velocity = pan.velocity(in: pan.view)
-            return abs(velocity.x) > abs(velocity.y)
+            guard let pan = recognizer as? UIPanGestureRecognizer, let view = pan.view else { return true }
+            let velocity = pan.velocity(in: view)
+            if abs(velocity.x) > abs(velocity.y) { slide = .seek; return true }
+            let location = pan.location(in: view)
+            guard parent?.levels == true, PictureLevel.slides(fromY: location.y, height: view.bounds.height) else { return false }
+            slide = location.x < view.bounds.width / 2 ? .brightness : .volume
+            return true
         }
     }
 }

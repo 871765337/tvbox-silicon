@@ -238,7 +238,8 @@ struct MusicVolumeSlider: View {
         func set(_ value: Double) { slider?.setValue(Float(value), animated: false); slider?.sendActions(for: .valueChanged) }
     }
 
-    private struct HiddenVolumeView: UIViewRepresentable {
+    /// Also carries the player's slides up and down for the volume.
+    struct HiddenVolumeView: UIViewRepresentable {
         let system: SystemSlider
         func makeUIView(context: Context) -> MPVolumeView {
             let view = MPVolumeView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
