@@ -114,8 +114,9 @@ final class DanmakuEngine: @unchecked Sendable {
 
     private func restart(at time: Double, size: CGSize) {
         self.size = size
-        // About 43pt on a 1080p TV, 22pt in a small Mac window.
-        fontSize = min(44, max(15, size.height * 0.04))
+        // About 43pt on a 1080p TV, 22pt in a small Mac window. From the shorter side: an upright iPhone's full-screen
+        // player is tall and narrow, and its height made the text twice the size it is when the phone is turned.
+        fontSize = min(44, max(15, min(size.width, size.height) * 0.04))
         layout = DanmakuLayout(width: size.width, height: size.height * 0.96, laneHeight: fontSize * 1.35)
         active = []
         var low = 0, high = comments.count
