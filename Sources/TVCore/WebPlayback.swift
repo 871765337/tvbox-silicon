@@ -7,6 +7,18 @@ public struct ParseService: Hashable, Sendable {
     public let type: Int
     public let url: String
     public let headers: [String: String]
+    /// Episode flags from `ext.flag`. Empty means this parser applies to every flag.
+    public let flags: [String]
+    /// TVBox parse `click`, used when a type 4 sniff runs this parser rather than the selected one.
+    public let click: String
+    public init(name: String, type: Int, url: String, headers: [String: String], flags: [String] = [], click: String = "") {
+        self.name = name
+        self.type = type
+        self.url = url
+        self.headers = headers
+        self.flags = flags
+        self.click = click
+    }
 }
 
 extension Subscription {
@@ -14,8 +26,22 @@ extension Subscription {
         (raw["parses"]?.array ?? []).compactMap { item in
             guard let fields = item.object, let url = fields["url"]?.string, let type = fields["type"]?.int else { return nil }
             let headers = fields["ext"]?.object?["header"]?.object?.compactMapValues(\.string) ?? [:]
-            return ParseService(name: fields["name"]?.string ?? url, type: type, url: url, headers: headers)
+            return ParseService(name: fields["name"]?.string ?? url, type: type, url: url, headers: headers,
+                                flags: Self.sniffStrings(fields["ext"]?.object?["flag"]), click: fields["click"]?.string ?? "")
         }
+    }
+    public var sniffAds: [String] { Self.sniffStrings(raw["ads"]) }
+    public var sniffRules: [SniffRule] {
+        (raw["rules"]?.array ?? []).compactMap { item in
+            guard let fields = item.object else { return nil }
+            return SniffRule(hosts: Self.sniffStrings(fields["hosts"]), regex: Self.sniffStrings(fields["regex"]),
+                             script: Self.sniffStrings(fields["script"]), exclude: Self.sniffStrings(fields["exclude"]),
+                             click: Self.sniffStrings(fields["click"]))
+        }
+    }
+    private static func sniffStrings(_ value: JSONValue?) -> [String] {
+        if let text = value?.string { return text.isEmpty ? [] : [text] }
+        return value?.array?.compactMap(\.string).filter { !$0.isEmpty } ?? []
     }
 }
 
