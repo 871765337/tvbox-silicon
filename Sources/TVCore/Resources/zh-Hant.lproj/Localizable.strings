@@ -873,6 +873,11 @@
 "View on GitHub" = "在 GitHub 上檢視";
 "Thanks! Your feedback is issue #%lld." = "謝謝！你的意見已提交為問題 #%lld。";
 "You've sent a lot of feedback. Please try again later." = "你傳送的意見太多了，請稍後再試。";
+"You're sending feedback too quickly. Wait a minute and try again." = "傳送得太快了，請等一分鐘再試。";
+"You can send %lld messages in 24 hours and have sent them all. You can send another after %@." = "每 24 小時最多可以傳送 %lld 則意見，你已經傳滿了。%@ 之後可以再傳一則。";
+"You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow." = "每 24 小時最多可以傳送 %lld 則意見，你已經傳滿了，請明天再試。";
+"Today's feedback from everyone has reached its limit. You can send yours after %@." = "今天所有人的意見總數已達上限。%@ 之後可以傳送。";
+"Today's feedback from everyone has reached its limit. Please try again later." = "今天所有人的意見總數已達上限，請稍後再試。";
 "Couldn't send feedback. Please try again later." = "無法傳送意見，請稍後再試。";
 "Help Make Yingxia Better" = "幫助映匣變得更好";
 "Report a problem or share an idea. It goes straight to the developer." = "回報問題或分享你的想法，會直接送到開發者手中。";

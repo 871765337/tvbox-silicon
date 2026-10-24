@@ -23,15 +23,45 @@ public enum Feedback {
     }
 
     public enum Failure: LocalizedError, Equatable {
-        /// The server's caps: a minute's, or the day's for this install or for everyone.
+        /// The server's caps, as its 429 names them: a minute's for this network, or the last 24 hours' for
+        /// this install (`max` messages) or for everyone. `until` is when one more message fits.
+        case tooFast
+        case installLimit(max: Int, until: Date?)
+        case everyoneLimit(until: Date?)
+        /// A 429 that doesn't say which cap (a server from before it did).
         case tooMany
         case failed
         public var errorDescription: String? {
             switch self {
+            case .tooFast: L10n.text("You're sending feedback too quickly. Wait a minute and try again.")
+            case .installLimit(let max, let until):
+                until.map { L10n.text("You can send %lld messages in 24 hours and have sent them all. You can send another after %@.", max, Feedback.moment($0)) }
+                    ?? L10n.text("You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow.", max)
+            case .everyoneLimit(let until):
+                until.map { L10n.text("Today's feedback from everyone has reached its limit. You can send yours after %@.", Feedback.moment($0)) }
+                    ?? L10n.text("Today's feedback from everyone has reached its limit. Please try again later.")
             case .tooMany: L10n.text("You've sent a lot of feedback. Please try again later.")
             case .failed: L10n.text("Couldn't send feedback. Please try again later.")
             }
         }
+    }
+
+    /// Which cap refused a message, from the server's 429 body `{"limit", "max", "retryAfter"}` (seconds).
+    static func refusal(_ data: Data, now: Date = Date()) -> Failure {
+        struct Body: Decodable { let limit: String; let max: Int?; let retryAfter: Double? }
+        guard let body = try? JSONDecoder().decode(Body.self, from: data) else { return .tooMany }
+        let until = body.retryAfter.flatMap { $0.isFinite && $0 > 0 ? now.addingTimeInterval($0) : nil }
+        switch body.limit {
+        case "minute": return .tooFast
+        case "install": return body.max.map { .installLimit(max: $0, until: until) } ?? .tooMany
+        case "everyone": return .everyoneLimit(until: until)
+        default: return .tooMany
+        }
+    }
+
+    /// A time later today, or a day and time.
+    static func moment(_ date: Date) -> String {
+        Calendar.current.isDateInToday(date) ? date.formatted(date: .omitted, time: .shortened) : date.formatted(date: .abbreviated, time: .shortened)
     }
 
     /// Characters kept; the server cuts there too.
@@ -121,7 +151,7 @@ public enum Feedback {
         case 200..<300:
             guard let issue = try? JSONDecoder().decode(Issue.self, from: data) else { throw Failure.failed }
             return issue
-        case 429: throw Failure.tooMany
+        case 429: throw refusal(data)
         default: throw Failure.failed
         }
     }
