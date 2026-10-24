@@ -80,6 +80,19 @@ enum WebPlayback {
     }
 
     /// TVBox's JSON parse contract: GET service + page address, answer `{"url": ...}` (sometimes under `data`).
+    static func askJSON(service: String, page: String, headers requestHeaders: [String: String], http: HTTPClient) async -> (url: URL, headers: [String: String])? {
+        guard let request = try? WebAddress.resolve(service + page),
+              let (data, _) = try? await http.get(request, headers: requestHeaders),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let payload = (object["data"] as? [String: Any]) ?? object
+        guard let address = payload["url"] as? String, address.lowercased().hasPrefix("http"),
+              let url = try? WebAddress.resolve(address), url.absoluteString != page,
+              CatalogClient.isDirectMedia(address) || address.contains(".m3u8") || address.contains(".mp4") else { return nil }
+        var headers = (payload["header"] as? [String: String]) ?? (payload["headers"] as? [String: String]) ?? [:]
+        if let agent = (payload["user-agent"] ?? payload["User-Agent"] ?? payload["ua"]) as? String, !agent.isEmpty { headers["User-Agent"] = agent }
+        return (url, headers)
+    }
+
     static func askParseServices(page: String, parses: [ParseService], http: HTTPClient) async -> (url: URL, headers: [String: String])? {
         // Loopback services are answered by a plugin's proxy, which only exists while that plugin runs.
         let services = parses.filter { $0.type == 1 && $0.url.lowercased().hasPrefix("http") && !$0.url.contains("127.0.0.1") && !$0.url.contains("localhost") }
@@ -88,16 +101,7 @@ enum WebPlayback {
             var pending = services.prefix(24).makeIterator()
             func ask(_ service: ParseService) {
                 group.addTask {
-                    guard let request = try? WebAddress.resolve(service.url + page),
-                          let (data, _) = try? await http.get(request, headers: service.headers),
-                          let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-                    let payload = (object["data"] as? [String: Any]) ?? object
-                    guard let address = payload["url"] as? String, address.lowercased().hasPrefix("http"),
-                          let url = try? WebAddress.resolve(address), url.absoluteString != page,
-                          CatalogClient.isDirectMedia(address) || address.contains(".m3u8") || address.contains(".mp4") else { return nil }
-                    var headers = (payload["header"] as? [String: String]) ?? (payload["headers"] as? [String: String]) ?? [:]
-                    if let agent = (payload["user-agent"] ?? payload["User-Agent"] ?? payload["ua"]) as? String, !agent.isEmpty { headers["User-Agent"] = agent }
-                    return (url, headers)
+                    await askJSON(service: service.url, page: page, headers: service.headers, http: http)
                 }
             }
             // Like TVBox's concurrent JSON parsing: a few services at a time, first usable answer wins.
