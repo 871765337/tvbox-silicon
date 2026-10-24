@@ -161,7 +161,7 @@ struct HomeView: View {
             SectionHeader(title: L10n.text("Continue Watching")) { store.section = .history }
             ChipRow {
                 HStack(spacing: Layout.cardSpacing) {
-                    ForEach(store.playbackHistory.entries.prefix(12)) { HistoryCard(entry: $0).accessibilityIdentifier("history.resume." + $0.context.videoID) }
+                    ForEach(store.playbackHistory.entries.prefix(12)) { HistoryCard(entry: $0) }
                 }.padding(.vertical, 6)
             }
         }

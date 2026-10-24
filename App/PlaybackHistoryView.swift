@@ -49,7 +49,6 @@ struct PlaybackHistoryView: View {
                 LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
                     ForEach(entries) { entry in
                         HistoryCard(entry: entry, selection: managing ? selected.contains(entry.id) : nil, details: true) { tap(entry) }
-                            .accessibilityIdentifier((managing ? "history.select." : "history.resume.") + entry.context.videoID)
                     }
                 }
                 .tvFocusSection()
@@ -136,6 +135,17 @@ struct HistoryCard: View {
     /// Replaces resuming, for managing.
     var action: (() -> Void)? = nil
     var body: some View {
+        // The heart is a sibling of the poster button, so a click does not resume or change the selection.
+        ZStack(alignment: .topLeading) {
+            posterButton
+            FavoriteHeartButton(item: entry.favoriteItem(), name: entry.context.videoName)
+                .fixedSize()
+                .padding(8)
+                .allowsHitTesting(drag?.active != true)
+        }
+    }
+
+    private var posterButton: some View {
         Button {
             guard drag?.active != true else { return }
             if let action { action() } else { store.resume(entry) }
@@ -188,7 +198,9 @@ struct HistoryCard: View {
         }
         .cardButton()
         .accessibilityAddTraits(selection == true ? [.isSelected] : [])
+        .accessibilityIdentifier((selection != nil ? "history.select." : "history.resume.") + entry.context.videoID)
         .contextMenu {
+            FavoriteMenuButton(item: entry.favoriteItem(), name: entry.context.videoName)
             Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) { store.playbackHistory.remove(entry.id) }
         }
     }

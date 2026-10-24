@@ -792,13 +792,23 @@ struct VideoDetailView: View {
         34
         #endif
     }
+    private func currentVideo() -> Video { detail ?? video }
+
+    private func videoFavorite() -> FavoriteItem {
+        .video(FavoriteVideo(origin: client.origin, site: client.site, video: currentVideo()))
+    }
+
+    private func episodeFavorite(_ episode: Episode) -> FavoriteItem {
+        .episode(FavoriteEpisode(video: FavoriteVideo(origin: client.origin, site: client.site, video: currentVideo()), episodeFlag: episode.flag, episodeName: episode.name, episodeID: episode.id))
+    }
+
     @ViewBuilder private var playControl: some View {
         if let detail {
             if let first = detail.episodes.first(where: { $0.flag == activeFlag }) ?? detail.episodes.first {
                 // Beside the poster on a phone there is no room for both labels: Download drops to its icon.
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: false) }
-                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: true) }
+                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: false); videoFavoriteButton }
+                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: true); videoFavoriteButton }
                 }
             } else {
                 #if os(tvOS)
@@ -851,6 +861,19 @@ struct VideoDetailView: View {
                 .font(.headline).lineLimit(1).fixedSize()
         }
         .controlButton().controlSize(.large).accessibilityLabel(L10n.text("Download"))
+    }
+    /// Icon-only, beside Play and Download. An empty heart keeps the control color; a saved one is rose.
+    private var videoFavoriteButton: some View {
+        let saved = store.favorites.contains(videoFavorite())
+        return Button { store.favorites.toggle(videoFavorite()) } label: {
+            if saved {
+                Image(systemName: "heart.fill").foregroundStyle(Brand.rose)
+            } else {
+                Image(systemName: "heart")
+            }
+        }
+        .controlButton().controlSize(.large)
+        .accessibilityLabel(saved ? L10n.text("Remove %@ from favorites", currentVideo().name) : L10n.text("Add %@ to favorites", currentVideo().name))
     }
     /// Stands in for a watch-page player: a 16:9 stage with the artwork, title and the primary action.
     private var hero: some View {
@@ -966,7 +989,18 @@ struct VideoDetailView: View {
                             .overlay(alignment: .topTrailing) { if saved?.status == .completed { DownloadedBadge() } }
                     }
                 }
+                .overlay(alignment: .topLeading) {
+                    if store.favorites.contains(episodeFavorite(episode)) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: DownloadMetrics.thumb > 60 ? 18 : 12, weight: .semibold))
+                            .foregroundStyle(Brand.rose)
+                            .padding(4)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
                 .contextMenu {
+                    FavoriteMenuButton(item: episodeFavorite(episode), name: episode.name)
                     if saved == nil || saved?.status == .failed {
                         Button(L10n.text("Download"), systemImage: "arrow.down.circle") {
                             DownloadLibrary.shared.download(DownloadSource(site: client.site, videoID: video.id, episode: episode),

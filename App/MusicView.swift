@@ -315,6 +315,12 @@ struct MusicTrackRow: View {
                     if let saved = MusicDownloadLibrary.shared.item(for: track) { DownloadState(status: saved.status, fraction: saved.fraction) }
                 }
                 .frame(width: DownloadState.size * 1.2)
+                if store.favorites.contains(.music(track)) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: DownloadState.size, weight: .semibold))
+                        .foregroundStyle(Brand.rose)
+                        .accessibilityHidden(true)
+                }
                 if let duration = track.duration {
                     ZStack(alignment: .trailing) {
                         Text(verbatim: "00:00").hidden()
@@ -329,6 +335,7 @@ struct MusicTrackRow: View {
         .glassRow()
         // On Apple TV, a long press.
         .contextMenu {
+            FavoriteMenuButton(item: .music(track), name: track.title)
             Button { store.music.playNext([track]) } label: { Label(L10n.text("Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") }
             Button { store.music.addToUpNext([track]) } label: { Label(L10n.text("Add to Up Next"), systemImage: "text.line.last.and.arrowtriangle.forward") }
             Divider()
