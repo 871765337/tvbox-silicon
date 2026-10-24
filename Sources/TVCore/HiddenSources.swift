@@ -6,6 +6,7 @@ import Observation
     private var keys: [String]
     private let defaults: UserDefaults
     private static let storageKey = "hiddenSources.v1"
+    private static let backfillKey = "hiddenSources.backfill.v1"
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -29,5 +30,22 @@ import Observation
         guard !keys.contains(key) else { return }
         keys.append(key)
         defaults.set(keys, forKey: Self.storageKey)
+    }
+
+    /// Writes a hide when this counted failure leaves the source red. Success, cancellation,
+    /// a busy runtime, and a yellow-dot failure do nothing. A later success does not remove the hide.
+    public func note(_ site: Site, origin: URL, error: Error?, health: SourceHealth, now: Date = Date()) {
+        guard let error, SourceHealth.counts(error) else { return }
+        guard health.status(site, origin: origin, now: now) == .failing else { return }
+        insert(site, origin: origin)
+    }
+
+    /// One pass over the sources already loaded. An empty list waits for the real subscription.
+    public func backfill(_ sites: [Site], origin: URL, health: SourceHealth, now: Date = Date()) {
+        guard !defaults.bool(forKey: Self.backfillKey), !sites.isEmpty else { return }
+        for site in sites where health.status(site, origin: origin, now: now) == .failing {
+            insert(site, origin: origin)
+        }
+        defaults.set(true, forKey: Self.backfillKey)
     }
 }
