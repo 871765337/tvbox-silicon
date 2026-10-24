@@ -69,7 +69,8 @@ struct MobilePlayerView: View {
             EnhancedVideoSurface(enhancer: session.enhancer, fills: fillsScreen)
             if showsDanmaku && !session.danmaku.isEmpty {
                 DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision)
-                    .ignoresSafeArea()
+                    // Across the whole width, but below the Dynamic Island and above the home indicator when upright.
+                    .ignoresSafeArea(edges: .horizontal)
             }
             // The artwork dissolves into the first frame.
             if let waiting { waiting.view.ignoresSafeArea().transition(.opacity) }
