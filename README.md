@@ -15,24 +15,25 @@
   <a href="https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-arm64.dmg">Download for Mac</a>
   (<a href="https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-x86_64.dmg">Intel</a>)
   &nbsp;·&nbsp;
-  <a href="Docs/INSTALL.md">Install on iPhone, iPad &amp; Apple TV</a>
+  <a href="#-get-it">iPhone, iPad &amp; Apple TV beta</a>
   &nbsp;·&nbsp;
   <a href="Docs/DEVELOPMENT.md">Developer guide</a>
 </p>
 
 <p align="center">
   <img alt="SwiftUI" src="https://img.shields.io/badge/SwiftUI-native-0A84FF?logo=swift&logoColor=white">
-  <img alt="Platforms" src="https://img.shields.io/badge/tvOS%2026%20·%20iOS%2018%20·%20macOS%2015-1c1c1e?logo=apple&logoColor=white">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.1-2dd4bf">
+  <img alt="Platforms" src="https://img.shields.io/badge/tvOS%2017%20·%20iOS%2018%20·%20macOS%2015-1c1c1e?logo=apple&logoColor=white">
+  <a href="https://yingxia.getmegaportal.com/releases.json"><img alt="Latest version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fyingxia.getmegaportal.com%2Freleases.json&query=%24.releases%5B0%5D.version&label=version&color=2dd4bf"></a>
+  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-8e8e93"></a>
 </p>
 
 <p align="center">
-  <img src="website/public/screenshots/en/home.jpg" alt="Yingxia's Watch Now screen on Apple TV" width="860">
+  <img src="Docs/images/apple-tv.webp" alt="Yingxia's Watch Now screen on Apple TV" width="860">
 </p>
 
 ---
 
-Yingxia (映匣) plays your TVBox subscriptions the way an Apple app should: live channels, on-demand catalogs, and one search across every source, all in SwiftUI and AVKit. No web views, no ported Android screens, no account.
+Yingxia (映匣) plays your TVBox subscriptions the way an Apple app should: live channels, on-demand catalogs, and one search across every source, all in SwiftUI and AVKit. No ported Android screens, no account.
 
 👉 **See it in action at [yingxia.getmegaportal.com](https://yingxia.getmegaportal.com)**, including the intro film.
 
@@ -41,28 +42,41 @@ Yingxia (映匣) plays your TVBox subscriptions the way an Apple app should: liv
 | | |
 | --- | --- |
 | 📺 **Live TV, laid out like a guide** | Bring M3U or TXT playlists. Browse by group, search channels, and keep your favorites close. |
-| 🔎 **Search everything at once** | One query runs across every source in your subscription, and results appear as they arrive. |
-| 🗂️ **Every source gets its own shelf** | Browse each source's categories and pages with nothing but the Siri Remote. |
+| 🔎 **Search everything at once** | One query runs across every source in your subscriptions, and results appear as they arrive. |
+| 🗂️ **Every source gets its own shelf** | Browse each source's categories and pages, grouped by subscription. Hide the sources you don't use. |
+| ❤️ **Favorites for everything** | Save a show, a single episode, a song, a cloud file or a live channel. The newest ones wait on Watch Now. |
+| ☁️ **Cloud Files** | Browse your Quark and UC drives and your AList or OpenList servers, and play videos and music straight from them. |
+| 📲 **Play On** | Like AirPlay: send what's playing on iPhone, iPad or Mac to Yingxia on an Apple TV or another Mac, and it picks up at the same spot. |
+| ⬇️ **Watch offline** | Download episodes and movies to watch without a connection, on every device. |
+| 🎬 **Native playback** | AVPlayer with HLS, clear error screens with Retry, and Picture in Picture. iPhone and iPad add gestures and speeds from 0.5x to 4x; the Mac has a separate player window. |
 | 🧩 **Plugins on device** | Runs JSON, JavaScript and JAR sources, plus Python on Mac. Lightweight ports go first, with the original plugin as a fallback. |
-| 🛟 **Your subscription, kept safe** | Import any TVBox JSON subscription by URL. A failed refresh never wipes the last working copy. |
-| 🎬 **Native playback** | AVPlayer with HLS, clear error screens with Retry, and a separate Picture in Picture player window on Mac. |
+| 🛟 **Your subscriptions, kept safe** | Import TVBox JSON subscriptions by URL, several at once, merged into one list of sources. A failed refresh never wipes the last working copy. |
+| 🔄 **Stays up to date** | The Mac app updates itself. TestFlight keeps the iPhone, iPad and Apple TV apps current. |
 | 🔒 **Private by design** | No account and no tracking. Subscriptions and history stay on your device; only anonymous error reports are sent, and you can turn them off. |
 | 🌏 **Speaks your language** | English, Japanese, and Traditional and Simplified Chinese, following your system setting. |
 
 <p align="center">
-  <img src="website/public/screenshots/en/live.jpg" alt="Live TV guide" width="420">
-  <img src="website/public/screenshots/en/search.jpg" alt="Global search" width="420">
+  <img src="Docs/images/live.webp" alt="Live TV guide on Apple TV" width="280">
+  <img src="Docs/images/search.webp" alt="Global search on Apple TV" width="280">
+  <img src="Docs/images/source.webp" alt="A source's categories on Apple TV" width="280">
 </p>
+
+<p align="center">
+  <img src="Docs/images/mac.webp" alt="Yingxia's Watch Now on a Mac" width="520">
+  <img src="Docs/images/iphone-ipad.webp" alt="Yingxia's Watch Now on iPad and iPhone" width="312">
+</p>
+
+<p align="center"><sub>Pictures are mockups of the app from the website, with made-up titles.</sub></p>
 
 ## 📦 Get it
 
-| Platform | Status |
+| Platform | How |
 | --- | --- |
-| **Mac** (macOS 15+, Apple silicon or Intel) | ✅ Free download for [Apple silicon](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-arm64.dmg) or [Intel](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-x86_64.dmg), signed and notarized |
-| **Apple TV** (tvOS 17+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-tvos.ipa) and [sideload it](Docs/INSTALL.md#install-on-apple-tv) |
-| **iPhone & iPad** (iOS 18+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad), or add the [AltStore source](Docs/INSTALL.md#altstore-and-sidestore) |
+| **Mac** (macOS 15+, Apple silicon or Intel) | ✅ Free download for [Apple silicon](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-arm64.dmg) or [Intel](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-x86_64.dmg), signed and notarized. It updates itself. |
+| **iPhone & iPad** (iOS 18+) | 🧪 Public beta: [join on TestFlight](https://testflight.apple.com/join/dU6UNbzp). Or [download the IPA](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad), or add the [AltStore source](Docs/INSTALL.md#altstore-and-sidestore). |
+| **Apple TV** (tvOS 17+) | 🧪 Public beta: [join on TestFlight](https://testflight.apple.com/join/SSgWEwSr) (open the invite on an iPhone or iPad signed in to the same Apple Account, then install from TestFlight on the TV). Or [download the IPA](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-tvos.ipa) and [sideload it](Docs/INSTALL.md#install-on-apple-tv). |
 
-The iPhone, iPad and Apple TV apps aren't on the App Store yet. The [install guide](Docs/INSTALL.md) walks you through installing them with your own Apple account (a free one works), keeping them signed, and fixing common problems.
+TestFlight is the easiest way: no computer needed, and new builds arrive on their own. TestFlight builds are always numbered 1.7.7 with the release's build number, for example 1.7.7 (31) for 1.7.12. The beta and a sideloaded copy use the same app ID, so keep one or the other. The [install guide](Docs/INSTALL.md) covers sideloading with your own Apple Account (a free one works), keeping the app signed, and fixing common problems.
 
 ## 🛠️ Build from source
 
@@ -77,7 +91,7 @@ xcodegen generate
 open TVBox.xcodeproj            # pick TVBox-macOS, TVBox-iOS or TVBox-tvOS
 ```
 
-Physical iPhone, iPad and Apple TV builds need your own signing team in Xcode. The [developer guide](Docs/DEVELOPMENT.md) covers command-line builds, tests, source audits, the plugin runtime architecture, and more.
+Physical iPhone, iPad and Apple TV builds need your own signing team in Xcode. The [developer guide](Docs/DEVELOPMENT.md) covers command-line builds, tests, source audits, the plugin runtime architecture, releases, and more.
 
 ## 🧭 Project map
 
@@ -85,9 +99,10 @@ Physical iPhone, iPad and Apple TV builds need your own signing team in Xcode. T
 | --- | --- |
 | `App/` | SwiftUI screens and platform playback |
 | `Sources/TVCore/` | Subscriptions, networking, catalogs, localization, runtime boundaries |
-| `Runtime/` | JVM, JavaScript and Python plugin hosts |
+| `Runtime/` | JVM, JavaScript and Python plugin hosts, and the embedded JVM for iOS and tvOS |
 | `Vendor/` | Vendored DEX interpreter and QuickJS |
-| `website/` | The [yingxia.getmegaportal.com](https://yingxia.getmegaportal.com) site |
+| `Services/` | Cloudflare Workers for error reports, feedback and the App Review demo server |
+| `website/` | The [yingxia.getmegaportal.com](https://yingxia.getmegaportal.com) site, plus `releases.json`, the Mac appcasts and the AltStore source |
 | `Docs/` | Install guide, developer guide, runtime status, third-party notices |
 
 ## 🙏 Acknowledgements
