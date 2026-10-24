@@ -414,64 +414,223 @@ struct FavoritesView: View {
     @Environment(Store.self) private var store
     var body: some View {
         Group {
-            if store.favorites.isEmpty && store.videoFavorites.items.isEmpty {
+            if store.favorites.items.isEmpty {
                 EmptyPage(symbol: AppSection.favorites.icon, title: L10n.text("No Favorites Yet"),
-                          message: L10n.text("Tap the heart on a show's page or next to a live channel to save it on this device."),
+                          message: L10n.text("Save a live channel, a video, an episode, a song, or a cloud file with the heart."),
                           action: AppSection.live.title, actionSymbol: AppSection.live.icon, perform: { store.section = .live })
-            }
-            else {
+            } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
-                        if !store.videoFavorites.items.isEmpty {
-                            VStack(alignment: .leading, spacing: Layout.headerSpacing) {
-                                SectionHeader(title: L10n.text("Favorite Shows"))
-                                LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
-                                    ForEach(store.videoFavorites.items) { FavoriteShowCard(favorite: $0) }
-                                }
-                            }
-                            .tvFocusSection()
+                        if let error = store.favorites.persistenceError {
+                            StatusNotice(text: L10n.text("Unable to save favorites: %@", error))
                         }
-                        if !store.favorites.isEmpty {
-                            VStack(alignment: .leading, spacing: Layout.headerSpacing) {
-                                SectionHeader(title: L10n.text("Favorite Channels"))
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: Layout.cardMin), spacing: 12)], spacing: 12) {
-                                    ForEach(store.favorites) { ChannelCard(channel: $0) }
-                                }
-                            }
-                            .tvFocusSection()
-                        }
-                    }.pageContainer()
+                        if !store.favorites.items(.live).isEmpty { liveSection }
+                        if !store.favorites.items(.video).isEmpty { filmSection }
+                        if !store.favorites.items(.episode).isEmpty { episodeSection }
+                        if !store.favorites.items(.music).isEmpty { musicSection }
+                        if !store.favorites.items(.cloud).isEmpty { cloudSection }
+                    }
+                    .pageContainer()
                 }
             }
         }
         .screenBackdrop()
         .tabTitle(L10n.text("Favorites"))
     }
+
+    private var liveSection: some View {
+        VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+            SectionHeader(title: L10n.text("Live TV"))
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: Layout.cardMin), spacing: 12)], spacing: 12) {
+                ForEach(store.favorites.liveChannels) { ChannelCard(channel: $0) }
+            }
+        }
+        .tvFocusSection()
+    }
+
+    private var filmSection: some View {
+        VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+            SectionHeader(title: L10n.text("Films"))
+            LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
+                ForEach(store.favorites.items(.video)) { item in
+                    if case .video(let video) = item { FavoriteFilmCard(video: video) }
+                }
+            }
+        }
+        .tvFocusSection()
+    }
+
+    private var episodeSection: some View {
+        VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+            SectionHeader(title: L10n.text("Saved Episodes"))
+            LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
+                ForEach(store.favorites.items(.episode)) { item in
+                    if case .episode(let episode) = item { FavoriteEpisodeCard(episode: episode) }
+                }
+            }
+        }
+        .tvFocusSection()
+    }
+
+    private var musicSection: some View {
+        VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+            SectionHeader(title: L10n.text("Music"))
+            LazyVStack(alignment: .leading, spacing: MusicLayout.rowSpacing) {
+                ForEach(store.favorites.items(.music)) { item in
+                    if case .music(let track) = item {
+                        HStack(spacing: 10) {
+                            MusicTrackRow(track: track, showsFavoriteMark: false) { store.music.play(track) }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            FavoriteHeartButton(item: .music(track), name: track.title)
+                                .fixedSize()
+                        }
+                    }
+                }
+            }
+        }
+        .tvFocusSection()
+    }
+
+    private var cloudSection: some View {
+        VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+            SectionHeader(title: L10n.text("Cloud Files"))
+            LazyVStack(alignment: .leading, spacing: Layout.cardSpacing) {
+                ForEach(store.favorites.items(.cloud)) { item in
+                    if case .cloud(let file) = item { FavoriteCloudRow(file: file) }
+                }
+            }
+        }
+        .tvFocusSection()
+    }
 }
 
-/// A saved show; it opens on its details page, from the source it was saved from.
-struct FavoriteShowCard: View {
+/// Opens a saved film on its detail page, or reports that the source is gone.
+struct FavoriteVideoOpener<Label: View>: View {
     @Environment(Store.self) private var store
     @Environment(\.stripDrag) private var drag
-    let favorite: VideoFavorite
+    private let video: FavoriteVideo
+    private let label: Label
+
+    init(video: FavoriteVideo, @ViewBuilder label: () -> Label) {
+        self.video = video
+        self.label = label()
+    }
+
     var body: some View {
-        Group {
-            if let client = store.catalogClient(for: favorite) {
-                RouteLink { VideoDetailView(video: favorite.video, client: client) } label: { PosterCard(video: favorite.video) }
-            } else {
-                Button {
-                    guard drag?.active != true else { return }
-                    store.error = L10n.text("This show's source is no longer in your subscriptions.")
-                } label: { PosterCard(video: favorite.video).opacity(0.5) }
-            }
+        if let listing = video.listingVideo(), let client = store.catalogClient(for: video) {
+            RouteLink { VideoDetailView(video: listing, client: client) } label: { label }
+                .buttonStyle(IgnoreStripDragCardStyle(drag: drag))
+        } else {
+            Button {
+                if drag?.active != true { store.reportMissingFavoriteSource() }
+            } label: { label }
+            .cardButton()
+        }
+    }
+}
+
+/// NavigationLink activates on mouse-up; ignore that click while the home strip is dragging.
+private struct IgnoreStripDragCardStyle: PrimitiveButtonStyle {
+    var drag: StripDrag?
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            if drag?.active != true { configuration.trigger() }
+        } label: {
+            configuration.label
         }
         .cardButton()
-        .contextMenu {
-            Button(role: .destructive) { store.videoFavorites.remove(favorite.id) } label: {
-                Label(L10n.text("Remove %@ from favorites", favorite.name), systemImage: "heart.slash")
+    }
+}
+
+/// A saved film. The heart is a sibling of the poster button, so it does not open the title.
+private struct FavoriteFilmCard: View {
+    let video: FavoriteVideo
+    @State private var hovering = false
+    private var heartRevealed: Bool {
+        #if os(macOS)
+        hovering
+        #else
+        true
+        #endif
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            FavoriteVideoOpener(video: video) {
+                if let listing = video.listingVideo() {
+                    PosterCard(video: listing)
+                } else {
+                    Text(video.videoName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
+                }
             }
+            FavoriteHeartButton(item: .video(video), name: video.videoName, onArtwork: true, revealed: heartRevealed)
+                .fixedSize()
+                .padding(8)
         }
-        .accessibilityIdentifier("favorites.show." + favorite.videoID)
+        #if os(macOS)
+        .onHover { hovering = $0 }
+        .animation(.smooth(duration: 0.15), value: hovering)
+        #endif
+    }
+}
+
+/// A saved episode. Playing it does not remove the film favorite, and the heart removes only this episode.
+private struct FavoriteEpisodeCard: View {
+    @Environment(Store.self) private var store
+    let episode: FavoriteEpisode
+    @State private var hovering = false
+    private var heartRevealed: Bool {
+        #if os(macOS)
+        hovering
+        #else
+        true
+        #endif
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Button { store.play(episode) } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let listing = episode.video.listingVideo() {
+                        PosterCard(video: listing)
+                    } else {
+                        Text(episode.video.videoName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
+                    }
+                    Text(episode.episodeName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .cardButton()
+            FavoriteHeartButton(item: .episode(episode), name: episode.video.videoName, onArtwork: true, revealed: heartRevealed)
+                .fixedSize()
+                .padding(8)
+        }
+        #if os(macOS)
+        .onHover { hovering = $0 }
+        .animation(.smooth(duration: 0.15), value: hovering)
+        #endif
+    }
+}
+
+/// A saved cloud file, using the same panel as a channel card and the file row's label.
+private struct FavoriteCloudRow: View {
+    @Environment(Store.self) private var store
+    let file: FavoriteCloudFile
+
+    var body: some View {
+        let cloud = CloudFile(id: file.fileID, name: file.fileName, isFolder: false, size: file.size)
+        let driveName = CloudFiles.drive(key: file.driveKey)?.name ?? file.driveKey
+        HStack(spacing: 10) {
+            Button { store.play(file) } label: {
+                FileRowLabel(symbol: cloud.symbol, tint: cloud.tint, title: file.fileName, subtitle: driveName)
+            }
+            .glassRow()
+            FavoriteHeartButton(item: .cloud(file), name: file.fileName)
+                .fixedSize()
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentPanel()
     }
 }
 

@@ -16,6 +16,7 @@ import TVCore
     let playbackHistory: PlaybackHistory
     let playbackDefaults: UserDefaults
     let pinnedSources: PinnedSources
+    let hiddenSources: HiddenSources
     let sourceOrder: SourceOrder
     /// The history entry being resumed; another entry, or leaving the page, replaces or cancels it.
     private(set) var resumingHistoryID: String?
@@ -30,8 +31,7 @@ import TVCore
     var subscriptionErrors: [String: String] = [:]
     /// The last good copy of each subscription, by address.
     private(set) var documents: [String: Subscription] = [:]
-    var favorites: [Channel] = []
-    let videoFavorites: VideoFavorites
+    let favorites: Favorites
     var importing = false
     var error: String?
     var notice: String?
@@ -76,8 +76,12 @@ import TVCore
         playbackHistory = .shared
         #endif
         pinnedSources = PinnedSources(defaults: playbackDefaults)
+        hiddenSources = HiddenSources(defaults: playbackDefaults)
         sourceOrder = SourceOrder(defaults: playbackDefaults)
-        videoFavorites = VideoFavorites(defaults: defaults)
+        favorites = Favorites(defaults: defaults)
+        SourceHideReports.report = { [hiddenSources] site, origin, error in
+            hiddenSources.note(site, origin: origin, error: error, health: .shared)
+        }
         autoPlayNext = defaults.object(forKey: "autoPlayNextEpisode") == nil || defaults.bool(forKey: "autoPlayNextEpisode")
         let saved = defaults.data(forKey: "subscriptions").flatMap { try? JSONDecoder().decode([SubscriptionEntry].self, from: $0) }
         var entries = saved ?? [], copies: [String: Subscription] = [:]
@@ -102,7 +106,6 @@ import TVCore
             defaults.removeObject(forKey: "subscription")
         }
         rebuildSubscription(resetting: false)
-        if let data = defaults.data(forKey: "favorites") { favorites = (try? JSONDecoder().decode([Channel].self, from: data)) ?? [] }
         searchModel.order = sourceOrder
         DownloadLibrary.shared.resolver = { [weak self] item in
             guard let self else { throw CancellationError() }
@@ -227,6 +230,17 @@ import TVCore
         saveSubscriptionList()
         rebuildSubscription()
     }
+    func moveSourceGroup(_ address: String, onto target: String, includeHidden: Bool) {
+        let shown = sourceGroups(includeHidden: includeHidden).compactMap { group -> String? in
+            guard case .subscription(let value) = group.kind else { return nil }
+            return value
+        }
+        let next = SubscriptionOrder.moving(address, onto: target, in: shown)
+        guard next != shown else { return }
+        subscriptions = SubscriptionOrder.applying(displayed: next, to: subscriptions)
+        saveSubscriptionList()
+        rebuildSubscription()
+    }
 
     /// Fetches subscriptions side by side, keeps what arrives, and shows the merged result. A
     /// subscription that turns out to be a directory is replaced by the ones it lists, switched off.
@@ -272,7 +286,10 @@ import TVCore
     private func rebuildSubscription(resetting: Bool = true) {
         if resetting { searchModel.reset(); recommendationModel.reset() }
         subscription = Subscription.merge(subscriptions.filter(\.enabled).compactMap { documents[$0.address] })?.withBuiltInSites()
-        if let subscription { Self.registerPlugins(subscription) }
+        if let subscription {
+            Self.registerPlugins(subscription)
+            hiddenSources.backfill(subscription.sites, origin: subscription.origin, health: .shared)
+        }
     }
     func searchVideos(_ title: String) {
         guard let config = subscription else { return }
@@ -280,25 +297,36 @@ import TVCore
         guard !keyword.isEmpty else { return }
         let old = defaults.data(forKey: "videoSearchHistory").flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
         defaults.set(try? JSONEncoder().encode(Array(([keyword] + old.filter { $0 != keyword }).prefix(20))), forKey: "videoSearchHistory")
-        searchModel.search(keyword, config: config)
+        searchModel.search(keyword, config: config) { [hiddenSources] site in
+            hiddenSources.contains(site, origin: config.origin)
+        }
         section = .search
     }
-    func toggleFavorite(_ channel: Channel) {
-        if let index = favorites.firstIndex(where: { Self.same($0, channel) }) { favorites.remove(at: index) }
-        else { favorites.append(channel) }
-        defaults.set(try? JSONEncoder().encode(favorites), forKey: "favorites")
-    }
-    func isFavorite(_ channel: Channel) -> Bool { favorites.contains { Self.same($0, channel) } }
-    /// The source a saved show came from, found in any enabled subscription by its own origin and original key.
-    func catalogClient(for favorite: VideoFavorite) -> CatalogClient? {
+    func toggleFavorite(_ channel: Channel) { favorites.toggle(.live(channel)) }
+    func isFavorite(_ channel: Channel) -> Bool { favorites.contains(.live(channel)) }
+
+    func catalogClient(for video: FavoriteVideo) -> CatalogClient? {
         guard let config = subscription,
-              let site = config.sites.first(where: { $0.origin(or: config.origin) == favorite.origin && $0.sourceKey == favorite.sourceKey })
-        else { return nil }
+              let site = config.sites.first(where: { $0.origin(or: config.origin) == video.origin && $0.sourceKey == video.sourceKey }) else { return nil }
         return CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL)
     }
-    /// A live room's title changes while it streams, so rooms match by their address.
-    private static func same(_ saved: Channel, _ channel: Channel) -> Bool {
-        saved.id == channel.id || (LiveCatalog.isRoom(channel.url) && saved.url == channel.url)
+    func reportMissingFavoriteSource() {
+        error = L10n.text("This favorite's source is no longer in the current subscription. Restore that subscription to open it.")
+    }
+
+    func play(_ episode: FavoriteEpisode) {
+        guard catalogClient(for: episode.video) != nil else { reportMissingFavoriteSource(); return }
+        let position = episode.resumePosition(in: playbackHistory.entries)
+        resume(PlaybackHistoryEntry(context: episode.historyContext(), position: position, duration: 0, updatedAt: Date()))
+    }
+
+    func play(_ file: FavoriteCloudFile) {
+        guard let drive = CloudFiles.drive(key: file.driveKey) else {
+            error = L10n.text("This file's drive is no longer in Cloud Files.")
+            return
+        }
+        let cloud = CloudFile(id: file.fileID, name: file.fileName, isFolder: false, size: file.size)
+        playFile(cloud, in: CloudFilesFolder(drive: drive, id: file.folderID, name: file.folderName, files: [cloud]))
     }
 
     /// The sources to show, in the viewer's own order while it is on.
@@ -307,9 +335,9 @@ import TVCore
         return sourceOrder.enabled ? sourceOrder.arrange(sites, origin: config.origin) : sites
     }
 
-    /// The order the app picks: built-in sources, then `SourceStrategy`'s, with pinned sources first.
+    /// The order the app picks: built-in sources, then `SourceStrategy`'s, with pinned sources first. Hidden sources stay out.
     func automaticSites(_ config: Subscription) -> [Site] {
-        let sites = SourceStrategy.arrange(config.sites) { !$0.hidden && $0.canBrowse(jarURL: config.spiderURL) }
+        let sites = SourceLists.browsable(config.sites, jarURL: config.spiderURL) { hiddenSources.contains($0, origin: config.origin) }
         return pinnedSources.arrange(sites.filter(\.isBuiltIn) + sites.filter { !$0.isBuiltIn }, origin: config.origin)
     }
 
@@ -327,6 +355,13 @@ import TVCore
         guard let index = sites.firstIndex(where: { $0.id == site.id }) else { return }
         sites.move(fromOffsets: [index], toOffset: max(0, min(offset, sites.count)))
         sourceOrder.save(sites, origin: config.origin)
+    }
+
+    /// The sources page's sections: pinned, built-in, then one per subscription.
+    func sourceGroups(includeHidden: Bool) -> [SourceGroup] {
+        guard let config = subscription else { return [] }
+        let pins = pinnedSources.arrange(config.sites, origin: config.origin).filter { pinnedSources.contains($0, origin: config.origin) }
+        return SourceGroups.make(entries: subscriptions, documents: documents, builtIns: config.sites.filter(\.isBuiltIn), builtInOrigin: config.origin, mergedSites: config.sites, pinOrder: pins, userHidden: { hiddenSources.contains($0, origin: config.origin) }, includeHidden: includeHidden, jarURL: config.spiderURL)
     }
 
     func catalogChannel(_ resolved: Channel, video: Video, episode: Episode, client: CatalogClient,

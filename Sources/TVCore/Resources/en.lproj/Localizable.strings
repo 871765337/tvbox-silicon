@@ -39,6 +39,11 @@
 "Open Source Licenses" = "Open Source Licenses";
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source.";
 "No Favorites Yet" = "No Favorites Yet";
+"Tap the heart next to a live channel to save it on this device." = "Tap the heart next to a live channel to save it on this device.";
+"Films" = "Films";
+"Saved Episodes" = "Saved Episodes";
+"Save a live channel, a video, an episode, a song, or a cloud file with the heart." = "Save a live channel, a video, an episode, a song, or a cloud file with the heart.";
+"Unable to save favorites: %@" = "Unable to save favorites: %@";
 "Tap the heart on a show's page or next to a live channel to save it on this device." = "Tap the heart on a show's page or next to a live channel to save it on this device.";
 "This show's source is no longer in your subscriptions." = "This show's source is no longer in your subscriptions.";
 "Remove %@ from favorites" = "Remove %@ from favorites";
@@ -585,6 +590,7 @@
 "Continue from %@" = "Continue from %@";
 "Unable to save playback history: %@" = "Unable to save playback history: %@";
 "This history source is no longer in the current subscription. Restore that subscription to continue." = "This history source is no longer in the current subscription. Restore that subscription to continue.";
+"This favorite's source is no longer in the current subscription. Restore that subscription to open it." = "This favorite's source is no longer in the current subscription. Restore that subscription to open it.";
 "The saved episode is no longer available from this source. Choose an episode again." = "The saved episode is no longer available from this source. Choose an episode again.";
 "Unable to resume playback: %@" = "Unable to resume playback: %@";
 "The player could not restore the saved position. Try again." = "The player could not restore the saved position. Try again.";
@@ -594,6 +600,11 @@
 "Pinned" = "Pinned";
 "Pin source" = "Pin source";
 "Unpin source" = "Unpin source";
+"Pinned Group" = "Pinned Group";
+"Hide Source" = "Hide Source";
+"Unhide Source" = "Unhide Source";
+"Hidden Sources" = "Hidden Sources";
+"Hidden" = "Hidden";
 "Pinned Sources" = "Pinned Sources";
 "Search history" = "Search history";
 "Manage history" = "Manage history";
@@ -984,3 +995,5 @@
 "Choose a source to move it. Sources at the top are searched first, and their results are listed first." = "Choose a source to move it. Sources at the top are searched first, and their results are listed first.";
 "Move to Top" = "Move to Top";
 "Move to Bottom" = "Move to Bottom";
+"Like" = "Like";
+"Unlike" = "Unlike";

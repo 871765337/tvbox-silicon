@@ -20,8 +20,7 @@ struct HomeView: View {
                             pinnedSources(config)
                         }
                         RecommendationsView(config: config)
-                        if !store.videoFavorites.items.isEmpty { favoriteShows }
-                        if !store.favorites.isEmpty { favorites }
+                        if !store.favorites.items.isEmpty { favorites }
                         if !config.lives.isEmpty { playlists(config).id("live") }
                     } else {
                         welcome
@@ -162,18 +161,7 @@ struct HomeView: View {
             SectionHeader(title: L10n.text("Continue Watching")) { store.section = .history }
             ChipRow {
                 HStack(spacing: Layout.cardSpacing) {
-                    ForEach(store.playbackHistory.entries.prefix(12)) { HistoryCard(entry: $0).accessibilityIdentifier("history.resume." + $0.context.videoID) }
-                }.padding(.vertical, 6)
-            }
-        }
-    }
-
-    private var favoriteShows: some View {
-        VStack(alignment: .leading, spacing: Layout.headerSpacing) {
-            SectionHeader(title: L10n.text("Favorite Shows")) { store.section = .favorites }
-            ChipRow {
-                HStack(spacing: Layout.cardSpacing) {
-                    ForEach(store.videoFavorites.items.prefix(12)) { FavoriteShowCard(favorite: $0).frame(width: HistoryMetrics.card) }
+                    ForEach(store.playbackHistory.entries.prefix(12)) { HistoryCard(entry: $0) }
                 }.padding(.vertical, 6)
             }
         }
@@ -181,10 +169,12 @@ struct HomeView: View {
 
     private var favorites: some View {
         VStack(alignment: .leading, spacing: Layout.headerSpacing) {
-            SectionHeader(title: L10n.text("Favorite Channels")) { store.section = .favorites }
+            SectionHeader(title: L10n.text("Favorites")) { store.section = .favorites }
             ChipRow {
                 HStack(spacing: Layout.cardSpacing) {
-                    ForEach(store.favorites.prefix(12)) { ChannelCard(channel: $0).frame(width: Layout.cardMin) }
+                    ForEach(Array(store.favorites.items.prefix(12))) { item in
+                        HomeFavoriteCard(item: item).frame(width: Layout.cardMin)
+                    }
                 }.padding(.vertical, 6)
             }
         }
@@ -198,6 +188,115 @@ struct HomeView: View {
         }
     }
 
+}
+
+/// One of the 12 newest favorites on Watch Now, in the same panel as a channel card.
+private struct HomeFavoriteCard: View {
+    @Environment(Store.self) private var store
+    @Environment(\.stripDrag) private var drag
+    let item: FavoriteItem
+    #if os(tvOS)
+    private static let thumb: CGFloat = 72
+    #else
+    private static let thumb: CGFloat = 50
+    #endif
+    private static let posterWidth = thumb * 2 / 3
+
+    var body: some View {
+        switch item {
+        case .live(let channel):
+            ChannelCard(channel: channel)
+        case .video(let video):
+            videoCard(video)
+        case .episode(let episode):
+            episodeCard(episode)
+        case .music(let track):
+            musicCard(track)
+        case .cloud(let file):
+            cloudCard(file)
+        }
+    }
+
+    private func videoCard(_ video: FavoriteVideo) -> some View {
+        HStack(spacing: 10) {
+            FavoriteVideoOpener(video: video) {
+                media(poster(url: video.poster, headers: video.posterHeaders), title: video.videoName, subtitle: video.sourceName)
+            }
+            FavoriteHeartButton(item: .video(video), name: video.videoName)
+                .fixedSize()
+                .allowsHitTesting(drag?.active != true)
+        }
+        .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+        .contentPanel()
+    }
+
+    private func episodeCard(_ episode: FavoriteEpisode) -> some View {
+        HStack(spacing: 10) {
+            Button {
+                if drag?.active != true { store.play(episode) }
+            } label: {
+                media(poster(url: episode.video.poster, headers: episode.video.posterHeaders), title: episode.video.videoName, subtitle: episode.episodeName)
+            }
+            .cardButton()
+            FavoriteHeartButton(item: .episode(episode), name: episode.video.videoName)
+                .fixedSize()
+                .allowsHitTesting(drag?.active != true)
+        }
+        .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+        .contentPanel()
+    }
+
+    private func musicCard(_ track: MusicTrack) -> some View {
+        HStack(spacing: 10) {
+            Button {
+                if drag?.active != true { store.music.play(track) }
+            } label: {
+                media(MusicArtwork(url: track.artwork, size: Self.thumb), title: track.title, subtitle: track.artistLine)
+            }
+            .cardButton()
+            FavoriteHeartButton(item: .music(track), name: track.title)
+                .fixedSize()
+                .allowsHitTesting(drag?.active != true)
+        }
+        .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+        .contentPanel()
+    }
+
+    private func cloudCard(_ file: FavoriteCloudFile) -> some View {
+        let cloud = CloudFile(id: file.fileID, name: file.fileName, isFolder: false, size: file.size)
+        let driveName = CloudFiles.drive(key: file.driveKey)?.name ?? file.driveKey
+        return HStack(spacing: 10) {
+            Button {
+                if drag?.active != true { store.play(file) }
+            } label: {
+                FileRowLabel(symbol: cloud.symbol, tint: cloud.tint, title: file.fileName, subtitle: driveName)
+            }
+            .cardButton()
+            FavoriteHeartButton(item: .cloud(file), name: file.fileName)
+                .fixedSize()
+                .allowsHitTesting(drag?.active != true)
+        }
+        .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+        .contentPanel()
+    }
+
+    private func poster(url: URL?, headers: [String: String]) -> some View {
+        PosterImage(url: url, headers: headers)
+            .frame(width: Self.posterWidth, height: Self.thumb)
+            .clipShape(RoundedRectangle(cornerRadius: Self.thumb * 0.28, style: .continuous))
+    }
+
+    private func media<Art: View>(_ art: Art, title: String, subtitle: String) -> some View {
+        HStack(spacing: 14) {
+            art
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.headline).foregroundStyle(.primary).lineLimit(1)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+    }
 }
 
 /// The app icon artwork, masked like a home-screen icon.

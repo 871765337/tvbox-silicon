@@ -4,23 +4,39 @@ import TVCore
 struct SitesView: View {
     @Environment(Store.self) private var store
     @State private var query = ""
+    /// A group is open only when its id is here, so a group that shows up later starts folded.
+    /// Reset with the page, not with a pushed source: the state lives here and `prepared` keeps the default fold to once per visit.
+    @State private var expanded: Set<String> = Self.defaultExpanded
+    @State private var prepared = false
+    private static let defaultExpanded: Set<String> = ["pinned", "builtIn"]
+    /// The fold as it was when a search began; restored when the search is cleared.
+    @State private var foldBeforeSearch: Set<String>?
     @State private var arranging = false
     var body: some View {
         Group {
             if let config = store.subscription {
+                let groups = store.sourceGroups(includeHidden: false).filtered(by: query)
                 let sites = store.orderedSites(config)
                 ScrollView {
-                    VStack(alignment: .leading, spacing: Layout.cardSpacing) {
+                    LazyVStack(alignment: .leading, spacing: Layout.cardSpacing) {
                         if query.isEmpty && sites.count > 1 {
                             SourceOrderCard(sites: sites) { arranging = true }.tvFocusSection()
                         }
-                        LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
-                            ForEach(sites.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { site in
-                                RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site) }.tileButton()
-                                    .contextMenu {
-                                        PinSourceButton(site: site, origin: config.origin)
-                                        if store.sourceOrder.enabled { MoveSourceButtons(site: site, sites: sites) }
+                        ForEach(groups) { group in
+                            groupHeader(group)
+                            if expanded.contains(group.id) {
+                                LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
+                                    ForEach(group.sites) { site in
+                                        RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site, dimmed: group.kind == .hidden) }.tileButton()
+                                            .contextMenu {
+                                                PinSourceButton(site: site, origin: config.origin)
+                                                HideSourceButton(site: site, origin: config.origin)
+                                                if store.sourceOrder.enabled { MoveSourceButtons(site: site, sites: sites) }
+                                            }
                                     }
+                                }
+                                // Unfolds from under its header; folding only fades, as the groups below slide up.
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: -16)), removal: .opacity))
                             }
                         }
                     }.pageContainer()
@@ -40,6 +56,80 @@ struct SitesView: View {
         }
         .screenBackdrop()
         .catalogSearchable(text: $query, prompt: L10n.text("Find a source")).tabTitle(L10n.text("Sources"))
+        .task(id: store.section) {
+            if store.section == .sites && !prepared {
+                applyDefaultFold()
+                prepared = true
+            }
+        }
+        .onChange(of: store.section) { _, new in
+            if new != .sites { prepared = false }
+        }
+        .onChange(of: query) { old, new in
+            if old.isEmpty && !new.isEmpty {
+                foldBeforeSearch = expanded
+                expanded.formUnion(store.sourceGroups(includeHidden: false).map(\.id))
+            } else if !old.isEmpty && new.isEmpty, let saved = foldBeforeSearch {
+                expanded = saved
+                foldBeforeSearch = nil
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func groupHeader(_ group: SourceGroup) -> some View {
+        let open = expanded.contains(group.id)
+        let header = Button {
+            withAnimation(.snappy(duration: 0.3)) {
+                if open { expanded.remove(group.id) } else { expanded.insert(group.id) }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Text(L10n.text(group.title)).font(.headline).lineLimit(1)
+                Text("\(group.sites.count)").font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                // One chevron that turns, rather than two symbols swapped.
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(open ? 90 : 0))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier("sources.group." + group.id)
+        #if !os(tvOS)
+        if case .subscription = group.kind, query.isEmpty {
+            header
+                .draggable(group.id)
+                .dropDestination(for: String.self) { items, _ in
+                    guard query.isEmpty, let address = items.first else { return false }
+                    store.moveSourceGroup(address, onto: group.id, includeHidden: false)
+                    return true
+                }
+        } else {
+            header
+        }
+        #else
+        header
+        #endif
+    }
+
+    /// The default view of the page: subscription groups and hidden sources folded.
+    private func applyDefaultFold() {
+        expanded = Self.defaultExpanded
+        foldBeforeSearch = nil
+    }
+}
+
+private extension Array where Element == SourceGroup {
+    /// Sites whose name contains the query, ignoring case; groups left empty drop out.
+    func filtered(by query: String) -> [SourceGroup] {
+        guard !query.isEmpty else { return self }
+        return compactMap { group in
+            var kept = group
+            kept.sites = group.sites.filter { $0.name.localizedCaseInsensitiveContains(query) }
+            return kept.sites.isEmpty ? nil : kept
+        }
     }
 }
 
@@ -94,6 +184,8 @@ struct SiteCard: View {
     @Environment(Store.self) private var store
     @Environment(\.isFocused) private var isFocused
     let site: Site
+    /// A source the viewer hid, shown only while hidden sources are revealed.
+    var dimmed = false
     #if os(tvOS)
     private var focused: Bool { isFocused }
     private let icon: CGFloat = 88, padding: CGFloat = 20, radius: CGFloat = 28
@@ -125,6 +217,7 @@ struct SiteCard: View {
                     Text(label.parts[0]).font(.headline).lineLimit(1)
                         .foregroundStyle(focused ? Color.black : runs ? Color.primary : Color.secondary)
                     if runs { SourceHealthDot(status: store.health(of: site)) }
+                    if dimmed { Text(L10n.text("Hidden")).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                 }
                 if !detail.isEmpty {
                     Text(detail).font(.subheadline).lineLimit(1)
@@ -139,6 +232,7 @@ struct SiteCard: View {
         .padding(padding).frame(maxWidth: .infinity, alignment: .leading)
         .background { TileSurface(focused: focused, radius: radius) }
         .accessibilityElement(children: .combine)
+        .opacity(dimmed ? 0.45 : 1)
     }
 
     /// Which engine runs a source is an implementation detail; only built-in sources say so.
@@ -216,6 +310,18 @@ struct PinSourceButton: View {
         Button { store.pinnedSources.toggle(site, origin: origin) } label: {
             Label(L10n.text(pinned ? "Unpin source" : "Pin source"), systemImage: pinned ? "pin.slash" : "pin")
         }.accessibilityIdentifier("source.pin." + site.key)
+    }
+}
+
+struct HideSourceButton: View {
+    @Environment(Store.self) private var store
+    let site: Site
+    let origin: URL
+    var body: some View {
+        let hidden = store.hiddenSources.contains(site, origin: origin)
+        Button { store.hiddenSources.toggle(site, origin: origin) } label: {
+            Label(L10n.text(hidden ? "Unhide Source" : "Hide Source"), systemImage: hidden ? "eye" : "eye.slash")
+        }.accessibilityIdentifier("source.hide." + site.key)
     }
 }
 
@@ -599,7 +705,10 @@ struct SiteView: View {
             }
         }
         .onDisappear { requestTask?.cancel(); browser.cancel() }
-        .toolbar { PinSourceButton(site: site, origin: origin) }
+        .toolbar {
+            PinSourceButton(site: site, origin: origin)
+            HideSourceButton(site: site, origin: origin)
+        }
         .screenBackdrop()
         .onAppear {
             guard site.isBilibili, browser.loaded else { return }
@@ -977,13 +1086,23 @@ struct VideoDetailView: View {
         34
         #endif
     }
+    private func currentVideo() -> Video { detail ?? video }
+
+    private func videoFavorite() -> FavoriteItem {
+        .video(FavoriteVideo(origin: client.origin, site: client.site, video: currentVideo()))
+    }
+
+    private func episodeFavorite(_ episode: Episode) -> FavoriteItem {
+        .episode(FavoriteEpisode(video: FavoriteVideo(origin: client.origin, site: client.site, video: currentVideo()), episodeFlag: episode.flag, episodeName: episode.name, episodeID: episode.id))
+    }
+
     @ViewBuilder private var playControl: some View {
         if let detail {
             if let first = detail.episodes.first(where: { $0.flag == activeFlag }) ?? detail.episodes.first {
                 // Beside the poster on a phone there is no room for both labels: Download drops to its icon.
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: false); favoriteButton }
-                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: true); favoriteButton }
+                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: false); videoFavoriteButton }
+                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: true); videoFavoriteButton }
                 }
             } else {
                 #if os(tvOS)
@@ -1037,13 +1156,16 @@ struct VideoDetailView: View {
         }
         .controlButton().controlSize(.large).accessibilityLabel(L10n.text("Download"))
     }
-    /// Saves the show to Favorites, beside the favorite channels.
-    private var favoriteButton: some View {
-        let saved = store.videoFavorites.contains(VideoFavorite.id(origin: client.origin, site: client.site, video: video))
-        let title = saved ? L10n.text("Remove %@ from favorites", video.name) : L10n.text("Add %@ to favorites", video.name)
-        return Button { store.videoFavorites.toggle(VideoFavorite(origin: client.origin, site: client.site, video: video)) } label: {
-            Image(systemName: saved ? "heart.fill" : "heart").font(.headline)
-                .foregroundStyle(saved ? AnyShapeStyle(Brand.rose) : AnyShapeStyle(.primary))
+    /// Icon-only, beside Play and Download. An empty heart keeps the control color; a saved one is rose.
+    private var videoFavoriteButton: some View {
+        let saved = store.favorites.contains(videoFavorite())
+        let title = saved ? L10n.text("Remove %@ from favorites", currentVideo().name) : L10n.text("Add %@ to favorites", currentVideo().name)
+        return Button { store.favorites.toggle(videoFavorite()) } label: {
+            if saved {
+                Image(systemName: "heart.fill").foregroundStyle(Brand.rose)
+            } else {
+                Image(systemName: "heart")
+            }
         }
         .controlButton().controlSize(.large)
         .accessibilityLabel(title).help(title)
@@ -1163,7 +1285,18 @@ struct VideoDetailView: View {
                             .overlay(alignment: .topTrailing) { if saved?.status == .completed { DownloadedBadge() } }
                     }
                 }
+                .overlay(alignment: .topLeading) {
+                    if store.favorites.contains(episodeFavorite(episode)) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: DownloadMetrics.thumb > 60 ? 18 : 12, weight: .semibold))
+                            .foregroundStyle(Brand.rose)
+                            .padding(4)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
                 .contextMenu {
+                    FavoriteMenuButton(item: episodeFavorite(episode), name: episode.name)
                     if saved == nil || saved?.status == .failed {
                         Button(L10n.text("Download"), systemImage: "arrow.down.circle") {
                             DownloadLibrary.shared.download(DownloadSource(site: client.site, videoID: video.id, episode: episode),

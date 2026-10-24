@@ -39,6 +39,11 @@
 "Open Source Licenses" = "开源许可";
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "支持 TVBox JSON 订阅、M3U / TXT 直播列表与 type 1 / type 4 标准 JSON 接口。媒体格式取决于设备。Mac 版提供实验性本地 JavaScript 和 Python 插件支持，所有平台均提供实验性 JAR 插件支持，兼容情况因视频源而异。";
 "No Favorites Yet" = "还没有收藏";
+"Tap the heart next to a live channel to save it on this device." = "在直播频道旁点爱心，收藏会保存在这台设备上。";
+"Films" = "影片";
+"Saved Episodes" = "剧集";
+"Save a live channel, a video, an episode, a song, or a cloud file with the heart." = "可以在直播、影片详情、某一集、历史记录、歌曲和网盘文件上点心形收藏。";
+"Unable to save favorites: %@" = "收藏保存失败：%@";
 "Tap the heart on a show's page or next to a live channel to save it on this device." = "在影视详情页或直播频道旁点爱心，收藏会保存在这台设备上。";
 "This show's source is no longer in your subscriptions." = "这部影视的来源已不在你的订阅中。";
 "Remove %@ from favorites" = "取消收藏 %@";
@@ -584,6 +589,7 @@
 "Continue from %@" = "从 %@ 继续播放";
 "Unable to save playback history: %@" = "播放历史保存失败：%@";
 "This history source is no longer in the current subscription. Restore that subscription to continue." = "当前订阅中已没有此记录的视频源，请恢复原订阅后继续观看。";
+"This favorite's source is no longer in the current subscription. Restore that subscription to open it." = "当前订阅中已没有此收藏的视频源，请恢复原订阅后再打开。";
 "The saved episode is no longer available from this source. Choose an episode again." = "此源已没有记录中的剧集，请重新选择集数。";
 "Unable to resume playback: %@" = "无法继续播放：%@";
 "The player could not restore the saved position. Try again." = "播放器无法恢复上次进度，请重试。";
@@ -593,6 +599,11 @@
 "Pinned" = "已置顶";
 "Pin source" = "置顶源";
 "Unpin source" = "取消置顶";
+"Pinned Group" = "置顶";
+"Hide Source" = "隐藏源";
+"Unhide Source" = "取消隐藏";
+"Hidden Sources" = "已隐藏的源";
+"Hidden" = "已隐藏";
 "Pinned Sources" = "置顶点播源";
 "Search history" = "搜索播放历史";
 "Manage history" = "管理历史";
@@ -984,3 +995,5 @@
 "Move to Top" = "移到最前";
 "Move to Bottom" = "移到最后";
 "The plugin runtime could not complete this request. Try again or use another source." = "插件运行时无法完成此请求，请重试或使用其他来源。";
+"Like" = "喜欢";
+"Unlike" = "取消喜欢";

@@ -49,7 +49,6 @@ struct PlaybackHistoryView: View {
                 LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
                     ForEach(entries) { entry in
                         HistoryCard(entry: entry, selection: managing ? selected.contains(entry.id) : nil, details: true) { tap(entry) }
-                            .accessibilityIdentifier((managing ? "history.select." : "history.resume.") + entry.context.videoID)
                     }
                 }
                 .tvFocusSection()
@@ -61,7 +60,7 @@ struct PlaybackHistoryView: View {
     /// Count and actions on one line, or actions under the count when a phone is too narrow;
     /// managing swaps them for selection actions.
     private var header: some View {
-        let title = SectionHeader(title: L10n.text("%lld titles", history.entries.count))
+        let title = SectionHeader(title: L10n.text("%lld titles", entries.count))
         return ViewThatFits(in: .horizontal) {
             HStack(alignment: .center, spacing: 12) {
                 title
@@ -135,7 +134,59 @@ struct HistoryCard: View {
     var details = false
     /// Replaces resuming, for managing.
     var action: (() -> Void)? = nil
+    @State private var hovering = false
+    /// Touch and the remote have no hover, so the empty heart stays available there.
+    private var heartRevealed: Bool {
+        #if os(macOS)
+        hovering
+        #else
+        true
+        #endif
+    }
     var body: some View {
+        // The heart is a sibling of the poster button, so a click does not resume or change the selection.
+        ZStack(alignment: .topLeading) {
+            posterButton
+            FavoriteHeartButton(item: entry.favoriteItem(), name: entry.context.videoName, onArtwork: true, revealed: heartRevealed)
+                .fixedSize()
+                .padding(8)
+                .allowsHitTesting(drag?.active != true)
+        }
+        #if !os(tvOS)
+        // The menu lifts the whole card. Lifted from the poster alone, it left the heart drawn above
+        // the poster behind: alone over the hole for a moment, then gone under the blur, a flicker.
+        .contextMenu { menu }
+        #endif
+        .overlay(alignment: .topTrailing) {
+            if selection == nil, hovering {
+                historyRemove
+                    .padding(8)
+                    .transition(.opacity)
+            }
+        }
+        #if !os(tvOS)
+        .onHover { hovering = $0 }
+        .animation(.smooth(duration: 0.15), value: hovering)
+        #endif
+    }
+
+    /// Red remove control. A pointer shows it; the context menu stays for touch and the remote.
+    private var historyRemove: some View {
+        Button {
+            guard drag?.active != true else { return }
+            store.playbackHistory.remove(entry.id)
+        } label: {
+            Image(systemName: "xmark").font(.system(size: 9, weight: .bold)).foregroundStyle(.black.opacity(0.8))
+                .frame(width: 22, height: 22)
+                .background(Brand.rose, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L10n.text("Remove from history"))
+        .allowsHitTesting(drag?.active != true)
+    }
+
+    private var posterButton: some View {
         Button {
             guard drag?.active != true else { return }
             if let action { action() } else { store.resume(entry) }
@@ -188,8 +239,15 @@ struct HistoryCard: View {
         }
         .cardButton()
         .accessibilityAddTraits(selection == true ? [.isSelected] : [])
-        .contextMenu {
-            Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) { store.playbackHistory.remove(entry.id) }
-        }
+        .accessibilityIdentifier((selection != nil ? "history.select." : "history.resume.") + entry.context.videoID)
+        #if os(tvOS)
+        // The remote opens a menu on the focused button, so it stays here.
+        .contextMenu { menu }
+        #endif
+    }
+
+    @ViewBuilder private var menu: some View {
+        FavoriteMenuButton(item: entry.favoriteItem(), name: entry.context.videoName)
+        Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) { store.playbackHistory.remove(entry.id) }
     }
 }

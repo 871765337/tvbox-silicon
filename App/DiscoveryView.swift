@@ -287,11 +287,10 @@ struct GlobalSearchView: View {
         return L10n.text("%lld of %lld sources responded", model.completed - model.failures.count, model.total)
     }
 
+    /// Always one row. Stacking them here let the summary keep them beside it on a phone, as a lopsided
+    /// column; too narrow a row now moves the whole row under the summary instead.
     private func searchActions(_ config: Subscription) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) { searchActionButtons(config) }
-            VStack(alignment: .leading, spacing: 8) { searchActionButtons(config) }
-        }
+        HStack(spacing: 8) { searchActionButtons(config) }.fixedSize()
     }
 
     /// tvOS pills lead with a symbol, as the search pill does; elsewhere the title stands alone.
@@ -362,16 +361,29 @@ struct GlobalSearchView: View {
                 }
                 VStack(spacing: 0) {
                     ForEach(Array(history.enumerated()), id: \.element) { index, item in
-                        Button { model.draft = item; if let config = store.subscription { submit(config) } } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: "clock.arrow.circlepath").font(.body).foregroundStyle(.secondary).frame(width: 24)
-                                Text(item).font(.body).lineLimit(1)
-                                Spacer(minLength: 0)
-                                Image(systemName: "arrow.up.left").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                        HStack(spacing: 0) {
+                            Button { useHistory(item) } label: {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "clock.arrow.circlepath").font(.body).foregroundStyle(.secondary).frame(width: 24)
+                                    Text(item).font(.body).lineLimit(1)
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.leading, 18).frame(minHeight: 52).frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                            Button { removeSearch(item) } label: {
+                                Image(systemName: "xmark").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                                    .frame(width: 36, height: 52)
+                                    .contentShape(Rectangle())
                             }
-                            .padding(.horizontal, 18).frame(minHeight: 52).frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }.buttonStyle(.plain)
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("Remove"))
+                            Button { useHistory(item) } label: {
+                                Image(systemName: "arrow.up.left").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                                    .padding(.trailing, 18).frame(height: 52)
+                                    .contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                        }
                         if index < history.count - 1 { Divider().padding(.leading, 56) }
                     }
                 }
@@ -425,6 +437,15 @@ struct GlobalSearchView: View {
         #endif
     }
 
+    private func useHistory(_ item: String) {
+        model.draft = item
+        if let config = store.subscription { submit(config) }
+    }
+
+    private func removeSearch(_ item: String) {
+        historyData = (try? JSONEncoder().encode(history.filter { $0 != item })) ?? historyData
+    }
+
     private func rememberQuery(_ query: String? = nil) {
         let keyword = query ?? model.keyword
         guard !keyword.isEmpty else { return }
@@ -453,7 +474,9 @@ struct GlobalSearchView: View {
         guard !keyword.isEmpty else { return }
         rememberQuery(keyword)
         inputFocused = false
-        model.search(keyword, config: config)
+        model.search(keyword, config: config) { [store] site in
+            store.hiddenSources.contains(site, origin: config.origin)
+        }
     }
 }
 /// What a running search is doing: overall progress, a time estimate, and one row per plugin

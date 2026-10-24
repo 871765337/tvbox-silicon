@@ -140,9 +140,18 @@ struct CloudFolderView: View {
         if file.isFolder {
             FolderLink(drive: drive, folder: file.id, name: file.name) { label }
         } else if drive.plays(file) {
-            Button { play(file, in: files) } label: { label }
-                .glassRow()
-                .accessibilityIdentifier("files.play." + file.name)
+            let item = FavoriteItem.cloud(FavoriteCloudFile(driveKey: drive.key, folderID: folder, folderName: name, fileID: file.id, fileName: file.name, size: file.size))
+            Button { play(file, in: files) } label: {
+                HStack(spacing: 8) {
+                    label
+                    if store.favorites.contains(item) {
+                        Image(systemName: "heart.fill").foregroundStyle(Brand.rose).fixedSize().accessibilityHidden(true)
+                    }
+                }
+            }
+            .glassRow()
+            .contextMenu { FavoriteMenuButton(item: item, name: file.name) }
+            .accessibilityIdentifier("files.play." + file.name)
         } else {
             // Focusable on Apple TV all the same, or the remote couldn't scroll past these rows.
             #if os(tvOS)
@@ -349,7 +358,7 @@ private struct FilesSection<Content: View>: View {
     }
 }
 
-private struct FileRowLabel: View {
+struct FileRowLabel: View {
     let symbol: String
     let tint: Color
     let title: String

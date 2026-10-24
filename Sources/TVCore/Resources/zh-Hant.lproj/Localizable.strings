@@ -39,6 +39,11 @@
 "Open Source Licenses" = "開放原始碼授權";
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "支援 TVBox JSON 訂閱、M3U / TXT 直播清單與 type 1 / type 4 標準 JSON 介面。媒體格式依裝置而異。Mac 版提供實驗性本機 JavaScript 和 Python 外掛支援，所有平台皆提供實驗性 JAR 外掛支援，相容情況依來源而異。";
 "No Favorites Yet" = "尚無收藏";
+"Tap the heart next to a live channel to save it on this device." = "點選直播頻道旁的愛心，即可將收藏儲存在此裝置上。";
+"Films" = "影片";
+"Saved Episodes" = "劇集";
+"Save a live channel, a video, an episode, a song, or a cloud file with the heart." = "可以在直播、影片詳情、某一集、歷史記錄、歌曲和網盤檔案上點心形收藏。";
+"Unable to save favorites: %@" = "收藏儲存失敗：%@";
 "Tap the heart on a show's page or next to a live channel to save it on this device." = "在影視詳情頁或直播頻道旁點選愛心，即可將收藏儲存在此裝置上。";
 "This show's source is no longer in your subscriptions." = "這部影視的來源已不在你的訂閱中。";
 "Remove %@ from favorites" = "取消收藏 %@";
@@ -584,6 +589,7 @@
 "Continue from %@" = "從 %@ 繼續播放";
 "Unable to save playback history: %@" = "播放記錄儲存失敗：%@";
 "This history source is no longer in the current subscription. Restore that subscription to continue." = "目前訂閱中已沒有此記錄的影片來源，請恢復原訂閱後繼續觀看。";
+"This favorite's source is no longer in the current subscription. Restore that subscription to open it." = "目前的訂閱中已沒有此收藏的影片源，請恢復原訂閱後再開啟。";
 "The saved episode is no longer available from this source. Choose an episode again." = "此來源已沒有記錄中的劇集，請重新選擇集數。";
 "Unable to resume playback: %@" = "無法繼續播放：%@";
 "The player could not restore the saved position. Try again." = "播放器無法恢復上次進度，請重試。";
@@ -593,6 +599,11 @@
 "Pinned" = "已置頂";
 "Pin source" = "置頂來源";
 "Unpin source" = "取消置頂";
+"Pinned Group" = "置頂";
+"Hide Source" = "隱藏來源";
+"Unhide Source" = "取消隱藏";
+"Hidden Sources" = "已隱藏的來源";
+"Hidden" = "已隱藏";
 "Pinned Sources" = "置頂點播來源";
 "Search history" = "搜尋播放歷史";
 "Manage history" = "管理歷史";
@@ -984,3 +995,5 @@
 "Move to Top" = "移到最前";
 "Move to Bottom" = "移到最後";
 "The plugin runtime could not complete this request. Try again or use another source." = "外掛執行環境無法完成此請求，請重試或使用其他來源。";
+"Like" = "喜歡";
+"Unlike" = "取消喜歡";

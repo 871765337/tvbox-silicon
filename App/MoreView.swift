@@ -158,7 +158,7 @@ struct MoreView: View {
         case .messages: announcements.all.count
         case .sites: store.subscription.map { store.orderedSites($0).count }
         case .history: store.playbackHistory.entries.count
-        case .favorites: store.favorites.count + store.videoFavorites.items.count
+        case .favorites: store.favorites.items.count
         case .downloads: DownloadLibrary.shared.items.count
         default: nil
         }

@@ -39,6 +39,11 @@
 "Open Source Licenses" = "オープンソースライセンス";
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "TVBox JSON 配信設定、M3U / TXT ライブ再生リスト、type 1 / type 4 の標準 JSON API に対応しています。メディア形式はデバイスによって異なります。Mac のローカル JavaScript と Python プラグイン、およびすべてのプラットフォームの JAR プラグインは試験対応で、互換性は配信元によって異なります。";
 "No Favorites Yet" = "お気に入りはまだありません";
+"Tap the heart next to a live channel to save it on this device." = "ライブチャンネルの横にあるハートを押すと、このデバイスに保存できます。";
+"Films" = "作品";
+"Saved Episodes" = "エピソード";
+"Save a live channel, a video, an episode, a song, or a cloud file with the heart." = "ライブ、作品の詳細、エピソード、再生履歴、曲、クラウドのファイルでハートを押せます。";
+"Unable to save favorites: %@" = "お気に入りを保存できません：%@";
 "Tap the heart on a show's page or next to a live channel to save it on this device." = "作品の詳細ページやライブチャンネルの横にあるハートを押すと、このデバイスに保存できます。";
 "This show's source is no longer in your subscriptions." = "この作品のソースは、現在の配信設定にありません。";
 "Remove %@ from favorites" = "%@ をお気に入りから削除";
@@ -584,6 +589,7 @@
 "Continue from %@" = "%@ から再生";
 "Unable to save playback history: %@" = "再生履歴を保存できません：%@";
 "This history source is no longer in the current subscription. Restore that subscription to continue." = "現在の購読にこの配信元がありません。元の購読を復元してください。";
+"This favorite's source is no longer in the current subscription. Restore that subscription to open it." = "このお気に入りのソースは現在のサブスクリプションにありません。元のサブスクリプションを戻してから開いてください。";
 "The saved episode is no longer available from this source. Choose an episode again." = "保存したエピソードが見つかりません。もう一度選択してください。";
 "Unable to resume playback: %@" = "続きから再生できません：%@";
 "The player could not restore the saved position. Try again." = "前回の再生位置を復元できませんでした。もう一度お試しください。";
@@ -593,6 +599,11 @@
 "Pinned" = "固定済み";
 "Pin source" = "ソースを固定";
 "Unpin source" = "固定を解除";
+"Pinned Group" = "固定";
+"Hide Source" = "ソースを隠す";
+"Unhide Source" = "再表示";
+"Hidden Sources" = "隠したソース";
+"Hidden" = "非表示";
 "Pinned Sources" = "固定したソース";
 "Search history" = "視聴履歴を検索";
 "Manage history" = "履歴を管理";
@@ -984,3 +995,5 @@
 "Move to Top" = "一番上へ移動";
 "Move to Bottom" = "一番下へ移動";
 "The plugin runtime could not complete this request. Try again or use another source." = "プラグインの実行環境でリクエストを完了できませんでした。再試行するか、別のソースを使用してください。";
+"Like" = "いいね";
+"Unlike" = "いいねを取り消す";
