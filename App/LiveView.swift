@@ -414,21 +414,64 @@ struct FavoritesView: View {
     @Environment(Store.self) private var store
     var body: some View {
         Group {
-            if store.favorites.isEmpty {
+            if store.favorites.isEmpty && store.videoFavorites.items.isEmpty {
                 EmptyPage(symbol: AppSection.favorites.icon, title: L10n.text("No Favorites Yet"),
-                          message: L10n.text("Tap the heart next to a live channel to save it on this device."),
+                          message: L10n.text("Tap the heart on a show's page or next to a live channel to save it on this device."),
                           action: AppSection.live.title, actionSymbol: AppSection.live.icon, perform: { store.section = .live })
             }
             else {
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: Layout.cardMin), spacing: 12)], spacing: 12) {
-                        ForEach(store.favorites) { ChannelCard(channel: $0) }
+                    VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
+                        if !store.videoFavorites.items.isEmpty {
+                            VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+                                SectionHeader(title: L10n.text("Favorite Shows"))
+                                LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
+                                    ForEach(store.videoFavorites.items) { FavoriteShowCard(favorite: $0) }
+                                }
+                            }
+                            .tvFocusSection()
+                        }
+                        if !store.favorites.isEmpty {
+                            VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+                                SectionHeader(title: L10n.text("Favorite Channels"))
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: Layout.cardMin), spacing: 12)], spacing: 12) {
+                                    ForEach(store.favorites) { ChannelCard(channel: $0) }
+                                }
+                            }
+                            .tvFocusSection()
+                        }
                     }.pageContainer()
                 }
             }
         }
         .screenBackdrop()
         .tabTitle(L10n.text("Favorites"))
+    }
+}
+
+/// A saved show; it opens on its details page, from the source it was saved from.
+struct FavoriteShowCard: View {
+    @Environment(Store.self) private var store
+    @Environment(\.stripDrag) private var drag
+    let favorite: VideoFavorite
+    var body: some View {
+        Group {
+            if let client = store.catalogClient(for: favorite) {
+                RouteLink { VideoDetailView(video: favorite.video, client: client) } label: { PosterCard(video: favorite.video) }
+            } else {
+                Button {
+                    guard drag?.active != true else { return }
+                    store.error = L10n.text("This show's source is no longer in your subscriptions.")
+                } label: { PosterCard(video: favorite.video).opacity(0.5) }
+            }
+        }
+        .cardButton()
+        .contextMenu {
+            Button(role: .destructive) { store.videoFavorites.remove(favorite.id) } label: {
+                Label(L10n.text("Remove %@ from favorites", favorite.name), systemImage: "heart.slash")
+            }
+        }
+        .accessibilityIdentifier("favorites.show." + favorite.videoID)
     }
 }
 

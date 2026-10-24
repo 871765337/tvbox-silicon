@@ -15,6 +15,7 @@
 "Browse Live TV" = "瀏覽直播";
 "Live Playlists" = "直播清單";
 "Favorite Channels" = "收藏頻道";
+"Favorite Shows" = "收藏的影視";
 "Subscription Compatibility" = "訂閱相容性";
 "Direct live streams and standard JSON sources are supported. The Mac app includes a local JAR runtime; plugin and source compatibility is still being tested." = "支援直播直連和標準 JSON 隨選來源。Mac 版已內建 JAR 執行環境，外掛相容性與來源可用性仍在逐一驗證。";
 "View All Sources" = "檢視所有隨選來源";
@@ -38,7 +39,8 @@
 "Open Source Licenses" = "開放原始碼授權";
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "支援 TVBox JSON 訂閱、M3U / TXT 直播清單與 type 1 / type 4 標準 JSON 介面。媒體格式依裝置而異。Mac 版提供實驗性本機 JavaScript 和 Python 外掛支援，所有平台皆提供實驗性 JAR 外掛支援，相容情況依來源而異。";
 "No Favorites Yet" = "尚無收藏";
-"Tap the heart next to a live channel to save it on this device." = "點選直播頻道旁的愛心，即可將收藏儲存在此裝置上。";
+"Tap the heart on a show's page or next to a live channel to save it on this device." = "在影視詳情頁或直播頻道旁點選愛心，即可將收藏儲存在此裝置上。";
+"This show's source is no longer in your subscriptions." = "這部影視的來源已不在你的訂閱中。";
 "Remove %@ from favorites" = "取消收藏 %@";
 "Add %@ to favorites" = "收藏 %@";
 "Connect a Live Subscription" = "連接直播訂閱";

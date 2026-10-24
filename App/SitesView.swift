@@ -982,8 +982,8 @@ struct VideoDetailView: View {
             if let first = detail.episodes.first(where: { $0.flag == activeFlag }) ?? detail.episodes.first {
                 // Beside the poster on a phone there is no room for both labels: Download drops to its icon.
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: false) }
-                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: true) }
+                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: false); favoriteButton }
+                    HStack(spacing: 10) { playButton(first); downloadButton(iconOnly: true); favoriteButton }
                 }
             } else {
                 #if os(tvOS)
@@ -1036,6 +1036,18 @@ struct VideoDetailView: View {
                 .font(.headline).lineLimit(1).fixedSize()
         }
         .controlButton().controlSize(.large).accessibilityLabel(L10n.text("Download"))
+    }
+    /// Saves the show to Favorites, beside the favorite channels.
+    private var favoriteButton: some View {
+        let saved = store.videoFavorites.contains(VideoFavorite.id(origin: client.origin, site: client.site, video: video))
+        let title = saved ? L10n.text("Remove %@ from favorites", video.name) : L10n.text("Add %@ to favorites", video.name)
+        return Button { store.videoFavorites.toggle(VideoFavorite(origin: client.origin, site: client.site, video: video)) } label: {
+            Image(systemName: saved ? "heart.fill" : "heart").font(.headline)
+                .foregroundStyle(saved ? AnyShapeStyle(Brand.rose) : AnyShapeStyle(.primary))
+        }
+        .controlButton().controlSize(.large)
+        .accessibilityLabel(title).help(title)
+        .accessibilityIdentifier("detail.favorite")
     }
     /// Stands in for a watch-page player: a 16:9 stage with the artwork, title and the primary action.
     private var hero: some View {

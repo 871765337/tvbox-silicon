@@ -80,10 +80,15 @@ struct GlobalSearchView: View {
             .screenTitle(L10n.text("Global Search"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            .scrollDismissesKeyboard(.interactively)
             #endif
             .sheet(isPresented: $showFailures) { failureDetails }
             .onAppear {
+                // Not on iPhone and iPad: the keyboard would cover the tab bar, and a tab's root page has no back
+                // button, so there would be no way to leave without searching.
+                #if os(macOS)
                 if model.keyword.isEmpty { inputFocused = true }
+                #endif
                 if let config = store.subscription { model.resumeSuspended(config: config) }
             }
             .onDisappear { endVisible = false; model.suspend() }

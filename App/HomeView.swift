@@ -20,6 +20,7 @@ struct HomeView: View {
                             pinnedSources(config)
                         }
                         RecommendationsView(config: config)
+                        if !store.videoFavorites.items.isEmpty { favoriteShows }
                         if !store.favorites.isEmpty { favorites }
                         if !config.lives.isEmpty { playlists(config).id("live") }
                     } else {
@@ -167,9 +168,20 @@ struct HomeView: View {
         }
     }
 
+    private var favoriteShows: some View {
+        VStack(alignment: .leading, spacing: Layout.headerSpacing) {
+            SectionHeader(title: L10n.text("Favorite Shows")) { store.section = .favorites }
+            ChipRow {
+                HStack(spacing: Layout.cardSpacing) {
+                    ForEach(store.videoFavorites.items.prefix(12)) { FavoriteShowCard(favorite: $0).frame(width: HistoryMetrics.card) }
+                }.padding(.vertical, 6)
+            }
+        }
+    }
+
     private var favorites: some View {
         VStack(alignment: .leading, spacing: Layout.headerSpacing) {
-            SectionHeader(title: L10n.text("Favorites")) { store.section = .favorites }
+            SectionHeader(title: L10n.text("Favorite Channels")) { store.section = .favorites }
             ChipRow {
                 HStack(spacing: Layout.cardSpacing) {
                     ForEach(store.favorites.prefix(12)) { ChannelCard(channel: $0).frame(width: Layout.cardMin) }
