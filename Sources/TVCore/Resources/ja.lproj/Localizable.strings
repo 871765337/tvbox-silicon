@@ -625,7 +625,7 @@
 "Retry automatic matching" = "自動検索を再試行";
 "From local cache" = "ローカルキャッシュ";
 "Find official episodes for dmku" = "dmku用に公式エピソードを自動検索";
-"Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku; stream URLs and playback headers are never sent." = "Dandanplay・iQIYI・Tencent Videoを自動検索し、最初に見つかった該当コメントを使用します。dmkuには公式の公開エピソードページのみ送信し、ストリームURLや再生ヘッダーは送信しません。";
+"Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent." = "Dandanplay・iQIYI・Tencent Videoを自動検索し、最初に見つかった該当コメントを使用します。dmku（見つからない場合は danmu.zxz.ee）には公式の公開エピソードページのみ送信し、ストリームURLや再生ヘッダーは送信しません。";
 "Finding matching danmaku…" = "該当するコメントを検索中…";
 "No matching episode has comments." = "このエピソードのコメントは見つかりませんでした。";
 "Danmaku services are temporarily unavailable. Video playback is unaffected." = "コメントサービスを一時的に利用できません。動画再生には影響しません。";

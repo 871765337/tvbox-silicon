@@ -625,7 +625,7 @@
 "Retry automatic matching" = "重新自動配對";
 "From local cache" = "來自本機快取";
 "Find official episodes for dmku" = "為 dmku 自動尋找官方單集";
-"Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku; stream URLs and playback headers are never sent." = "自動查詢彈彈play、愛奇藝和騰訊影片，使用最先找到的有效彈幕。僅將官方公開單集頁面交給 dmku，不傳送播放串流位址或請求標頭。";
+"Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent." = "自動查詢彈彈play、愛奇藝和騰訊影片，使用最先找到的有效彈幕。僅將官方公開單集頁面交給 dmku（dmku 沒有時交給 danmu.zxz.ee），不傳送播放串流位址或請求標頭。";
 "Finding matching danmaku…" = "正在配對彈幕…";
 "No matching episode has comments." = "未找到目前集的彈幕。";
 "Danmaku services are temporarily unavailable. Video playback is unaffected." = "彈幕服務暫時無法使用，不影響影片播放。";

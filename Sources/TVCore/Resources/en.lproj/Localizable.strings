@@ -626,7 +626,7 @@
 "Retry automatic matching" = "Retry automatic matching";
 "From local cache" = "From local cache";
 "Find official episodes for dmku" = "Find official episodes for dmku";
-"Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku; stream URLs and playback headers are never sent." = "Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku; stream URLs and playback headers are never sent.";
+"Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent." = "Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent.";
 "Finding matching danmaku…" = "Finding matching danmaku…";
 "No matching episode has comments." = "No matching episode has comments.";
 "Danmaku services are temporarily unavailable. Video playback is unaffected." = "Danmaku services are temporarily unavailable. Video playback is unaffected.";

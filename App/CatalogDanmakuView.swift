@@ -204,7 +204,7 @@ struct CatalogDanmakuSettingsView: View {
                 }
                 Section {
                     Toggle(L10n.text("Find official episodes for dmku"), isOn: $officialLookup)
-                    Text(L10n.text("Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku; stream URLs and playback headers are never sent."))
+                    Text(L10n.text("Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent."))
                         .font(.caption).foregroundStyle(.secondary)
                     HStack {
                         TextField(L10n.text("Video title"), text: $keyword).onSubmit { search() }.accessibilityIdentifier("danmaku.keyword")

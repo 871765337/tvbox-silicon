@@ -24,8 +24,13 @@ private actor DanmakuTestTransport {
             return try JSONSerialization.data(withJSONObject: root)
         }
         if host == "pbaccess.video.qq.com" { return Data(#"{"ret":0,"data":{"areaBoxList":[]}}"#.utf8) }
+        if host == "backup.test" {
+            if mode != "backup" { throw TVError.http(404) }
+            return Data(##"{"code":200,"count":2,"danmuku":[[1,5,"#4994c4","有2条弹幕正在赶来，请遵守弹幕礼仪，祝您观影愉快~","1"],[3,1,"#ffffff","备用解析","1721178153"],[8,5,"#f00","顶部","1721178153"]]}"##.utf8)
+        }
         if host == "dmku.test" {
             if mode == "dandan" { throw TVError.http(503) }
+            if mode == "backup" { return Data(#"{"code":23,"danmuku":[]}"#.utf8) }
             return Data(##"{"code":23,"danmuku":[[1.5,"right","#fff","32px","真实协议测试"],[4,"top","#f00","32px","顶部"]]}"##.utf8)
         }
         if host == "dandan.test" {
@@ -80,6 +85,20 @@ private actor DanmakuTestTransport {
         #expect(Date().timeIntervalSince(start) < 3)
         #expect(mode == "dandan" ? result.source == "Dandanplay" : result.source == "dmku · iqiyi")
     }
+}
+
+@Test func officialPagesFallBackToTheBackupParserWhenDmkuHasNoComments() async throws {
+    let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let transport = DanmakuTestTransport("backup")
+    let resolver = DanmakuResolver(cache: MediaCache(root: root), http: DanmakuHTTP { try await transport.send($0) },
+        dandanServer: "https://dandan.test", dmkuServer: URL(string: "https://dmku.test")!, backupServer: URL(string: "https://backup.test/")!)
+    let result = try await resolver.resolve(automaticContext())
+    #expect(result.source == "backup.test · iqiyi")
+    #expect(result.comments.map(\.text) == ["备用解析", "顶部"])
+    #expect(result.comments.last?.mode == .top)
+    #expect(result.comments.last?.color == 0xff0000)
+    #expect(await transport.count("dmku.test") == 1)
 }
 
 @Test func officialMatchingRejectsRemakesWrongSeasonsTrailersAndCredentialURLs() throws {
