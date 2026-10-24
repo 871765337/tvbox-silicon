@@ -4,18 +4,38 @@ import TVCore
 struct SitesView: View {
     @Environment(Store.self) private var store
     @State private var query = ""
+    @State private var arranging = false
     var body: some View {
         Group {
             if let config = store.subscription {
+                let sites = store.orderedSites(config)
                 ScrollView {
-                    LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
-                        ForEach(store.orderedSites(config)
-                            .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { site in
-                            RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site) }.tileButton()
-                                .contextMenu { PinSourceButton(site: site, origin: config.origin) }
+                    VStack(alignment: .leading, spacing: Layout.cardSpacing) {
+                        if query.isEmpty && sites.count > 1 {
+                            SourceOrderCard(sites: sites) { arranging = true }.tvFocusSection()
+                        }
+                        LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
+                            ForEach(sites.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { site in
+                                RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site) }.tileButton()
+                                    .contextMenu {
+                                        PinSourceButton(site: site, origin: config.origin)
+                                        if store.sourceOrder.enabled { MoveSourceButtons(site: site, sites: sites) }
+                                    }
+                            }
                         }
                     }.pageContainer()
                 }
+                .sheet(isPresented: $arranging) { SourceOrderEditor(sites: sites, automatic: store.automaticSites(config)) }
+                #if DEBUG
+                // `-qaArrangeSources 1` opens the editor for screenshots.
+                .task {
+                    guard UserDefaults.standard.bool(forKey: "qaArrangeSources") else { return }
+                    store.setCustomSourceOrder(true)
+                    // Let launch settle first: on tvOS a sheet asked for straight away never appeared.
+                    try? await Task.sleep(for: .seconds(2))
+                    arranging = true
+                }
+                #endif
             } else { ContentUnavailableView(L10n.text("No Sources Yet"), systemImage: "square.grid.2x2", description: Text(L10n.text("Add a TVBox subscription in Settings."))) }
         }
         .screenBackdrop()
@@ -197,6 +217,287 @@ struct PinSourceButton: View {
             Label(L10n.text(pinned ? "Unpin source" : "Pin source"), systemImage: pinned ? "pin.slash" : "pin")
         }.accessibilityIdentifier("source.pin." + site.key)
     }
+}
+
+/// Context-menu moves within the viewer's own source order.
+struct MoveSourceButtons: View {
+    @Environment(Store.self) private var store
+    let site: Site
+    let sites: [Site]
+    var body: some View {
+        if let index = sites.firstIndex(where: { $0.id == site.id }) {
+            if index > 0 {
+                Button { store.moveSource(site, to: 0) } label: { Label(L10n.text("Move to Top"), systemImage: "arrow.up.to.line") }
+            }
+            if index < sites.count - 1 {
+                Button { store.moveSource(site, to: sites.count) } label: { Label(L10n.text("Move to Bottom"), systemImage: "arrow.down.to.line") }
+            }
+        }
+    }
+}
+
+/// The Sources page's header: the switch for the viewer's own order (`SourceOrder`), the top of
+/// that order at a glance, and the way into arranging it.
+struct SourceOrderCard: View {
+    @Environment(Store.self) private var store
+    let sites: [Site]
+    let arrange: () -> Void
+    private var enabled: Binding<Bool> {
+        Binding { store.sourceOrder.enabled } set: { on in withAnimation(.smooth) { store.setCustomSourceOrder(on) } }
+    }
+    private var detail: String {
+        L10n.text(store.sourceOrder.enabled ? "Sources at the top are searched first, and their results are listed first."
+                                            : "Yingxia searches quick, reliable sources first.")
+    }
+    var body: some View {
+        #if os(tvOS)
+        VStack(alignment: .leading, spacing: 8) {
+            TVSettingsToggle(title: L10n.text("Custom Search Order"), detail: detail, isOn: enabled)
+                .accessibilityIdentifier("sources.order.toggle")
+            if store.sourceOrder.enabled {
+                Button(action: arrange) {
+                    TVSettingsRowLabel(title: L10n.text("Arrange Sources"), chevron: true) { SourceOrderPreview(sites: sites) }
+                }
+                .glassRow()
+                .accessibilityIdentifier("sources.order.arrange")
+            }
+        }
+        #else
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                IconTile(symbol: "arrow.up.arrow.down", tint: Brand.indigo, size: 40)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(L10n.text("Custom Search Order")).font(.headline)
+                    Text(detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                Toggle(L10n.text("Custom Search Order"), isOn: enabled).labelsHidden().toggleStyle(.switch)
+                    .accessibilityIdentifier("sources.order.toggle")
+            }
+            if store.sourceOrder.enabled {
+                Divider()
+                HStack(spacing: 12) {
+                    // As many icons as fit beside the button.
+                    ViewThatFits(in: .horizontal) {
+                        SourceOrderPreview(sites: sites, limit: 5)
+                        SourceOrderPreview(sites: sites, limit: 4)
+                        SourceOrderPreview(sites: sites, limit: 3)
+                    }
+                    Spacer(minLength: 8)
+                    Button(action: arrange) {
+                        Label(L10n.text("Arrange"), systemImage: "arrow.up.arrow.down")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Brand.onAccent)
+                            .lineLimit(1).fixedSize()
+                            .padding(.horizontal, 16).padding(.vertical, 7)
+                            .background(Brand.accent, in: Capsule())
+                    }
+                    .buttonStyle(LiftButtonStyle())
+                    .accessibilityIdentifier("sources.order.arrange")
+                }
+            }
+        }
+        .padding(16)
+        .contentPanel(cornerRadius: 22)
+        #endif
+    }
+}
+
+/// The first sources of an order, as numbered icons.
+struct SourceOrderPreview: View {
+    let sites: [Site]
+    var limit = 5
+    #if os(tvOS)
+    private let size: CGFloat = 44
+    #else
+    private let size: CGFloat = 30
+    #endif
+    var body: some View {
+        let shown = Array(sites.prefix(limit))
+        HStack(spacing: size * 0.32) {
+            ForEach(Array(shown.enumerated()), id: \.element.id) { index, site in
+                SourceIcon(site: site, label: SourceLabel(site.name), size: size)
+                    .overlay(alignment: .topLeading) {
+                        SourceRankBadge(rank: index + 1, size: size * 0.52).offset(x: -size * 0.18, y: -size * 0.18)
+                    }
+            }
+            if sites.count > shown.count {
+                Text(verbatim: "+\(sites.count - shown.count)").font(.subheadline.weight(.semibold)).monospacedDigit().foregroundStyle(.secondary)
+            }
+        }
+        // Room for the badges that stick out.
+        .padding(.top, size * 0.18).padding(.leading, size * 0.18)
+        .accessibilityHidden(true)
+    }
+}
+
+struct SourceRankBadge: View {
+    let rank: Int
+    var size: CGFloat
+    var body: some View {
+        Text(rank, format: .number).font(.system(size: size * 0.62, weight: .bold, design: .rounded)).monospacedDigit()
+            .foregroundStyle(Brand.onAccent)
+            .padding(.horizontal, size * 0.2)
+            .frame(minWidth: size, minHeight: size)
+            .background(Brand.accent, in: Capsule())
+            .overlay { Capsule().strokeBorder(.black.opacity(0.25), lineWidth: 1) }
+    }
+}
+
+/// One source in the order editor: its place, icon, name and health.
+private struct SourceOrderRow: View {
+    @Environment(Store.self) private var store
+    let site: Site
+    let rank: Int
+    #if os(tvOS)
+    private let icon: CGFloat = 56, rankWidth: CGFloat = 44
+    private let title = Font.system(size: 29, weight: .medium), caption = Font.system(size: 22)
+    #else
+    private let icon: CGFloat = 32, rankWidth: CGFloat = 26
+    private let title = Font.body.weight(.medium), caption = Font.caption
+    #endif
+    var body: some View {
+        let label = SourceLabel(site.name)
+        let detail = (label.parts.dropFirst() + [site.isBuiltIn ? L10n.text("Built-in") : nil].compactMap { $0 }).joined(separator: " · ")
+        HStack(spacing: 12) {
+            Text(rank, format: .number).font(caption.weight(.semibold)).monospacedDigit()
+                .foregroundStyle(rank <= 3 ? Color.primary : Color.secondary)
+                .frame(minWidth: rankWidth, alignment: .trailing)
+            SourceIcon(site: site, label: label, size: icon)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(label.parts[0]).font(title).lineLimit(1)
+                    SourceHealthDot(status: store.health(of: site))
+                }
+                if !detail.isEmpty { Text(detail).font(caption).foregroundStyle(.secondary).lineLimit(1) }
+            }
+            Spacer(minLength: 8)
+            #if os(macOS)
+            // macOS lists draw no handle of their own; any part of the row drags.
+            Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
+            #endif
+        }
+        .padding(.vertical, 3)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The viewer's source order as a list to drag into place. tvOS has no dragging: there, choose a
+/// source, then where it goes; each move is saved at once.
+struct SourceOrderEditor: View {
+    @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var sites: [Site]
+    /// What Reset goes back to.
+    private let automatic: [Site]
+    #if os(tvOS)
+    @State private var moving: Site?
+    #endif
+
+    init(sites: [Site], automatic: [Site]) {
+        _sites = State(initialValue: sites)
+        self.automatic = automatic
+    }
+
+    private var isAutomatic: Bool { sites.map(\.id) == automatic.map(\.id) }
+
+    private func save() {
+        if let config = store.subscription { store.sourceOrder.save(sites, origin: config.origin) }
+    }
+
+    var body: some View {
+        #if os(tvOS)
+        NavigationStack {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.text("Choose a source to move it. Sources at the top are searched first, and their results are listed first."))
+                        .font(.system(size: 24)).foregroundStyle(.secondary).padding(.bottom, 12)
+                    ForEach(Array(sites.enumerated()), id: \.element.id) { index, site in
+                        Button { moving = site } label: { SourceOrderRow(site: site, rank: index + 1).frame(maxWidth: .infinity) }
+                            .glassRow()
+                            .accessibilityIdentifier("sources.order.row." + site.key)
+                    }
+                    TVSettingsAction(title: L10n.text("Reset"), destructive: true) {
+                        withAnimation(.smooth) { sites = automatic }
+                        save()
+                    }
+                    .disabled(isAutomatic)
+                    .padding(.top, 16)
+                }
+                .glassRowInsets()
+            }
+            .screenTitle(L10n.text("Arrange Sources"))
+            .screenBackdrop()
+            .confirmationDialog(moving.map { SourceLabel($0.name).parts[0] } ?? "",
+                                isPresented: Binding { moving != nil } set: { if !$0 { moving = nil } },
+                                titleVisibility: .visible, presenting: moving) { site in
+                let index = sites.firstIndex { $0.id == site.id } ?? 0
+                if index > 0 {
+                    Button(L10n.text("Move to Top")) { move(site, to: 0) }
+                    Button(L10n.text("Move Up")) { move(site, to: index - 1) }
+                }
+                if index < sites.count - 1 {
+                    Button(L10n.text("Move Down")) { move(site, to: index + 2) }
+                    Button(L10n.text("Move to Bottom")) { move(site, to: sites.count) }
+                }
+            }
+        }
+        .frame(width: 1100, height: 800)
+        .onExitCommand { dismiss() }
+        #else
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(Array(sites.enumerated()), id: \.element.id) { index, site in
+                        SourceOrderRow(site: site, rank: index + 1)
+                            #if os(iOS)
+                            .listRowBackground(Surface())
+                            #endif
+                            .accessibilityIdentifier("sources.order.row." + site.key)
+                    }
+                    .onMove { sites.move(fromOffsets: $0, toOffset: $1) }
+                } footer: {
+                    Text(L10n.text("Drag sources to reorder them. Sources at the top are searched first, and their results are listed first."))
+                }
+            }
+            #if os(iOS)
+            .environment(\.editMode, .constant(.active))
+            .scrollContentBackground(.hidden)
+            .background { Backdrop() }
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .navigationTitle(L10n.text("Arrange Sources"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.text("Cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.text("Done")) { save(); dismiss() }.fontWeight(.semibold)
+                        .accessibilityIdentifier("sources.order.done")
+                }
+                #if os(iOS)
+                ToolbarItem(placement: .bottomBar) {
+                    Button(L10n.text("Reset")) { withAnimation(.smooth) { sites = automatic } }.disabled(isAutomatic)
+                }
+                #else
+                ToolbarItem(placement: .destructiveAction) {
+                    Button(L10n.text("Reset")) { withAnimation(.smooth) { sites = automatic } }.disabled(isAutomatic)
+                }
+                #endif
+            }
+        }
+        #if os(macOS)
+        .frame(width: 480, height: 600)
+        #endif
+        #endif
+    }
+
+    #if os(tvOS)
+    private func move(_ site: Site, to offset: Int) {
+        guard let index = sites.firstIndex(where: { $0.id == site.id }) else { return }
+        withAnimation(.smooth) { sites.move(fromOffsets: [index], toOffset: offset) }
+        save()
+    }
+    #endif
 }
 
 struct SiteView: View {

@@ -354,3 +354,25 @@ private final class OfflineProtocol: URLProtocol, @unchecked Sendable {
     #expect(model.videos(for: "p").map(\.id) == ["p1a", "p1b", "p2a", "p2b"])
     #expect(!model.loadingMore)
 }
+
+@Test @MainActor func searchFollowsTheViewersSourceOrderWhileItIsOn() async throws {
+    let suite = "order." + UUID().uuidString
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let base = URL(string: "https://example.com/config")!
+    let sub = try Subscription.parse(Data(#"{"sites":[{"key":"a","type":4,"api":"/api"},{"key":"b","type":4,"api":"/api"},{"key":"c","type":4,"api":"/api"}]}"#.utf8), origin: base)
+    let order = SourceOrder(defaults: defaults)
+    order.save([sub.sites[2], sub.sites[0]], origin: base)
+    let model = SearchModel(http: client())
+    model.order = order
+    model.search("movie", config: sub)
+    await model.task?.value
+    #expect(model.matches.map(\.site.key) == ["a", "b", "c"]) // Off: the automatic order.
+    order.enabled = true
+    model.search("film", config: sub)
+    await model.task?.value
+    #expect(model.matches.map(\.site.key) == ["c", "a", "b"]) // Sources the order doesn't list yet follow.
+    order.enabled = false
+    model.search("film", config: sub)
+    #expect(model.matches.map(\.site.key) == ["a", "b", "c"]) // Cached results are listed in the current order.
+}

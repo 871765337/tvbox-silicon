@@ -16,6 +16,7 @@ import TVCore
     let playbackHistory: PlaybackHistory
     let playbackDefaults: UserDefaults
     let pinnedSources: PinnedSources
+    let sourceOrder: SourceOrder
     /// The history entry being resumed; another entry, or leaving the page, replaces or cancels it.
     private(set) var resumingHistoryID: String?
     private var resumeTask: Task<Void, Never>?
@@ -75,6 +76,7 @@ import TVCore
         playbackHistory = .shared
         #endif
         pinnedSources = PinnedSources(defaults: playbackDefaults)
+        sourceOrder = SourceOrder(defaults: playbackDefaults)
         videoFavorites = VideoFavorites(defaults: defaults)
         autoPlayNext = defaults.object(forKey: "autoPlayNextEpisode") == nil || defaults.bool(forKey: "autoPlayNextEpisode")
         let saved = defaults.data(forKey: "subscriptions").flatMap { try? JSONDecoder().decode([SubscriptionEntry].self, from: $0) }
@@ -101,6 +103,7 @@ import TVCore
         }
         rebuildSubscription(resetting: false)
         if let data = defaults.data(forKey: "favorites") { favorites = (try? JSONDecoder().decode([Channel].self, from: data)) ?? [] }
+        searchModel.order = sourceOrder
         DownloadLibrary.shared.resolver = { [weak self] item in
             guard let self else { throw CancellationError() }
             return try await self.resolveDownload(item)
@@ -298,9 +301,32 @@ import TVCore
         saved.id == channel.id || (LiveCatalog.isRoom(channel.url) && saved.url == channel.url)
     }
 
+    /// The sources to show, in the viewer's own order while it is on.
     func orderedSites(_ config: Subscription) -> [Site] {
+        let sites = automaticSites(config)
+        return sourceOrder.enabled ? sourceOrder.arrange(sites, origin: config.origin) : sites
+    }
+
+    /// The order the app picks: built-in sources, then `SourceStrategy`'s, with pinned sources first.
+    func automaticSites(_ config: Subscription) -> [Site] {
         let sites = SourceStrategy.arrange(config.sites) { !$0.hidden && $0.canBrowse(jarURL: config.spiderURL) }
         return pinnedSources.arrange(sites.filter(\.isBuiltIn) + sites.filter { !$0.isBuiltIn }, origin: config.origin)
+    }
+
+    /// Turns the viewer's own source order on or off. The first time, it starts from the order on
+    /// screen, so nothing jumps.
+    func setCustomSourceOrder(_ enabled: Bool) {
+        if enabled, sourceOrder.isEmpty, let config = subscription { sourceOrder.save(automaticSites(config), origin: config.origin) }
+        sourceOrder.enabled = enabled
+    }
+
+    /// Moves a source within the viewer's order; `offset` is a position in `orderedSites`, as `move(fromOffsets:toOffset:)` takes it.
+    func moveSource(_ site: Site, to offset: Int) {
+        guard let config = subscription else { return }
+        var sites = orderedSites(config)
+        guard let index = sites.firstIndex(where: { $0.id == site.id }) else { return }
+        sites.move(fromOffsets: [index], toOffset: max(0, min(offset, sites.count)))
+        sourceOrder.save(sites, origin: config.origin)
     }
 
     func catalogChannel(_ resolved: Channel, video: Video, episode: Episode, client: CatalogClient,

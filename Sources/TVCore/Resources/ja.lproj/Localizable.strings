@@ -974,3 +974,12 @@
 "Brightness" = "明るさ";
 "Slide for Brightness and Volume" = "スライドで明るさと音量を調整";
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "動画の左側を上下にスライドすると明るさ、右側では音量を調整できます。";
+"Custom Search Order" = "カスタム検索順";
+"Sources at the top are searched first, and their results are listed first." = "上にあるソースから先に検索し、その結果を先に表示します。";
+"Yingxia searches quick, reliable sources first." = "映匣は速くて安定したソースから先に検索します。";
+"Arrange" = "並べ替え";
+"Arrange Sources" = "ソースを並べ替え";
+"Drag sources to reorder them. Sources at the top are searched first, and their results are listed first." = "ドラッグしてソースを並べ替えます。上にあるソースから先に検索し、その結果を先に表示します。";
+"Choose a source to move it. Sources at the top are searched first, and their results are listed first." = "ソースを選んで移動します。上にあるソースから先に検索し、その結果を先に表示します。";
+"Move to Top" = "一番上へ移動";
+"Move to Bottom" = "一番下へ移動";
