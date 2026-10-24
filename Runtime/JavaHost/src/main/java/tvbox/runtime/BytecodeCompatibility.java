@@ -11,18 +11,40 @@ public final class BytecodeCompatibility {
     // v12: objects that R8 initializes through Object.<init> are allocated directly.
     // v13: HttpURLConnection range requests are observed too (cloud-drive CDN addresses).
     // v14: large constant arrays (fill-array-data) are copied into the array, not out of it (IR2JConverter).
-    public static final String VERSION = "host-v15";
+    // v16: static values a class file can't keep as constants (a String in an Object field) are set in <clinit>.
+    public static final String VERSION = "host-v16";
     private static final java.util.Set<String> connections = java.util.Set.of("java/net/URLConnection", "java/net/HttpURLConnection", "javax/net/ssl/HttpsURLConnection");
 
     private static final String BRIDGES = "tvbox/runtime/generated/InterfaceCalls";
     private record CallSite(String owner, String name, String descriptor) { }
+    private record InitialValue(String name, String descriptor, Object value) { }
 
     private static byte[] transform(byte[] bytes, java.util.Map<CallSite, String> bridges, String bridgeOwner) {
         bytes = ConstructorRepair.repair(bytes);
         ClassReader reader = new ClassReader(bytes);
         ClassWriter writer = new ClassWriter(reader, 0);
         boolean newCz = reader.getClassName().equals("com/github/catvod/spider/NewCz");
+        var initialValues = new java.util.ArrayList<InitialValue>();
+        boolean[] initializer = { false };
         reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
+            // Dex gives any static field an initial value; a class file only primitives, and Strings in String
+            // fields. The JVM refuses a class with any other ("Bad string initial value"), so dex2jar's String in
+            // an Object field, or class in a Class field, is set first thing in <clinit> instead, as dex does.
+            @Override public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+                if (value != null && (access & Opcodes.ACC_STATIC) != 0 && (descriptor.startsWith("L") || descriptor.startsWith("["))
+                        && !(value instanceof String && descriptor.equals("Ljava/lang/String;"))) {
+                    if (value instanceof String || value instanceof Type) initialValues.add(new InitialValue(name, descriptor, value));
+                    value = null;
+                }
+                return super.visitField(access, name, descriptor, signature, value);
+            }
+            @Override public void visitEnd() {
+                if (!initialValues.isEmpty() && !initializer[0]) {
+                    MethodVisitor method = withInitialValues(super.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null), reader.getClassName(), initialValues);
+                    method.visitCode(); method.visitInsn(Opcodes.RETURN); method.visitMaxs(0, 0); method.visitEnd();
+                }
+                super.visitEnd();
+            }
             @Override public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
                 if ((access & Opcodes.ACC_STATIC) != 0 && ((name.equals("getUrl") && descriptor.equals("()Ljava/lang/String;"))
                         || (name.equals("getOwnProxyUrl") && (descriptor.equals("()Ljava/lang/String;") || descriptor.equals("(Ljava/lang/String;)Ljava/lang/String;"))))
@@ -39,7 +61,12 @@ public final class BytecodeCompatibility {
                     nativeBridge(method, reader.getClassName(), name, descriptor, (access & Opcodes.ACC_STATIC) != 0);
                     return null;
                 }
-                return new MethodVisitor(Opcodes.ASM9, super.visitMethod(access, name, descriptor, signature, exceptions)) {
+                MethodVisitor target = super.visitMethod(access, name, descriptor, signature, exceptions);
+                if (name.equals("<clinit>") && !initialValues.isEmpty()) {
+                    initializer[0] = true;
+                    target = withInitialValues(target, reader.getClassName(), initialValues);
+                }
+                return new MethodVisitor(Opcodes.ASM9, target) {
                     @Override public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
                         if (opcode == Opcodes.INVOKEVIRTUAL && owner.equals("java/lang/Class") && (name.equals("getMethod") || name.equals("getDeclaredMethod")) && descriptor.equals("(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;")) {
                             super.visitMethodInsn(Opcodes.INVOKESTATIC, "tvbox/runtime/ReflectionDiagnostics", name, "(Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;", false);
@@ -87,6 +114,20 @@ public final class BytecodeCompatibility {
             }
         }, 0);
         return writer.toByteArray();
+    }
+
+    /** Sets `values` before the rest of <clinit> runs, as dex sets static values before it. */
+    private static MethodVisitor withInitialValues(MethodVisitor method, String owner, java.util.List<InitialValue> values) {
+        return new MethodVisitor(Opcodes.ASM9, method) {
+            @Override public void visitCode() {
+                super.visitCode();
+                for (InitialValue value : values) {
+                    super.visitLdcInsn(value.value());
+                    super.visitFieldInsn(Opcodes.PUTSTATIC, owner, value.name(), value.descriptor());
+                }
+            }
+            @Override public void visitMaxs(int maxStack, int maxLocals) { super.visitMaxs(Math.max(maxStack, 1), maxLocals); }
+        };
     }
 
     private static void nativeBridge(MethodVisitor method, String owner, String name, String descriptor, boolean isStatic) {
