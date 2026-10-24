@@ -577,6 +577,7 @@
 "Continue from %@" = "Continue from %@";
 "Unable to save playback history: %@" = "Unable to save playback history: %@";
 "This history source is no longer in the current subscription. Restore that subscription to continue." = "This history source is no longer in the current subscription. Restore that subscription to continue.";
+"This favorite's source is no longer in the current subscription. Restore that subscription to open it." = "This favorite's source is no longer in the current subscription. Restore that subscription to open it.";
 "The saved episode is no longer available from this source. Choose an episode again." = "The saved episode is no longer available from this source. Choose an episode again.";
 "Unable to resume playback: %@" = "Unable to resume playback: %@";
 "The player could not restore the saved position. Try again." = "The player could not restore the saved position. Try again.";

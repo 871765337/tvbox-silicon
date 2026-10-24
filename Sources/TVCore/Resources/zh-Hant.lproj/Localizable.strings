@@ -577,6 +577,7 @@
 "Continue from %@" = "從 %@ 繼續播放";
 "Unable to save playback history: %@" = "播放記錄儲存失敗：%@";
 "This history source is no longer in the current subscription. Restore that subscription to continue." = "目前訂閱中已沒有此記錄的影片來源，請恢復原訂閱後繼續觀看。";
+"This favorite's source is no longer in the current subscription. Restore that subscription to open it." = "目前的訂閱中已沒有此收藏的影片源，請恢復原訂閱後再開啟。";
 "The saved episode is no longer available from this source. Choose an episode again." = "此來源已沒有記錄中的劇集，請重新選擇集數。";
 "Unable to resume playback: %@" = "無法繼續播放：%@";
 "The player could not restore the saved position. Try again." = "播放器無法恢復上次進度，請重試。";

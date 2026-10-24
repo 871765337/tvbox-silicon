@@ -302,6 +302,31 @@ import TVCore
     func toggleFavorite(_ channel: Channel) { favorites.toggle(.live(channel)) }
     func isFavorite(_ channel: Channel) -> Bool { favorites.contains(.live(channel)) }
 
+    func catalogClient(for video: FavoriteVideo) -> CatalogClient? {
+        guard let config = subscription,
+              let site = config.sites.first(where: { $0.origin(or: config.origin) == video.origin && $0.sourceKey == video.sourceKey }) else { return nil }
+        return CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL)
+    }
+
+    func reportMissingFavoriteSource() {
+        error = L10n.text("This favorite's source is no longer in the current subscription. Restore that subscription to open it.")
+    }
+
+    func play(_ episode: FavoriteEpisode) {
+        guard catalogClient(for: episode.video) != nil else { reportMissingFavoriteSource(); return }
+        let position = episode.resumePosition(in: playbackHistory.entries)
+        resume(PlaybackHistoryEntry(context: episode.historyContext(), position: position, duration: 0, updatedAt: Date()))
+    }
+
+    func play(_ file: FavoriteCloudFile) {
+        guard let drive = CloudFiles.drive(key: file.driveKey) else {
+            error = L10n.text("This file's drive is no longer in Cloud Files.")
+            return
+        }
+        let cloud = CloudFile(id: file.fileID, name: file.fileName, isFolder: false, size: file.size)
+        playFile(cloud, in: CloudFilesFolder(drive: drive, id: file.folderID, name: file.folderName, files: [cloud]))
+    }
+
     func orderedSites(_ config: Subscription) -> [Site] {
         let sites = SourceLists.browsable(config.sites, jarURL: config.spiderURL) { hiddenSources.contains($0, origin: config.origin) }
         return pinnedSources.arrange(sites.filter(\.isBuiltIn) + sites.filter { !$0.isBuiltIn }, origin: config.origin)

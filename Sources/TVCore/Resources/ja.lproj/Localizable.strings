@@ -577,6 +577,7 @@
 "Continue from %@" = "%@ から再生";
 "Unable to save playback history: %@" = "再生履歴を保存できません：%@";
 "This history source is no longer in the current subscription. Restore that subscription to continue." = "現在の購読にこの配信元がありません。元の購読を復元してください。";
+"This favorite's source is no longer in the current subscription. Restore that subscription to open it." = "このお気に入りのソースは現在のサブスクリプションにありません。元のサブスクリプションを戻してから開いてください。";
 "The saved episode is no longer available from this source. Choose an episode again." = "保存したエピソードが見つかりません。もう一度選択してください。";
 "Unable to resume playback: %@" = "続きから再生できません：%@";
 "The player could not restore the saved position. Try again." = "前回の再生位置を復元できませんでした。もう一度お試しください。";
