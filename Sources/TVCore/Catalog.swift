@@ -28,6 +28,13 @@ public struct Video: Identifiable, Hashable, Sendable, Codable {
         self.id = id; self.name = name; self.poster = poster; self.posterHeaders = posterHeaders
         self.year = year; self.remarks = remarks; self.synopsis = synopsis; self.episodes = episodes
     }
+    /// This video with `poster` when it has none of its own. Many sources leave `vod_pic` out of the detail
+    /// answer although their list or search answer had it, and history, favorites and Now Playing keep what plays.
+    public func keepingPoster(_ poster: URL?, headers: [String: String]? = nil) -> Video {
+        guard self.poster == nil, let poster else { return self }
+        return Video(id: id, name: name, poster: poster, posterHeaders: headers ?? [:], year: year,
+                     remarks: remarks, synopsis: synopsis, episodes: episodes)
+    }
     public init?(json: [String: JSONValue], origin: URL) {
         guard let id = json["vod_id"]?.string, !id.isEmpty else { return nil }
         self.id = id; name = json["vod_name"]?.string.map(HTMLText.name).flatMap { $0.isEmpty ? nil : $0 } ?? id
