@@ -586,6 +586,11 @@
 "Pinned" = "已置頂";
 "Pin source" = "置頂來源";
 "Unpin source" = "取消置頂";
+"Pinned Group" = "置頂";
+"Hide Source" = "隱藏來源";
+"Unhide Source" = "取消隱藏";
+"Show Hidden Sources" = "顯示已隱藏";
+"Hidden" = "已隱藏";
 "Pinned Sources" = "置頂點播來源";
 "Search history" = "搜尋播放歷史";
 "Manage history" = "管理歷史";

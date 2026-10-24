@@ -586,6 +586,11 @@
 "Pinned" = "Pinned";
 "Pin source" = "Pin source";
 "Unpin source" = "Unpin source";
+"Pinned Group" = "Pinned Group";
+"Hide Source" = "Hide Source";
+"Unhide Source" = "Unhide Source";
+"Show Hidden Sources" = "Show Hidden Sources";
+"Hidden" = "Hidden";
 "Pinned Sources" = "Pinned Sources";
 "Search history" = "Search history";
 "Manage history" = "Manage history";

@@ -4,22 +4,95 @@ import TVCore
 struct SitesView: View {
     @Environment(Store.self) private var store
     @State private var query = ""
+    /// Reset with the page, not with a pushed source: the state lives here and `.task(id:)` only reapplies it on a section change.
+    @State private var includeHidden = false
+    @State private var collapsed: Set<String> = []
+    /// The fold as it was when a search began; restored when the search is cleared.
+    @State private var foldBeforeSearch: Set<String>?
     var body: some View {
         Group {
             if let config = store.subscription {
+                let groups = store.sourceGroups(includeHidden: includeHidden).filtered(by: query)
                 ScrollView {
-                    LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
-                        ForEach(store.orderedSites(config)
-                            .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { site in
-                            RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site) }.tileButton()
-                                .contextMenu { PinSourceButton(site: site, origin: config.origin) }
+                    LazyVStack(alignment: .leading, spacing: Layout.cardSpacing) {
+                        ForEach(groups) { group in
+                            groupHeader(group)
+                            if !collapsed.contains(group.id) {
+                                LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
+                                    ForEach(group.sites) { site in
+                                        let dimmed = includeHidden && store.hiddenSources.contains(site, origin: config.origin)
+                                        RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site, dimmed: dimmed) }.tileButton()
+                                            .contextMenu {
+                                                PinSourceButton(site: site, origin: config.origin)
+                                                HideSourceButton(site: site, origin: config.origin)
+                                            }
+                                    }
+                                }
+                            }
                         }
                     }.pageContainer()
+                }
+                .toolbar {
+                    Button { includeHidden.toggle() } label: {
+                        Label(L10n.text("Show Hidden Sources"), systemImage: includeHidden ? "eye.fill" : "eye")
+                    }
+                    .accessibilityAddTraits(includeHidden ? .isSelected : [])
+                    .accessibilityIdentifier("sources.showHidden")
                 }
             } else { ContentUnavailableView(L10n.text("No Sources Yet"), systemImage: "square.grid.2x2", description: Text(L10n.text("Add a TVBox subscription in Settings."))) }
         }
         .screenBackdrop()
         .catalogSearchable(text: $query, prompt: L10n.text("Find a source")).tabTitle(L10n.text("Sources"))
+        .task(id: store.section) { applyDefaultFold() }
+        .onChange(of: query) { old, new in
+            if old.isEmpty && !new.isEmpty {
+                foldBeforeSearch = collapsed
+                collapsed.subtract(store.sourceGroups(includeHidden: includeHidden).map(\.id))
+            } else if !old.isEmpty && new.isEmpty, let saved = foldBeforeSearch {
+                collapsed = saved
+                foldBeforeSearch = nil
+            }
+        }
+    }
+
+    private func groupHeader(_ group: SourceGroup) -> some View {
+        let open = !collapsed.contains(group.id)
+        return Button {
+            if open { collapsed.insert(group.id) } else { collapsed.remove(group.id) }
+        } label: {
+            HStack(spacing: 8) {
+                Text(L10n.text(group.title)).font(.headline).lineLimit(1)
+                Text("\(group.sites.count)").font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Image(systemName: open ? "chevron.down" : "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier("sources.group." + group.id)
+    }
+
+    /// The default view of the page: hidden sources out, subscription groups folded.
+    private func applyDefaultFold() {
+        includeHidden = false
+        collapsed = Set(store.sourceGroups(includeHidden: false).filter { group in
+            if case .subscription = group.kind { return true }
+            return false
+        }.map(\.id))
+        foldBeforeSearch = nil
+    }
+}
+
+private extension Array where Element == SourceGroup {
+    /// Sites whose name contains the query, ignoring case; groups left empty drop out.
+    func filtered(by query: String) -> [SourceGroup] {
+        guard !query.isEmpty else { return self }
+        return compactMap { group in
+            var kept = group
+            kept.sites = group.sites.filter { $0.name.localizedCaseInsensitiveContains(query) }
+            return kept.sites.isEmpty ? nil : kept
+        }
     }
 }
 
@@ -74,6 +147,8 @@ struct SiteCard: View {
     @Environment(Store.self) private var store
     @Environment(\.isFocused) private var isFocused
     let site: Site
+    /// A source the viewer hid, shown only while hidden sources are revealed.
+    var dimmed = false
     #if os(tvOS)
     private var focused: Bool { isFocused }
     private let icon: CGFloat = 88, padding: CGFloat = 20, radius: CGFloat = 28
@@ -105,6 +180,7 @@ struct SiteCard: View {
                     Text(label.parts[0]).font(.headline).lineLimit(1)
                         .foregroundStyle(focused ? Color.black : runs ? Color.primary : Color.secondary)
                     if runs { SourceHealthDot(status: store.health(of: site)) }
+                    if dimmed { Text(L10n.text("Hidden")).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                 }
                 if !detail.isEmpty {
                     Text(detail).font(.subheadline).lineLimit(1)
@@ -119,6 +195,7 @@ struct SiteCard: View {
         .padding(padding).frame(maxWidth: .infinity, alignment: .leading)
         .background { TileSurface(focused: focused, radius: radius) }
         .accessibilityElement(children: .combine)
+        .opacity(dimmed ? 0.45 : 1)
     }
 
     /// Which engine runs a source is an implementation detail; only built-in sources say so.
@@ -196,6 +273,18 @@ struct PinSourceButton: View {
         Button { store.pinnedSources.toggle(site, origin: origin) } label: {
             Label(L10n.text(pinned ? "Unpin source" : "Pin source"), systemImage: pinned ? "pin.slash" : "pin")
         }.accessibilityIdentifier("source.pin." + site.key)
+    }
+}
+
+struct HideSourceButton: View {
+    @Environment(Store.self) private var store
+    let site: Site
+    let origin: URL
+    var body: some View {
+        let hidden = store.hiddenSources.contains(site, origin: origin)
+        Button { store.hiddenSources.toggle(site, origin: origin) } label: {
+            Label(L10n.text(hidden ? "Unhide Source" : "Hide Source"), systemImage: hidden ? "eye" : "eye.slash")
+        }.accessibilityIdentifier("source.hide." + site.key)
     }
 }
 
@@ -298,7 +387,10 @@ struct SiteView: View {
             }
         }
         .onDisappear { requestTask?.cancel(); browser.cancel() }
-        .toolbar { PinSourceButton(site: site, origin: origin) }
+        .toolbar {
+            PinSourceButton(site: site, origin: origin)
+            HideSourceButton(site: site, origin: origin)
+        }
         .screenBackdrop()
         .onAppear {
             guard site.isBilibili, browser.loaded else { return }

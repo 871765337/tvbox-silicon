@@ -586,6 +586,11 @@
 "Pinned" = "固定済み";
 "Pin source" = "ソースを固定";
 "Unpin source" = "固定を解除";
+"Pinned Group" = "固定";
+"Hide Source" = "ソースを隠す";
+"Unhide Source" = "再表示";
+"Show Hidden Sources" = "隠したソースを表示";
+"Hidden" = "非表示";
 "Pinned Sources" = "固定したソース";
 "Search history" = "視聴履歴を検索";
 "Manage history" = "履歴を管理";

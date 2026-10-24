@@ -304,6 +304,13 @@ import TVCore
         return pinnedSources.arrange(sites.filter(\.isBuiltIn) + sites.filter { !$0.isBuiltIn }, origin: config.origin)
     }
 
+    /// The sources page's sections: pinned, built-in, then one per subscription.
+    func sourceGroups(includeHidden: Bool) -> [SourceGroup] {
+        guard let config = subscription else { return [] }
+        let pins = pinnedSources.arrange(config.sites, origin: config.origin).filter { pinnedSources.contains($0, origin: config.origin) }
+        return SourceGroups.make(entries: subscriptions, documents: documents, builtIns: config.sites.filter(\.isBuiltIn), builtInOrigin: config.origin, pinOrder: pins, userHidden: { hiddenSources.contains($0, origin: config.origin) }, includeHidden: includeHidden, jarURL: config.spiderURL)
+    }
+
     func catalogChannel(_ resolved: Channel, video: Video, episode: Episode, client: CatalogClient,
                         resumePosition: Double? = nil) -> Channel {
         let channel = episodeChannel(resolved, video: video, episode: episode, client: client, resumePosition: resumePosition)
