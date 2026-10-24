@@ -283,7 +283,9 @@ import TVCore
         guard !keyword.isEmpty else { return }
         let old = defaults.data(forKey: "videoSearchHistory").flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
         defaults.set(try? JSONEncoder().encode(Array(([keyword] + old.filter { $0 != keyword }).prefix(20))), forKey: "videoSearchHistory")
-        searchModel.search(keyword, config: config)
+        searchModel.search(keyword, config: config) { [hiddenSources] site in
+            hiddenSources.contains(site, origin: config.origin)
+        }
         section = .search
     }
     func toggleFavorite(_ channel: Channel) {
@@ -298,7 +300,7 @@ import TVCore
     }
 
     func orderedSites(_ config: Subscription) -> [Site] {
-        let sites = SourceStrategy.arrange(config.sites) { !$0.hidden && $0.canBrowse(jarURL: config.spiderURL) }
+        let sites = SourceLists.browsable(config.sites, jarURL: config.spiderURL) { hiddenSources.contains($0, origin: config.origin) }
         return pinnedSources.arrange(sites.filter(\.isBuiltIn) + sites.filter { !$0.isBuiltIn }, origin: config.origin)
     }
 

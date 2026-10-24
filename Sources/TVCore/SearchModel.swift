@@ -39,6 +39,7 @@ import Observation
     private var subscriptionID: String?
     /// Each source's position in `SourceStrategy` order; matches are listed in this order.
     private var rank: [String: Int] = [:]
+    private var excluded: @MainActor (Site) -> Bool = { _ in false }
     public init(http: HTTPClient = HTTPClient()) { self.http = http }
 
     public var failures: [SearchSourceResult] { results.filter { $0.error != nil } }
@@ -138,9 +139,19 @@ import Observation
         selectedSource = nil; scrollID = nil; stopped = false
         clearPages()
         cache = [:]; subscriptionID = nil
+        excluded = { _ in false }
     }
 
-    public func search(_ query: String, config: Subscription) {
+    public static func eligible(_ sites: [Site], jarURL: URL?, excluding hidden: (Site) -> Bool) -> [Site] {
+        sites.filter { $0.searchable && $0.canBrowse(jarURL: jarURL) && !hidden($0) }
+    }
+
+    public static func visible(_ results: [SearchSourceResult], excluding hidden: (Site) -> Bool) -> [SearchSourceResult] {
+        results.filter { !hidden($0.site) }
+    }
+
+    public func search(_ query: String, config: Subscription, excluding hidden: @escaping @MainActor (Site) -> Bool = { _ in false }) {
+        excluded = hidden
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return }
         let identity = "\(config.origin)|\(config.importedAt.timeIntervalSince1970)"
@@ -149,14 +160,16 @@ import Observation
         stop()
         keyword = value; draft = value; results = []; completed = 0
         clearPages()
-        let sites = config.sites.filter { $0.searchable && $0.canBrowse(jarURL: config.spiderURL) }
-        // The source chosen last time stays chosen while it is searched.
+        let sites = Self.eligible(config.sites, jarURL: config.spiderURL, excluding: hidden)
         let preferred = UserDefaults.standard.string(forKey: Self.sourceKey)
         selectedSource = sites.contains { $0.id == preferred } ? preferred : nil; scrollID = nil
         rank = Dictionary(SourceStrategy.arrange(sites, where: { _ in true }, failing: failing(config)).enumerated().map { ($1.id, $0) }) { first, _ in first }
         total = sites.count
         if let hit = cache[value], Date().timeIntervalSince(hit.created) < 300 {
-            results = hit.results; total = hit.total; completed = results.count; stopped = false
+            results = Self.visible(hit.results, excluding: hidden)
+            total = sites.count
+            completed = results.count
+            stopped = false
             return
         }
         run(sites, config: config)
@@ -166,9 +179,8 @@ import Observation
         guard !busy, !keyword.isEmpty else { return }
         let finished = Set(results.map(\.id))
         let failed = Set(failures.map(\.id))
-        let sites = config.sites.filter {
-            $0.searchable && $0.canBrowse(jarURL: config.spiderURL) &&
-            (retryFailures ? failed.contains($0.id) : !finished.contains($0.id))
+        let sites = Self.eligible(config.sites, jarURL: config.spiderURL, excluding: excluded).filter {
+            retryFailures ? failed.contains($0.id) : !finished.contains($0.id)
         }
         if retryFailures { results.removeAll { failed.contains($0.id) }; completed = results.count }
         run(sites, config: config)
