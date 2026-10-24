@@ -964,3 +964,7 @@
 "Couldn't Play on %@" = "無法在 %@ 上播放";
 "Play from Other Devices" = "接收其他裝置的播放";
 "With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player." = "在這裡打開映匣後，同一個網路中你的其他裝置可以把正在播放的內容傳到這裡：在它們的播放器中點一下「在其他裝置上播放」。";
+"Touch and Hold Speed" = "長按倍速";
+"Touch and hold the video to play at this speed. Slide sideways to change it, or slide down to keep it after you let go." = "長按影片畫面以此速度播放。按住時左右滑動可調整倍速，向下滑動可在放開後保持。";
+"Slide sideways to change the speed, or down to keep it" = "左右滑動調整倍速，向下滑動鎖定";
+"Back to Normal Speed" = "恢復正常速度";

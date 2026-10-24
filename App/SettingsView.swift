@@ -291,6 +291,7 @@ struct FormSettingsView: View {
     @AppStorage(ErrorReports.key) private var sendsErrorReports = true
     #if os(iOS)
     @State private var addingSubscription = false
+    @AppStorage(SpeedBoost.key) private var holdSpeed = SpeedBoost.standard
     #endif
     #if os(macOS)
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
@@ -407,6 +408,17 @@ struct FormSettingsView: View {
                     // gets a group of its own so the note plainly belongs to it.
                     Text(danmakuNote)
                 }
+            }
+            Section {
+                Picker(selection: $holdSpeed) {
+                    ForEach(SpeedBoost.rates, id: \.self) { Text($0.formatted(.number.precision(.fractionLength(0...2))) + "×").tag($0) }
+                } label: {
+                    FormLabel(symbol: "forward.fill", tint: .orange, title: L10n.text("Touch and Hold Speed"))
+                }
+            } header: {
+                if !store.extrasUnlocked { Text(L10n.text("Playback")) }
+            } footer: {
+                Text(L10n.text("Touch and hold the video to play at this speed. Slide sideways to change it, or slide down to keep it after you let go."))
             }
             #endif
             if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
