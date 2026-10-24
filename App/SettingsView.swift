@@ -377,7 +377,7 @@ struct FormSettingsView: View {
             #if os(iOS)
             Section {
                 Toggle(isOn: $showsTabLabels) {
-                    FormLabel(symbol: "textformat", tint: .gray, title: L10n.text("Tab Bar Labels"))
+                    FormLabel(symbol: "dock.rectangle", tint: .gray, title: L10n.text("Tab Bar Labels"))
                 }
                 .settingsSwitch()
             } footer: {

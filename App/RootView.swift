@@ -160,6 +160,10 @@ struct RootView: View {
     #endif
     private var platformTabs: some View {
         tabView
+            #if os(iOS)
+            // The system tab bar keeps the labels it was built with, so switching them rebuilds it.
+            .id(showsTabLabels)
+            #endif
             #if os(tvOS)
             .musicSidebarHeader()
             // Now Playing is not a page: choosing it opens the full-screen player over the section
