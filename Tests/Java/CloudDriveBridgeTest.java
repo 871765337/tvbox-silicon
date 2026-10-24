@@ -231,45 +231,69 @@ public class CloudDriveBridgeTest {
 
     static void ftyFamilyCredentials() throws Exception {
         class Loader extends ClassLoader {
-            Class<?> define(String name, String parent, int shape) {
-                var w = new org.objectweb.asm.ClassWriter(0);
+            final Map<String, byte[]> classes = new HashMap<>();
+            Class<?> define(String name, String parent, java.util.function.Consumer<org.objectweb.asm.ClassWriter> body) {
+                var w = new org.objectweb.asm.ClassWriter(org.objectweb.asm.ClassWriter.COMPUTE_MAXS);
                 w.visit(52, 1, name, null, parent, null);
-                if (shape == 1) w.visitField(1, "yq", "Lcom/github/catvod/spider/Cloud_quark;", null, null).visitEnd();
-                if (shape == 2) {
-                    for (String field : List.of("F5", "W", "ee")) w.visitField(1, field, "Ljava/lang/String;", null, null).visitEnd();
-                    w.visitField(9, "instance", "L" + name + ";", null, null).visitEnd();
-                    var init = w.visitMethod(1, "<init>", "()V", null, null);
-                    init.visitCode(); init.visitVarInsn(25, 0); init.visitMethodInsn(183, "java/lang/Object", "<init>", "()V", false);
-                    init.visitInsn(177); init.visitMaxs(1, 1); init.visitEnd();
-                    var singleton = w.visitMethod(9, "Zm", "()L" + name + ";", null, null);
-                    singleton.visitCode(); singleton.visitFieldInsn(178, name, "instance", "L" + name + ";");
-                    singleton.visitInsn(176); singleton.visitMaxs(1, 0); singleton.visitEnd();
-                    for (String method : List.of("Gd", "k")) {
-                        var verify = w.visitMethod(1, method, method.equals("k") ? "(Ljava/lang/String;)Z" : "()Z", null, null);
-                        verify.visitCode(); verify.visitInsn(3); verify.visitInsn(172); verify.visitMaxs(1, 2); verify.visitEnd();
-                    }
-                }
+                body.accept(w);
                 w.visitEnd(); byte[] bytes = w.toByteArray();
+                classes.put(name + ".class", bytes);
                 return defineClass(name.replace('/', '.'), bytes, 0, bytes.length);
             }
+            @Override public InputStream getResourceAsStream(String name) {
+                byte[] bytes = classes.get(name);
+                return bytes == null ? super.getResourceAsStream(name) : new ByteArrayInputStream(bytes);
+            }
         }
-        for (String helper : List.of("xU", "Z", "N0")) {
+        // {account class, singleton, web cookie, mobile ticket, other String, Pan's Quark field}: FTY renames
+        // all of them between releases (N0 until 2026-10-21, k with renamed fields since 2026-10-22).
+        // The last layout's response handler stores two Strings, so which one is the cookie is unclear.
+        for (List<String> layout : List.of(List.of("N0", "Zm", "F5", "W", "ee", "yq"), List.of("k", "OW", "W", "ee", "xa", "Gd"),
+                List.of("k", "OW", "W", "ee", "xa", "ambiguous"))) {
+            String account = "com/github/catvod/spider/merge/" + layout.get(0), self = "L" + account + ";";
+            boolean ambiguous = layout.get(5).equals("ambiguous");
             var loader = new Loader();
-            loader.define("com/github/catvod/spider/Cloud_quark", "java/lang/Object", 0);
-            loader.define("com/github/catvod/spider/Pan", "java/lang/Object", 1);
-            var wogg = loader.define("com/github/catvod/spider/WoGG", "com/github/catvod/spider/Pan", 0);
-            var type = loader.define("com/github/catvod/spider/merge/" + helper, "java/lang/Object", 2);
-            var account = type.getConstructor().newInstance(); type.getField("instance").set(null, account);
+            var type = loader.define(account, "java/lang/Object", w -> {
+                for (String field : layout.subList(2, 5)) w.visitField(1, field, "Ljava/lang/String;", null, null).visitEnd();
+                w.visitField(9, "instance", self, null, null).visitEnd();
+                var init = w.visitMethod(1, "<init>", "()V", null, null);
+                init.visitCode(); init.visitVarInsn(25, 0); init.visitMethodInsn(183, "java/lang/Object", "<init>", "()V", false);
+                init.visitInsn(177); init.visitMaxs(0, 0); init.visitEnd();
+                var singleton = w.visitMethod(9, layout.get(1), "()" + self, null, null);
+                singleton.visitCode(); singleton.visitFieldInsn(178, account, "instance", self); singleton.visitInsn(176); singleton.visitMaxs(0, 0); singleton.visitEnd();
+                // The sign-in response handler stores the web cookie.
+                var response = w.visitMethod(2, "U", "(Lokhttp3/Response;Ljava/lang/String;)Z", null, null);
+                response.visitCode();
+                for (String field : ambiguous ? layout.subList(2, 5) : layout.subList(2, 3)) {
+                    response.visitVarInsn(25, 0); response.visitVarInsn(25, 2); response.visitFieldInsn(181, account, field, "Ljava/lang/String;");
+                }
+                response.visitInsn(3); response.visitInsn(172); response.visitMaxs(0, 0); response.visitEnd();
+                // The static setter stores the mobile ticket; a sibling with the same shape stores nothing.
+                for (String setter : List.of("yq", "SN")) {
+                    var method = w.visitMethod(9, setter, "(" + self + "Ljava/lang/String;)V", null, null);
+                    method.visitCode();
+                    if (setter.equals("yq")) { method.visitVarInsn(25, 0); method.visitVarInsn(25, 1); method.visitFieldInsn(181, account, layout.get(3), "Ljava/lang/String;"); }
+                    method.visitInsn(177); method.visitMaxs(0, 0); method.visitEnd();
+                }
+            });
+            loader.define("com/github/catvod/spider/Cloud_quark", "java/lang/Object", w -> {
+                var play = w.visitMethod(1, "play", "()V", null, null);
+                play.visitCode(); play.visitMethodInsn(184, account, layout.get(1), "()" + self, false);
+                play.visitInsn(87); play.visitInsn(177); play.visitMaxs(0, 0); play.visitEnd();
+            });
+            loader.define("com/github/catvod/spider/Pan", "java/lang/Object", w ->
+                w.visitField(1, layout.get(5), "Lcom/github/catvod/spider/Cloud_quark;", null, null).visitEnd());
+            var wogg = loader.define("com/github/catvod/spider/WoGG", "com/github/catvod/spider/Pan", w -> { });
+            var instance = type.getConstructor().newInstance(); type.getField("instance").set(null, instance);
             try (var bridge = new CloudDriveBridge(Files.createTempDirectory("fty-cloud-test"))) {
                 var accounts = new JSONObject().put("quarkCookie", "__pus=fixture");
                 check(!bridge.restoreFtyQuarkAccount(accounts, wogg), "Incomplete legacy login was restored");
                 accounts.put("quarkServiceTicket", "mobile-fixture");
                 check(!bridge.restoreFtyQuarkAccount(accounts, Object.class), "Unrelated plugin received credentials");
-                check(bridge.restoreFtyQuarkAccount(accounts, wogg), "FTY login was not restored");
-                check(type.getField("F5").get(account).equals("__pus=fixture"), "FTY web cookie missing");
-                check(type.getField("W").get(account).equals("mobile-fixture"), "FTY mobile ticket missing");
-                check(type.getField("ee").get(account) == null, "External-source account was changed");
-                check(Boolean.FALSE.equals(type.getMethod("Gd").invoke(account)), "Account validation was bypassed");
+                check(bridge.restoreFtyQuarkAccount(accounts, wogg) != ambiguous, "FTY login restore didn't match " + layout);
+                check(Objects.equals(type.getField(layout.get(2)).get(instance), ambiguous ? null : "__pus=fixture"), "FTY web cookie wrong");
+                check(Objects.equals(type.getField(layout.get(3)).get(instance), ambiguous ? null : "mobile-fixture"), "FTY mobile ticket wrong");
+                check(type.getField(layout.get(4)).get(instance) == null, "External-source account was changed");
             }
         }
     }
