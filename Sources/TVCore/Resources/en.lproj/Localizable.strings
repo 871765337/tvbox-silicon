@@ -114,6 +114,7 @@
 "The local JAR runtime is not installed." = "The local JAR runtime is not installed.";
 "The plugin request timed out after 60 seconds. Retry or choose another source." = "The plugin request timed out after 60 seconds. Retry or choose another source.";
 "The plugin returned no content. Try another source." = "The plugin returned no content. Try another source.";
+"The plugin runtime could not complete this request. Try again or use another source." = "The plugin runtime could not complete this request. Try again or use another source.";
 "This configuration has no global spider JAR." = "This configuration has no global spider JAR.";
 "The plugin MD5 does not match the subscription. Refresh the subscription before checking again." = "The plugin MD5 does not match the subscription. Refresh the subscription before checking again.";
 "The source %@ returned HTTP %lld." = "The source %@ returned HTTP %lld.";

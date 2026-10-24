@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 #include <signal.h>
 #include <jni.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -16,9 +17,56 @@ static jmethodID requestMethod;
 static BOOL failed;
 static char *failure(const char *message) {
     NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"error": @(message)} options:0 error:NULL];
-    return strdup([[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding].UTF8String);
+    NSString *text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    const char *utf8 = text.UTF8String;
+    return utf8 ? strdup(utf8) : NULL;
+}
+static char *requestFailure(const char *message) {
+    NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"error": @(message), @"errorCode": @"embedded_request"} options:0 error:NULL];
+    NSString *text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    const char *utf8 = text.UTF8String;
+    return utf8 ? strdup(utf8) : NULL;
 }
 char *TVAppleRuntimeRequest(const char *resourcePath, const char *requestJSON);
+
+static char *performRequest(JNIEnv *env, const char *requestJSON) {
+    NSString *requestText = requestJSON ? [[NSString alloc] initWithUTF8String:requestJSON] : nil;
+    if (!requestText || requestText.length > INT_MAX) return requestFailure("The plugin request contains invalid text.");
+    NSUInteger length = requestText.length;
+    unichar *characters = malloc((length + 1) * sizeof(unichar));
+    if (!characters) return requestFailure("Not enough memory to prepare the plugin request.");
+    [requestText getCharacters:characters range:NSMakeRange(0,length)];
+    jstring input=(*env)->NewString(env,(const jchar *)characters,(jsize)length);
+    free(characters);
+    if (!input) {
+        if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionDescribe(env); (*env)->ExceptionClear(env); }
+        return requestFailure("Could not prepare the embedded plugin request. See diagnostic logs.");
+    }
+    jstring output=(jstring)(*env)->CallStaticObjectMethod(env,bootstrap,requestMethod,input);
+    (*env)->DeleteLocalRef(env,input);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionDescribe(env); (*env)->ExceptionClear(env);
+        if (output) (*env)->DeleteLocalRef(env,output);
+        return requestFailure("The embedded plugin request failed. See diagnostic logs.");
+    }
+    if (!output) return requestFailure("The plugin returned no response.");
+    jsize outputLength=(*env)->GetStringLength(env,output);
+    const jchar *outputCharacters=(*env)->GetStringChars(env,output,NULL);
+    char *result;
+    if (outputCharacters) {
+        NSString *text=[[NSString alloc] initWithCharacters:(const unichar *)outputCharacters length:(NSUInteger)outputLength];
+        // Java strings can contain unpaired UTF-16 surrogates. Their UTF-8 conversion fails;
+        // strdup(NULL) crashed TestFlight build 29 while returning a search response.
+        const char *utf8=text.UTF8String;
+        result=utf8 ? strdup(utf8) : requestFailure("The plugin returned invalid Unicode text.");
+        (*env)->ReleaseStringChars(env,output,outputCharacters);
+    } else {
+        if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionDescribe(env); (*env)->ExceptionClear(env); }
+        result=requestFailure("Could not read the embedded plugin response. See diagnostic logs.");
+    }
+    (*env)->DeleteLocalRef(env,output);
+    return result;
+}
 
 // The Java heap is sized from what this process may still use, not fixed: iOS kills an app over
 // its memory limit, and the limit differs by device. Native code (interpreter, plugins' guard
@@ -109,24 +157,7 @@ char *TVAppleRuntimeRequest(const char *resourcePath, const char *requestJSON) {
             (*env)->ExceptionDescribe(env); (*env)->ExceptionClear(env); failed=YES;
             return failure("Could not initialize the plugin libraries. See diagnostic logs.");
         }
-        NSString *requestText = @(requestJSON);
-        NSUInteger length = requestText.length;
-        unichar *characters = malloc((length + 1) * sizeof(unichar));
-        [requestText getCharacters:characters range:NSMakeRange(0,length)];
-        jstring input=(*env)->NewString(env,(const jchar *)characters,(jsize)length);
-        free(characters);
-        jstring output=(jstring)(*env)->CallStaticObjectMethod(env,bootstrap,requestMethod,input);
-        (*env)->DeleteLocalRef(env,input);
-        char *result=NULL;
-        if ((*env)->ExceptionCheck(env)) {
-            (*env)->ExceptionDescribe(env); (*env)->ExceptionClear(env);
-            result=failure("The embedded plugin request failed. See diagnostic logs.");
-        } else if(output) {
-            const jchar *characters=(*env)->GetStringChars(env,output,NULL);
-            NSString *text=[[NSString alloc] initWithCharacters:(const unichar *)characters length:(NSUInteger)(*env)->GetStringLength(env,output)];
-            result=strdup(text.UTF8String);
-            (*env)->ReleaseStringChars(env,output,characters); (*env)->DeleteLocalRef(env,output);
-        } else result=failure("The plugin returned no response.");
+        char *result=performRequest(env,requestJSON);
         (*runtimeVM)->DetachCurrentThread(runtimeVM);
         return result;
     }
