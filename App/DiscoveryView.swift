@@ -635,7 +635,7 @@ struct RecommendationsView: View {
     @State private var categoryPage = 1
     @State private var browser = CatalogBrowser()
     private var model: RecommendationModel { store.recommendationModel }
-    private var sites: [Site] { fixedSite.map { [$0] } ?? store.orderedSites(config) }
+    private var sites: [Site] { fixedSite.map { [$0] } ?? store.recommendationSites(config) }
     /// Until the user picks a source, default to the first in strategy order, so opening the app
     /// does not start the JVM when a standard API or script source is available.
     private var site: Site? { sites.first(where: { $0.key == sourceKey }) ?? sites.first }

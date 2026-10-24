@@ -340,6 +340,14 @@ import TVCore
         playFile(cloud, in: CloudFilesFolder(drive: drive, id: file.folderID, name: file.folderName, files: [cloud]))
     }
 
+    /// The Watch Now source row: pinned, then built-in, then the sources page's subscription order.
+    func recommendationSites(_ config: Subscription) -> [Site] {
+        let leading = automaticSites(config)
+        let pinned = leading.filter { pinnedSources.contains($0, origin: config.origin) }
+        let builtIn = leading.filter { $0.isBuiltIn && !pinnedSources.contains($0, origin: config.origin) }
+        return SourceGroups.homeRow(pinned: pinned, builtIn: builtIn, groups: sourceGroups(includeHidden: false))
+    }
+
     /// The sources to show, in the viewer's own order while it is on.
     func orderedSites(_ config: Subscription) -> [Site] {
         let sites = automaticSites(config)
