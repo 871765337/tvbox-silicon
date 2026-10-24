@@ -152,6 +152,7 @@ struct RootView: View {
     /// The phone's tab bar: the tabs the viewer arranged, then More with the rest and the tab bar editor. Every
     /// iPhone screen uses it, not only compact ones: iPhone Duo's inner display is regular both ways, and there
     /// the full set of sections overflowed the side tab bar into the system's own More list, without the editor.
+    @AppStorage(PhoneTabs.labelsKey) private var showsTabLabels = true
     private var phoneTabs: Bool { sizeClass == .compact || UIDevice.current.userInterfaceIdiom == .phone }
     /// Sections a phone reaches through More, as arranged in the tab bar editor.
     private var inMore: [AppSection] { PhoneTabs(stored: storedTabs).arranged(slots: barSlots, hiding: store.hiddenSections).more }
@@ -245,7 +246,9 @@ struct RootView: View {
         #if os(tvOS)
         if item == .nowPlaying { MusicTabLabel() } else { Label(item.title, systemImage: item.icon) }
         #else
-        Label(item.title, systemImage: item.icon)
+        // Only the title changes, so the tab bar updates in place; VoiceOver still reads the name.
+        Label { Text(phoneTabs && !showsTabLabels ? "" : item.title) } icon: { Image(systemName: item.icon) }
+            .accessibilityLabel(item.title)
         #endif
     }
 

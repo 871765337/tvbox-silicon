@@ -269,7 +269,8 @@ extension View {
         self
         #endif
     }
-    /// Switches in the system's own colour: green on iPhone and iPad, the accent on the Mac.
+    /// Switches in the system's own colour: green on iPhone and iPad, the accent on the Mac. Every switch on
+    /// iPhone and iPad takes it: the neutral accent is near-white in Dark Mode, so a switch tinted with it turned white.
     @ViewBuilder func settingsSwitch() -> some View {
         #if os(iOS)
         tint(.green)
@@ -293,6 +294,7 @@ struct FormSettingsView: View {
     @State private var addingSubscription = false
     @AppStorage(SpeedBoost.key) private var holdSpeed = SpeedBoost.standard
     @AppStorage(PictureLevel.key) private var slidesLevels = true
+    @AppStorage(PhoneTabs.labelsKey) private var showsTabLabels = true
     #endif
     #if os(macOS)
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
@@ -374,6 +376,17 @@ struct FormSettingsView: View {
             Section {
                 FormLink(symbol: AppSection.home.icon, tint: Brand.cyan, title: L10n.text("Watch Now")) { WatchNowSettingsView() }
             }
+
+            #if os(iOS)
+            Section {
+                Toggle(isOn: $showsTabLabels) {
+                    FormLabel(symbol: "dock.rectangle", tint: .gray, title: L10n.text("Tab Bar Labels"))
+                }
+                .settingsSwitch()
+            } footer: {
+                Text(L10n.text("Off shows only the icons in the tab bar along the bottom."))
+            }
+            #endif
 
             #if os(macOS)
             Section {

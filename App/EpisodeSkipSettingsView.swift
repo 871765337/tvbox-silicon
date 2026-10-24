@@ -26,6 +26,7 @@ struct EpisodeSkipSettingsView: View {
             Form {
                 Section {
                     Toggle(L10n.text("Automatically skip intro and outro"), isOn: $enabled)
+                        .settingsSwitch()
                         .accessibilityIdentifier("player.skip.enabled")
                     Text(L10n.text("Times apply to this series and all its episodes. Automatic skipping is a global switch. The outro is remembered as time remaining."))
                         .font(.footnote).foregroundStyle(.secondary)
