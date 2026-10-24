@@ -66,9 +66,10 @@ struct SitesView: View {
         }
     }
 
+    @ViewBuilder
     private func groupHeader(_ group: SourceGroup) -> some View {
         let open = expanded.contains(group.id)
-        return Button {
+        let header = Button {
             if open { expanded.remove(group.id) } else { expanded.insert(group.id) }
         } label: {
             HStack(spacing: 8) {
@@ -82,6 +83,21 @@ struct SitesView: View {
         .buttonStyle(.plain)
         .accessibilityAddTraits(.isHeader)
         .accessibilityIdentifier("sources.group." + group.id)
+        #if !os(tvOS)
+        if case .subscription = group.kind {
+            header
+                .draggable(group.id)
+                .dropDestination(for: String.self) { items, _ in
+                    guard query.isEmpty, let address = items.first else { return false }
+                    store.moveSourceGroup(address, before: group.id, includeHidden: includeHidden)
+                    return true
+                }
+        } else {
+            header
+        }
+        #else
+        header
+        #endif
     }
 
     /// The default view of the page: hidden sources out, subscription groups folded.

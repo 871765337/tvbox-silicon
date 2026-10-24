@@ -227,6 +227,19 @@ import TVCore
         saveSubscriptionList()
         rebuildSubscription()
     }
+    func moveSourceGroup(_ address: String, before target: String, includeHidden: Bool) {
+        let shown = sourceGroups(includeHidden: includeHidden).compactMap { group -> String? in
+            guard case .subscription(let value) = group.kind else { return nil }
+            return value
+        }
+        guard address != target, var next = Optional(shown), let from = next.firstIndex(of: address), next.contains(target) else { return }
+        let moved = next.remove(at: from)
+        let index = next.firstIndex(of: target) ?? next.endIndex
+        next.insert(moved, at: index)
+        subscriptions = SubscriptionOrder.applying(displayed: next, to: subscriptions)
+        saveSubscriptionList()
+        rebuildSubscription()
+    }
 
     /// Fetches subscriptions side by side, keeps what arrives, and shows the merged result. A
     /// subscription that turns out to be a directory is replaced by the ones it lists, switched off.
