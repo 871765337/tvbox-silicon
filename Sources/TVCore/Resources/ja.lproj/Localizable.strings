@@ -441,6 +441,11 @@
 "Yingxia %@" = "映匣 %@";
 "What's New" = "新機能";
 "Now Available" = "配信開始";
+"New build (%@) in TestFlight" = "TestFlight に新しいビルド (%@)";
+"In TestFlight" = "TestFlight で配信中";
+"Open TestFlight" = "TestFlight を開く";
+"Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features." = "映匣 %@ を TestFlight で配信中です。TestFlight を開いて「アップデート」をタップすると、これらの新機能を使えます。";
+"Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features." = "映匣 %@ を TestFlight で配信中です。この Apple TV で TestFlight を開いて映匣をアップデートすると、これらの新機能を使えます。";
 "Here's what's new in version %@." = "バージョン %@ の新しいところをご紹介します。";
 "Bilibili" = "ビリビリ";
 "Built-in" = "内蔵";

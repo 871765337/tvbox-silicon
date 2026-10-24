@@ -5,10 +5,16 @@ import Foundation
 public struct ReleaseFeed: Codable, Sendable, Equatable {
     public static let address = URL(string: "https://yingxia.getmegaportal.com/releases.json")!
     public var releases: [Release]
-    public init(releases: [Release]) { self.releases = releases }
+    /// The build TestFlight testers can install now, keyed by `ReleaseFeed.platform`. Every TestFlight build is
+    /// called 1.7.7 and carries the build number of the release it was made from, so builds are what compare;
+    /// a build is only listed once it is live on the public link, which can be days after the release.
+    public var testflight: [String: TestFlight]?
+    public init(releases: [Release], testflight: [String: TestFlight]? = nil) { self.releases = releases; self.testflight = testflight }
 
     public struct Release: Codable, Sendable, Equatable, Identifiable {
         public var version: String
+        /// The release's build number (CFBundleVersion), which its TestFlight build shares.
+        public var build: Int?
         /// ISO date, e.g. "2026-10-09".
         public var date: String?
         /// Where to get this release, keyed by `ReleaseFeed.platform`, plus `ReleaseFeed.intelMacKey` for the Intel
@@ -16,8 +22,8 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
         public var links: [String: URL]
         public var features: [Feature]
         public var id: String { version }
-        public init(version: String, date: String? = nil, links: [String: URL], features: [Feature]) {
-            self.version = version; self.date = date; self.links = links; self.features = features
+        public init(version: String, build: Int? = nil, date: String? = nil, links: [String: URL], features: [Feature]) {
+            self.version = version; self.build = build; self.date = date; self.links = links; self.features = features
         }
         /// Intel Macs get their own package; the `macos` link is the Apple silicon one.
         public func link(for platform: String = ReleaseFeed.platform, intelMac: Bool = ReleaseFeed.isIntelMac) -> URL? {
@@ -39,6 +45,13 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
         public init(symbol: String, title: LocalizedText, detail: LocalizedText, platforms: [String]? = nil) {
             self.symbol = symbol; self.title = title; self.detail = detail; self.platforms = platforms
         }
+    }
+
+    public struct TestFlight: Codable, Sendable, Equatable {
+        public var build: Int
+        /// The public link, which opens the app's page in the TestFlight app.
+        public var link: URL?
+        public init(build: Int, link: URL? = nil) { self.build = build; self.link = link }
     }
 
     public static var platform: String {
@@ -86,10 +99,29 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
         }
     }
 
+    /// For a TestFlight build: the releases after `build` up to the build live in TestFlight, newest first.
+    public func testFlightUpdates(after build: Int, platform: String = ReleaseFeed.platform) -> [Release] {
+        guard let live = testflight?[platform]?.build, live > build else { return [] }
+        return newestFirst.filter { release in
+            release.build.map { $0 > build && $0 <= live } == true && release.link(for: platform) != nil
+        }
+    }
+
+    /// For a TestFlight build: the releases someone skipped when updating from build `previous` to `current`,
+    /// newest first. Without a previous build only the current build's release counts.
+    public func testFlightWhatsNew(since previous: Int?, current: Int, platform: String = ReleaseFeed.platform) -> [Release] {
+        newestFirst.filter { release in
+            guard let build = release.build else { return false }
+            let skipped = previous.map { build > $0 && build <= current } ?? (build == current)
+            return skipped && !release.features(for: platform).isEmpty
+        }
+    }
+
     /// Entries from `newer` replace same-version entries here; the rest are kept.
     public func merged(with newer: ReleaseFeed) -> ReleaseFeed {
         let replaced = Set(newer.releases.map { AppVersion($0.version) })
-        return ReleaseFeed(releases: newer.releases + releases.filter { !replaced.contains(AppVersion($0.version)) })
+        return ReleaseFeed(releases: newer.releases + releases.filter { !replaced.contains(AppVersion($0.version)) },
+                           testflight: newer.testflight ?? testflight)
     }
 
     private var newestFirst: [Release] { releases.sorted { AppVersion($0.version) > AppVersion($1.version) } }

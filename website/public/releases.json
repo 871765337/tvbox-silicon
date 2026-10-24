@@ -2,6 +2,7 @@
   "releases": [
     {
       "version": "1.7.10",
+      "build": 29,
       "date": "2026-10-24",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.10/Yingxia-1.7.10-macos-arm64.dmg",
@@ -62,6 +63,7 @@
     },
     {
       "version": "1.7.9",
+      "build": 28,
       "date": "2026-10-23",
       "links": {
         "ios": "https://yingxia.getmegaportal.com/#install-ios",
@@ -181,6 +183,7 @@
     },
     {
       "version": "1.7.8",
+      "build": 27,
       "date": "2026-10-23",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.8/Yingxia-1.7.8-macos-arm64.dmg",
@@ -329,6 +332,7 @@
     },
     {
       "version": "1.7.6",
+      "build": 23,
       "date": "2026-10-22",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.6/Yingxia-1.7.6-macos-arm64.dmg",
@@ -404,6 +408,7 @@
     },
     {
       "version": "1.7.5",
+      "build": 22,
       "date": "2026-10-20",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.5/Yingxia-1.7.5-macos-arm64.dmg",
@@ -515,6 +520,7 @@
     },
     {
       "version": "1.7.3",
+      "build": 21,
       "date": "2026-10-19",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.3/Yingxia-1.7.3-macos-arm64.dmg",
@@ -632,6 +638,7 @@
     },
     {
       "version": "1.7.2",
+      "build": 20,
       "date": "2026-10-17",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.2/Yingxia-1.7.2-macos-arm64.dmg",
@@ -688,6 +695,7 @@
     },
     {
       "version": "1.7.1",
+      "build": 19,
       "date": "2026-10-17",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.1/Yingxia-1.7.1-macos-arm64.dmg",
@@ -714,6 +722,7 @@
     },
     {
       "version": "1.7.0",
+      "build": 18,
       "date": "2026-10-16",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.7.0/Yingxia-1.7.0-macos-arm64.dmg",
@@ -785,6 +794,7 @@
     },
     {
       "version": "1.6.5",
+      "build": 16,
       "date": "2026-10-16",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.5/Yingxia-1.6.5-macos-arm64.dmg",
@@ -811,6 +821,7 @@
     },
     {
       "version": "1.6.4",
+      "build": 15,
       "date": "2026-10-15",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.4/Yingxia-1.6.4-macos-arm64.dmg",
@@ -897,6 +908,7 @@
     },
     {
       "version": "1.6.3",
+      "build": 14,
       "date": "2026-10-15",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.3/Yingxia-1.6.3-macos-arm64.dmg",
@@ -998,6 +1010,7 @@
     },
     {
       "version": "1.6.2",
+      "build": 13,
       "date": "2026-10-14",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.2/Yingxia-1.6.2-macos-arm64.dmg",
@@ -1024,6 +1037,7 @@
     },
     {
       "version": "1.6.1",
+      "build": 12,
       "date": "2026-10-14",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6.1/Yingxia-1.6.1-macos-arm64.dmg",
@@ -1050,6 +1064,7 @@
     },
     {
       "version": "1.6",
+      "build": 11,
       "date": "2026-10-14",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.6/Yingxia-1.6-macos-arm64.dmg",
@@ -1154,6 +1169,7 @@
     },
     {
       "version": "1.5.1",
+      "build": 10,
       "date": "2026-10-13",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.5.1/Yingxia-1.5.1-macos-arm64.dmg",
@@ -1213,6 +1229,7 @@
     },
     {
       "version": "1.5",
+      "build": 9,
       "date": "2026-10-13",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.5/Yingxia-1.5-macos-arm64.dmg",
@@ -1332,6 +1349,7 @@
     },
     {
       "version": "1.3",
+      "build": 8,
       "date": "2026-10-13",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.3/Yingxia-1.3-macos-arm64.dmg",
@@ -1439,6 +1457,7 @@
     },
     {
       "version": "1.2.2",
+      "build": 7,
       "date": "2026-10-12",
       "links": {
         "ios": "https://yingxia.getmegaportal.com/#install-ios",
@@ -1468,6 +1487,7 @@
     },
     {
       "version": "1.2.1",
+      "build": 6,
       "date": "2026-10-12",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.2.1/Yingxia-1.2.1-macos-arm64.dmg",
@@ -1515,6 +1535,7 @@
     },
     {
       "version": "1.2",
+      "build": 5,
       "date": "2026-10-12",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.2/Yingxia-1.2-macos-arm64.dmg",
@@ -1580,6 +1601,7 @@
     },
     {
       "version": "1.1.5",
+      "build": 4,
       "date": "2026-10-11",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.1.5/Yingxia-1.1.5-macos-arm64.dmg",
@@ -1703,6 +1725,7 @@
     },
     {
       "version": "1.1",
+      "build": 3,
       "date": "2026-10-11",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.1/Yingxia-1.1-macos-arm64.dmg",
@@ -1823,6 +1846,7 @@
     },
     {
       "version": "1.0.1",
+      "build": 2,
       "date": "2026-10-09",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.0.1/Yingxia-1.0.1-macos-arm64.dmg",
@@ -1867,11 +1891,22 @@
     },
     {
       "version": "1.0",
+      "build": 1,
       "date": "2026-10-08",
       "links": {
         "macos": "https://download.getmegaportal.com/yingxia/1.0/Yingxia-1.0-macos-arm64.dmg"
       },
       "features": []
     }
-  ]
+  ],
+  "testflight": {
+    "ios": {
+      "build": 29,
+      "link": "https://testflight.apple.com/join/dU6UNbzp"
+    },
+    "tvos": {
+      "build": 29,
+      "link": "https://testflight.apple.com/join/SSgWEwSr"
+    }
+  }
 }

@@ -441,6 +441,11 @@
 "Yingxia %@" = "映匣 %@";
 "What's New" = "新功能";
 "Now Available" = "現已推出";
+"New build (%@) in TestFlight" = "TestFlight 新版本 (%@) 已上架";
+"In TestFlight" = "TestFlight 已上架";
+"Open TestFlight" = "打開 TestFlight";
+"Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features." = "映匣 %@ 已在 TestFlight 上架。打開 TestFlight 並點一下「更新」即可取得這些新功能。";
+"Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features." = "映匣 %@ 已在 TestFlight 上架。在這台 Apple TV 上打開 TestFlight 並更新映匣，即可取得這些新功能。";
 "Here's what's new in version %@." = "看看 %@ 版本帶來了什麼。";
 "Bilibili" = "嗶哩嗶哩";
 "Built-in" = "內建";

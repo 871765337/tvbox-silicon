@@ -100,7 +100,7 @@ import TVCore
         .defaultSize(width: 1240, height: 820)
         .commands {
             CommandGroup(after: .appInfo) {
-                if !Distribution.isAppStore {
+                if Updates.channel != .none {
                     Button(L10n.text("Check for Updates…")) { Task { await updates.check(manual: true) } }
                         .disabled(updates.checking)
                 }

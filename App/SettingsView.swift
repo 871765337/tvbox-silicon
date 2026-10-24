@@ -471,7 +471,7 @@ struct FormSettingsView: View {
             #if os(iOS)
             // As in the Settings app: one-line rows with their state on the right, and the notes under
             // each group instead of a second line and a small link inside the row.
-            if !Distribution.isAppStore {
+            if Updates.channel != .none {
             Section {
                 Button {
                     if updates.available.isEmpty { Task { await updates.check(manual: true) } } else { updates.show() }
@@ -491,7 +491,7 @@ struct FormSettingsView: View {
             } header: {
                 Text(L10n.text("About"))
             } footer: {
-                if let latest = updates.available.first { Text(L10n.text("Yingxia %@ is available", latest.version)) }
+                if let title = updates.availableTitle { Text(title) }
                 else if let checked = updates.lastChecked { Text(L10n.text("Last checked %@", checked.formatted(date: .abbreviated, time: .shortened))) }
             }
             }
@@ -500,7 +500,7 @@ struct FormSettingsView: View {
                 if !updates.currentNotes.isEmpty {
                     Button(action: updates.showCurrentNotes) {
                         HStack(spacing: 8) {
-                            FormLabel(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.current))
+                            FormLabel(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.displayVersion))
                                 .foregroundStyle(.primary).lineLimit(1)
                             Spacer(minLength: 0)
                             Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
@@ -515,7 +515,7 @@ struct FormSettingsView: View {
             }
             #else
             Section {
-                if updates.available.isEmpty, !Distribution.isAppStore {
+                if updates.available.isEmpty, Updates.channel != .none {
                     LabeledContent {
                         Button { Task { await updates.check(manual: true) } } label: {
                             if updates.checking { ProgressView().controlSize(.small) } else { Text(L10n.text("Check Now")) }
@@ -537,7 +537,7 @@ struct FormSettingsView: View {
                 #endif
                 if !updates.currentNotes.isEmpty {
                     Button(action: updates.showCurrentNotes) {
-                        FormLabel(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.current))
+                        FormLabel(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.displayVersion))
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }.formRowButton()
                 }
@@ -579,9 +579,9 @@ struct FormSettingsView: View {
                 Text(L10n.text("Yingxia")).font(.title2.weight(.bold))
                 if let version { Text(version).font(.subheadline).foregroundStyle(.secondary) }
                 Text(Brand.copyright).font(.caption).foregroundStyle(.tertiary)
-                if let latest = updates.available.first {
+                if let title = updates.availableTitle {
                     Button(action: updates.show) {
-                        Label(L10n.text("Yingxia %@ is available", latest.version), systemImage: "gift.fill")
+                        Label(title, systemImage: "gift.fill")
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Brand.onAccent)
                             .padding(.horizontal, 16).padding(.vertical, 9)
                             .background(Brand.accent, in: Capsule())
@@ -609,12 +609,12 @@ struct FormSettingsView: View {
             }
             .padding(.vertical, 6)
             .accessibilityElement(children: .combine)
-            if let latest = updates.available.first {
+            if let title = updates.availableTitle {
                 Button(action: updates.show) {
                     LabeledContent {
                         NewBadge()
                     } label: {
-                        FormLabel(symbol: "gift.fill", tint: Brand.cyan, title: L10n.text("Yingxia %@ is available", latest.version),
+                        FormLabel(symbol: "gift.fill", tint: Brand.cyan, title: title,
                                   subtitle: L10n.text("New features are waiting for you."))
                     }
                 }.formRowButton()
@@ -1235,7 +1235,7 @@ struct TVSettingsView: View {
                 TVSettingsToggle(title: L10n.text("Send Error Reports"), isOn: $sendsErrorReports)
                     .onChange(of: sendsErrorReports) { _, on in if !on { ErrorReports.shared.discard() } }
             }
-            if updates.available.isEmpty, !Distribution.isAppStore { updateSection }
+            if updates.available.isEmpty, Updates.channel != .none { updateSection }
             TVSettingsSection(title: L10n.text("About"),
                               footer: store.extrasUnlocked ? L10n.text("Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source.") : nil) {
                 TVSettingsLink(title: L10n.text("Open Source Licenses")) { LicensesView() }
@@ -1277,9 +1277,9 @@ struct TVSettingsView: View {
 
     private var updateSection: some View {
         TVSettingsSection(title: L10n.text("Software Update")) {
-            if let latest = updates.available.first {
+            if let title = updates.availableTitle {
                 Button(action: updates.show) {
-                    TVSettingsRowLabel(title: L10n.text("Yingxia %@ is available", latest.version), chevron: true) { NewBadge() }
+                    TVSettingsRowLabel(title: title, chevron: true) { NewBadge() }
                 }.glassRow()
             } else {
                 TVSettingsAction(title: L10n.text("Check Now"),
@@ -1289,7 +1289,7 @@ struct TVSettingsView: View {
             }
             if !updates.currentNotes.isEmpty {
                 Button(action: updates.showCurrentNotes) {
-                    TVSettingsRowLabel(title: L10n.text("What's New in Version %@", updates.current), chevron: true)
+                    TVSettingsRowLabel(title: L10n.text("What's New in Version %@", updates.displayVersion), chevron: true)
                 }.glassRow()
             }
         }

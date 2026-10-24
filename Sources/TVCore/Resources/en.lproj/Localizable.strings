@@ -441,6 +441,11 @@
 "Yingxia %@" = "Yingxia %@";
 "What's New" = "What's New";
 "Now Available" = "Now Available";
+"New build (%@) in TestFlight" = "New build (%@) in TestFlight";
+"In TestFlight" = "In TestFlight";
+"Open TestFlight" = "Open TestFlight";
+"Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features." = "Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features.";
+"Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features." = "Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features.";
 "Here's what's new in version %@." = "Here's what's new in version %@.";
 "Bilibili" = "Bilibili";
 "Built-in" = "Built-in";

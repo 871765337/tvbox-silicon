@@ -480,6 +480,18 @@ enum Distribution {
         return false
         #endif
     }
+
+    /// An App Store build installed from TestFlight, which leaves a sandbox receipt. A build promoted to the
+    /// App Store gets a production receipt, so it stops sending people to TestFlight. `-qaTestFlight 1` in debug builds.
+    static let isTestFlight: Bool = {
+        #if APPSTORE
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #elseif DEBUG
+        return UserDefaults.standard.bool(forKey: "qaTestFlight")
+        #else
+        return false
+        #endif
+    }()
 }
 
 // MARK: Cloud Files

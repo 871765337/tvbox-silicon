@@ -2,10 +2,10 @@ import Foundation
 import Testing
 @testable import TVCore
 
-private func release(_ version: String, platforms: [String] = ["macos", "ios", "tvos"], features: [ReleaseFeed.Feature] = [
+private func release(_ version: String, build: Int? = nil, platforms: [String] = ["macos", "ios", "tvos"], features: [ReleaseFeed.Feature] = [
     .init(symbol: "sparkles", title: "New", detail: "Something new")
 ]) -> ReleaseFeed.Release {
-    .init(version: version, links: Dictionary(uniqueKeysWithValues: platforms.map { ($0, URL(string: "https://example.com/\($0)")!) }), features: features)
+    .init(version: version, build: build, links: Dictionary(uniqueKeysWithValues: platforms.map { ($0, URL(string: "https://example.com/\($0)")!) }), features: features)
 }
 
 @Test func versionsCompareNumerically() {
@@ -50,6 +50,34 @@ private func release(_ version: String, platforms: [String] = ["macos", "ios", "
     #expect(merged.release("1.1").features.count == 1)
 }
 
+/// TestFlight builds are all 1.7.7; build numbers decide, and only up to the build testers can install.
+@Test func testFlightUpdatesWaitForTheLiveBuild() {
+    let releases = [release("1.7.8", build: 27), release("1.7.9", build: 28, platforms: ["ios"]), release("1.7.10", build: 29), release("1.7.11", build: 30)]
+    let link = URL(string: "https://testflight.apple.com/join/x")!
+    let feed = ReleaseFeed(releases: releases, testflight: ["ios": .init(build: 29, link: link), "tvos": .init(build: 27)])
+    #expect(feed.testFlightUpdates(after: 27, platform: "ios").map(\.version) == ["1.7.10", "1.7.9"])
+    #expect(feed.testFlightUpdates(after: 29, platform: "ios").isEmpty)
+    #expect(feed.testFlightUpdates(after: 25, platform: "tvos").map(\.version) == ["1.7.8"])
+    #expect(feed.testFlightUpdates(after: 27, platform: "tvos").isEmpty)
+    #expect(feed.testFlightUpdates(after: 27, platform: "macos").isEmpty)
+    #expect(ReleaseFeed(releases: releases).testFlightUpdates(after: 27, platform: "ios").isEmpty)
+}
+
+@Test func testFlightWhatsNewCoversSkippedBuilds() {
+    let feed = ReleaseFeed(releases: [release("1.7.6"), release("1.7.8", build: 27), release("1.7.9", build: 28, platforms: ["ios"]),
+                                      release("1.7.10", build: 29)])
+    #expect(feed.testFlightWhatsNew(since: 27, current: 29, platform: "ios").map(\.version) == ["1.7.10", "1.7.9"])
+    #expect(feed.testFlightWhatsNew(since: nil, current: 29, platform: "ios").map(\.version) == ["1.7.10"])
+    #expect(feed.testFlightWhatsNew(since: nil, current: 26, platform: "ios").isEmpty)
+    #expect(feed.testFlightWhatsNew(since: 29, current: 29, platform: "ios").isEmpty)
+}
+
+@Test func fetchedTestFlightBuildsReplaceBundledOnes() {
+    let bundled = ReleaseFeed(releases: [release("1.0")], testflight: ["ios": .init(build: 1)])
+    #expect(bundled.merged(with: ReleaseFeed(releases: [])).testflight?["ios"]?.build == 1)
+    #expect(bundled.merged(with: ReleaseFeed(releases: [], testflight: ["ios": .init(build: 2)])).testflight?["ios"]?.build == 2)
+}
+
 @Test func localizedTextFallsBackToEnglish() throws {
     let text = try JSONDecoder().decode(LocalizedText.self, from: Data(#"{"en": "New", "zh-Hans": "新"}"#.utf8))
     #expect(text.text(language: "zh-CN") == "新")
@@ -74,6 +102,17 @@ private func release(_ version: String, platforms: [String] = ["macos", "ios", "
     let feed = try JSONDecoder().decode(ReleaseFeed.self, from: Data(contentsOf: file))
     #expect(!feed.releases.isEmpty)
     #expect(Set(feed.releases.map { AppVersion($0.version) }).count == feed.releases.count)
+    // TestFlight builds find their release by build number, so every release has one, newer releases higher.
+    let builds = feed.releases.sorted { AppVersion($0.version) > AppVersion($1.version) }.map { $0.build ?? 0 }
+    #expect(!builds.contains(0), "a release has no build")
+    #expect(builds == builds.sorted(by: >) && Set(builds).count == builds.count, "builds don't rise with versions")
+    let project = try String(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../project.yml"), encoding: .utf8)
+    let projectBuild = project.firstMatch(of: /CURRENT_PROJECT_VERSION: '(\d+)'/).flatMap { Int($0.1) }
+    #expect(builds.first == projectBuild, "the newest release's build is not CURRENT_PROJECT_VERSION in project.yml")
+    for (platform, testflight) in feed.testflight ?? [:] {
+        #expect(["ios", "tvos"].contains(platform) && testflight.link != nil, "testflight.\(platform)")
+        #expect(testflight.build <= builds.first ?? 0, "testflight.\(platform) is ahead of the newest release")
+    }
     for entry in feed.releases {
         #expect(!entry.links.isEmpty, "\(entry.version) has no links")
         #expect(Set(entry.links.keys).isSubset(of: ["macos", ReleaseFeed.intelMacKey, "ios", "tvos"]), "\(entry.version) has an unknown platform")

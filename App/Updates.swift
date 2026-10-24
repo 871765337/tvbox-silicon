@@ -18,11 +18,48 @@ import TVCore
         }
     }
 
+    enum Channel {
+        /// Direct downloads and sideloaded builds compare versions and link to the downloads.
+        case direct
+        /// TestFlight builds are all called 1.7.7, so they compare build numbers and send people to TestFlight.
+        case testFlight
+        /// The App Store updates its own builds.
+        case none
+    }
+    static var channel: Channel { Distribution.isTestFlight ? .testFlight : Distribution.isAppStore ? .none : .direct }
+
     /// The version this build carries, e.g. "1.0.1".
     let current: String
+    /// The build number this build carries (CFBundleVersion).
+    let build: Int
     /// Newer releases for this platform, newest first. Drives the "New" badges.
-    /// The release feed points at direct downloads; the App Store updates its own builds.
-    var available: [ReleaseFeed.Release] { Distribution.isAppStore ? [] : feed.updates(after: current) }
+    var available: [ReleaseFeed.Release] {
+        switch Self.channel {
+        case .direct: feed.updates(after: current)
+        case .testFlight: feed.testFlightUpdates(after: build)
+        case .none: []
+        }
+    }
+    /// This build as people see it: TestFlight names builds "1.7.7 (30)".
+    var displayVersion: String { Self.channel == .testFlight ? "\(current) (\(build))" : current }
+    /// The newest release to install, as people will see it once it's installed.
+    var latestVersion: String? {
+        guard let latest = available.first else { return nil }
+        guard Self.channel == .testFlight, let live = feed.testflight?[ReleaseFeed.platform]?.build else { return latest.version }
+        return "\(current) (\(live))"
+    }
+    /// "Yingxia 1.7.10 is available", or for testers, where to get it.
+    var availableTitle: String? {
+        guard let latest = available.first else { return nil }
+        guard Self.channel == .testFlight, let live = feed.testflight?[ReleaseFeed.platform]?.build else {
+            return L10n.text("Yingxia %@ is available", latest.version)
+        }
+        return L10n.text("New build (%@) in TestFlight", String(live))
+    }
+    /// Where Get the Update goes: the release's download, or the TestFlight app, which installs the new build.
+    func link(for release: ReleaseFeed.Release) -> URL? {
+        Self.channel == .testFlight ? feed.testflight?[ReleaseFeed.platform]?.link : release.link()
+    }
     var sheet: Sheet?
     /// Result of a check someone asked for.
     var message: String?
@@ -40,13 +77,16 @@ import TVCore
     init(defaults: UserDefaults = .standard, bundle: Bundle = .main) {
         self.defaults = defaults
         var current = bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        var build = Int(bundle.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0
         var address = ReleaseFeed.address
         #if DEBUG
-        // QA: `-qaReleaseFeed <url>` reads another feed, `-qaVersion 1.0` pretends to be an older build.
+        // QA: `-qaReleaseFeed <url>` reads another feed, `-qaVersion 1.0` and `-qaBuild 27` pretend to be an older build.
         if let value = defaults.string(forKey: "qaReleaseFeed"), let url = URL(string: value) { address = url }
         if let value = defaults.string(forKey: "qaVersion") { current = value }
+        if defaults.object(forKey: "qaBuild") != nil { build = defaults.integer(forKey: "qaBuild") }
         #endif
         self.current = current
+        self.build = build
         self.address = address
         let bundled = bundle.url(forResource: "releases", withExtension: "json")
             .flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: Data(contentsOf: $0)) } ?? ReleaseFeed(releases: [])
@@ -59,17 +99,33 @@ import TVCore
     }
 
     /// The current release's notes, for "What's New in This Version".
-    var currentNotes: [ReleaseFeed.Release] { Distribution.isAppStore ? [] : feed.whatsNew(since: nil, current: current) }
+    var currentNotes: [ReleaseFeed.Release] {
+        switch Self.channel {
+        case .direct: feed.whatsNew(since: nil, current: current)
+        case .testFlight: feed.testFlightWhatsNew(since: nil, current: build)
+        case .none: []
+        }
+    }
 
     /// Once per launch: queue What's New after an update, then look for a newer release.
     /// `returning` says whether someone used the app before this build recorded versions.
     func launched(returning: Bool) async {
-        guard !Distribution.isAppStore else { return }
-        let previous = defaults.string(forKey: Keys.lastVersion)
-        defaults.set(current, forKey: Keys.lastVersion)
-        if previous != nil || returning, previous.map({ AppVersion($0) < AppVersion(current) }) ?? true {
-            let notes = feed.whatsNew(since: previous, current: current)
-            if !notes.isEmpty { sheet = .whatsNew(notes) }
+        switch Self.channel {
+        case .none: return
+        case .direct:
+            let previous = defaults.string(forKey: Keys.lastVersion)
+            defaults.set(current, forKey: Keys.lastVersion)
+            if previous != nil || returning, previous.map({ AppVersion($0) < AppVersion(current) }) ?? true {
+                let notes = feed.whatsNew(since: previous, current: current)
+                if !notes.isEmpty { sheet = .whatsNew(notes) }
+            }
+        case .testFlight:
+            let previous = defaults.object(forKey: Keys.lastBuild) == nil ? nil : defaults.integer(forKey: Keys.lastBuild)
+            defaults.set(build, forKey: Keys.lastBuild)
+            if previous != nil || returning, previous.map({ $0 < build }) ?? true {
+                let notes = feed.testFlightWhatsNew(since: previous, current: build)
+                if !notes.isEmpty { sheet = .whatsNew(notes) }
+            }
         }
         await check()
     }
@@ -77,7 +133,7 @@ import TVCore
     /// Looks for a newer release. Automatic checks run at most every few hours and announce each
     /// version once; a check someone asks for always runs and reports the outcome.
     func check(manual: Bool = false) async {
-        guard !checking, !Distribution.isAppStore else { return }
+        guard !checking, Self.channel != .none else { return }
         if !manual, let lastChecked, Date().timeIntervalSince(lastChecked) < Self.interval { announce(); return }
         checking = true
         defer { checking = false }
@@ -87,14 +143,14 @@ import TVCore
             defaults.set(try? JSONEncoder().encode(fetched), forKey: Keys.feed)
             lastChecked = Date()
             defaults.set(lastChecked, forKey: Keys.checked)
-            Diagnostics.shared.record(.info, "updates", "Release feed checked: current=\(current) latest=\(available.first?.version ?? current)")
+            Diagnostics.shared.record(.info, "updates", "Release feed checked: current=\(displayVersion) latest=\(latestVersion ?? displayVersion)")
         } catch {
             Diagnostics.shared.record(.warning, "updates", "Release feed check failed: \(error.localizedDescription)")
             if manual { message = L10n.text("Couldn't check for updates: %@", error.localizedDescription) }
             return
         }
         if manual {
-            if available.isEmpty { message = L10n.text("Yingxia %@ is the latest version.", current) }
+            if available.isEmpty { message = L10n.text("Yingxia %@ is the latest version.", displayVersion) }
             else { show() }
         } else { announce() }
     }
@@ -119,6 +175,7 @@ import TVCore
 
     private enum Keys {
         static let lastVersion = "updates.lastVersion"
+        static let lastBuild = "updates.lastBuild"
         static let announced = "updates.announcedVersion"
         static let checked = "updates.lastChecked"
         static let feed = "updates.feed"
@@ -131,9 +188,7 @@ import TVCore
 /// pill buttons, and a shelf of artwork cards, one per feature.
 struct ReleaseNotesView: View {
     let sheet: Updates.Sheet
-    #if os(macOS)
     @Environment(Updates.self) private var updates
-    #endif
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -151,7 +206,12 @@ struct ReleaseNotesView: View {
         var seen = Set<ReleaseFeed.Feature>()
         return releases.flatMap { $0.features(for: ReleaseFeed.platform) }.filter { seen.insert($0).inserted }
     }
-    private var version: String { releases.first?.version ?? "" }
+    /// TestFlight testers update in the TestFlight app, where every build is called 1.7.7.
+    private var testFlight: Bool { Updates.channel == .testFlight }
+    private var version: String {
+        guard testFlight else { return releases.first?.version ?? "" }
+        return (update == nil ? updates.displayVersion : updates.latestVersion) ?? ""
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -189,7 +249,7 @@ struct ReleaseNotesView: View {
                 VStack(alignment: .leading, spacing: Size.buttonGap) { hero; actions.padding(.horizontal, Size.margin) }
                 Spacer(minLength: 0)
                 #if os(tvOS)
-                if let link = update?.link() { scanCode(link).padding(.trailing, Size.margin) }
+                if !testFlight, let link = update?.link() { scanCode(link).padding(.trailing, Size.margin) }
                 #endif
             }
             shelf
@@ -217,7 +277,7 @@ struct ReleaseNotesView: View {
                 .font(.system(size: Size.title, weight: .heavy)).tracking(-0.6)
                 .lineLimit(2).minimumScaleFactor(0.7).fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text(update == nil ? L10n.text("Here's what's new in version %@.", version) : L10n.text("Yingxia %@ is ready with new features.", version))
+            Text(subtitle)
                 .font(.system(size: Size.subtitle, weight: .medium)).foregroundStyle(.white.opacity(0.72))
                 .frame(maxWidth: Size.textWidth, alignment: .leading)
         }
@@ -225,9 +285,19 @@ struct ReleaseNotesView: View {
         .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
     }
 
+    private var subtitle: String {
+        if update == nil { return L10n.text("Here's what's new in version %@.", version) }
+        guard testFlight else { return L10n.text("Yingxia %@ is ready with new features.", version) }
+        #if os(tvOS)
+        return L10n.text("Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features.", version)
+        #else
+        return L10n.text("Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features.", version)
+        #endif
+    }
+
     private var eyebrow: String {
         let name = L10n.text("Yingxia %@", version)
-        return "\(name) · \(update == nil ? L10n.text("What's New") : L10n.text("Now Available"))"
+        return "\(name) · \(update == nil ? L10n.text("What's New") : testFlight ? L10n.text("In TestFlight") : L10n.text("Now Available"))"
     }
 
     /// One artwork card per feature, title and description underneath, as in an Apple TV shelf.
@@ -289,7 +359,7 @@ struct ReleaseNotesView: View {
         #if os(tvOS)
         Button(L10n.text(update == nil ? "Continue" : "OK")) { dismiss() }.controlButton(prominent: true)
         #else
-        let primary = update?.link()
+        let primary = update.flatMap(updates.link(for:))
         #if os(macOS)
         if update != nil, let installer = updates.installer {
             MacInstallActions(installer: installer, link: primary)
@@ -308,7 +378,7 @@ struct ReleaseNotesView: View {
         let layout = Self.stackedButtons ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 12))
         return layout {
             Button { if let primary { openURL(primary) }; dismiss() } label: {
-                Label(L10n.text(primary == nil ? "Continue" : "Get the Update"), systemImage: primary == nil ? "play.fill" : "arrow.down.circle.fill")
+                Label(L10n.text(primary == nil ? "Continue" : testFlight ? "Open TestFlight" : "Get the Update"), systemImage: primary == nil ? "play.fill" : "arrow.down.circle.fill")
                     .frame(maxWidth: Self.stackedButtons ? .infinity : nil)
             }
             .buttonStyle(PillButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
@@ -548,7 +618,7 @@ extension View {
         #if os(macOS)
         let presented = sheet(item: item) { ReleaseNotesView(sheet: $0).environment(updates) }
         #else
-        let presented = fullScreenCover(item: item) { ReleaseNotesView(sheet: $0) }
+        let presented = fullScreenCover(item: item) { ReleaseNotesView(sheet: $0).environment(updates) }
         #endif
         return presented
         .alert(L10n.text("Software Update"), isPresented: Binding(get: { !playing && updates.message != nil }, set: { if !$0 { updates.message = nil } })) {
