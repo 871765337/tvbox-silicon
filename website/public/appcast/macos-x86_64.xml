@@ -6,6 +6,18 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Yingxia</title>
         <item>
+            <title>1.7.11</title>
+            <pubDate>Sat, 24 Oct 2026 19:36:33 +0800</pubDate>
+            <sparkle:version>30</sparkle:version>
+            <sparkle:shortVersionString>1.7.11</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-macos-x86_64.dmg" length="197730840" type="application/octet-stream" sparkle:edSignature="heAOfp/YMmQRDYq/bS+mhHWo817qlgfPE61iyh1heSAsZUIkDVQJwcxS2JdBxdHySn7QXd6nqagbt03bjgtQDA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://download.getmegaportal.com/yingxia/1.7.11/Yingxia30-29-x86_64.delta" sparkle:deltaFrom="29" length="2595690" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="479392" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="WuqnDGddAB7hwGnsp4joSMHehLU/LyMH18ocOOW7TDYf44q9CZvkLdkq/K6lthOhCkkH/69ZKuYuI4SxOWuSAw=="/>
+                <enclosure url="https://download.getmegaportal.com/yingxia/1.7.11/Yingxia30-27-x86_64.delta" sparkle:deltaFrom="27" length="2711962" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="479392" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Geu6lmx1nDLJNl4pWFMvCgb3UBBTGLVYA8d9QRaB4oLn/UTkJt0z0qXKNyFeW9p6ktzEF8nhI1kYA9L3WpcAAQ=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>1.7.10</title>
             <pubDate>Sat, 24 Oct 2026 02:09:42 +0800</pubDate>
             <sparkle:version>29</sparkle:version>
@@ -27,6 +39,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: kAOoJq4In1x1+feI/QaaYcLr/eD6d0cQQk30a64ycXycubDDvg8ObuKSsouPdUklqwd5hHVXjZyX7wiN4f7eCw==
-length: 2114
+edSignature: d971kmZU1OvohiJxFCTI9ZYnaBReASxjz1pbQdciA8PhANSCvqCUxDtQawrmFreiF0jIdy1oRGFIlhi6VayFBA==
+length: 3574
 -->
