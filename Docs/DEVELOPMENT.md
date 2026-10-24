@@ -166,7 +166,7 @@ swift test
 Scripts/verify.sh
 ```
 
-The localization check verifies translation coverage, format arguments, and static Swift key references. `Scripts/verify.sh` runs the Swift tests and unsigned macOS, iOS device-SDK, and tvOS device-SDK builds. Successful builds do not establish plugin compatibility or device playback support.
+The localization check verifies translation coverage, format arguments, and static Swift key references. `Scripts/verify.sh` runs the Swift tests, native JNI bridge tests, Java host tests, and unsigned macOS, iOS device-SDK, and tvOS device-SDK builds. The native bridge tests (`Scripts/test-apple-runtime-bridge.sh`) use the installed JDK and controlled Java responses to exercise malformed Unicode, exceptions, and concurrent requests through the production bridge. Successful builds do not establish plugin compatibility or device playback support.
 
 `Scripts/test-tv-ui.sh <tvOS simulator UUID>` drives the Siri Remote in a separate tvOS bundle (no JAR runtime, isolated data) against `Scripts/qa-server.py`: `TVNavigationUITests` opens a video page whose details never arrive (`-qaPage open-detail:qa-stall:1`) and checks that Back returns to the previous page instead of leaving the app. Focus starts in the tab sidebar, so the test moves right into the page.
 
