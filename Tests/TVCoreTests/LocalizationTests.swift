@@ -42,7 +42,7 @@ import Testing
     #expect(PluginFailure.message(["error": .string("boom")], language: "en") == "Plugin error: boom")
 }
 @Test func embeddedPluginFailuresAreLocalizedAndKeepTheNativeReason() {
-    let failure: [String: JSONValue] = ["error": .string("The plugin returned invalid Unicode text."), "errorCode": .string("embedded_request")]
+    let failure: [String: JSONValue] = ["error": .string("The embedded plugin request failed. See diagnostic logs."), "errorCode": .string("embedded_request")]
     let expected = [
         "en": "The plugin runtime could not complete this request. Try again or use another source.",
         "zh-Hans": "插件运行时无法完成此请求，请重试或使用其他来源。",
@@ -52,7 +52,7 @@ import Testing
     for (language, message) in expected {
         #expect(PluginFailure.message(failure, language: language) == message)
     }
-    #expect(PluginFailure.diagnostic(source: "test", failure) == "source=test code=embedded_request The plugin returned invalid Unicode text.")
+    #expect(PluginFailure.diagnostic(source: "test", failure) == "source=test code=embedded_request The embedded plugin request failed. See diagnostic logs.")
 }
 #if os(macOS)
 @Test func structuredPluginFailuresAreLocalizedWithoutChangingHostOrStatus() {

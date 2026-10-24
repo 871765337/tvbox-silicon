@@ -15,19 +15,30 @@ static JavaVM *runtimeVM;
 static jclass bootstrap;
 static jmethodID requestMethod;
 static BOOL failed;
-static char *failure(const char *message) {
-    NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"error": @(message)} options:0 error:NULL];
+static char *errorResponse(NSDictionary *envelope) {
+    NSData *data = [NSJSONSerialization dataWithJSONObject:envelope options:0 error:NULL];
     NSString *text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     const char *utf8 = text.UTF8String;
     return utf8 ? strdup(utf8) : NULL;
 }
-static char *requestFailure(const char *message) {
-    NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"error": @(message), @"errorCode": @"embedded_request"} options:0 error:NULL];
-    NSString *text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    const char *utf8 = text.UTF8String;
-    return utf8 ? strdup(utf8) : NULL;
-}
+static char *failure(const char *message) { return errorResponse(@{@"error": @(message)}); }
+static char *requestFailure(const char *message) { return errorResponse(@{@"error": @(message), @"errorCode": @"embedded_request"}); }
 char *TVAppleRuntimeRequest(const char *resourcePath, const char *requestJSON);
+
+// Java strings can hold unpaired UTF-16 surrogates (a plugin cutting text inside an emoji), which
+// have no UTF-8 form: strdup(NULL) crashed TestFlight build 29 while returning a search response.
+// Replace them with U+FFFD, as the Mac host replaces them with '?', so the rest still shows.
+static NSString *stringFromJava(const jchar *characters, jsize length) {
+    unichar *copy = malloc(((size_t)length + 1) * sizeof(unichar));
+    if (!copy) return nil;
+    for (jsize i = 0; i < length; i++) {
+        unichar c = characters[i];
+        if (CFStringIsSurrogateHighCharacter(c) && i + 1 < length && CFStringIsSurrogateLowCharacter(characters[i + 1])) {
+            copy[i] = c; copy[i + 1] = characters[i + 1]; i++;
+        } else copy[i] = CFStringIsSurrogateHighCharacter(c) || CFStringIsSurrogateLowCharacter(c) ? 0xFFFD : c;
+    }
+    return [[NSString alloc] initWithCharactersNoCopy:copy length:(NSUInteger)length freeWhenDone:YES];
+}
 
 static char *performRequest(JNIEnv *env, const char *requestJSON) {
     NSString *requestText = requestJSON ? [[NSString alloc] initWithUTF8String:requestJSON] : nil;
@@ -54,11 +65,9 @@ static char *performRequest(JNIEnv *env, const char *requestJSON) {
     const jchar *outputCharacters=(*env)->GetStringChars(env,output,NULL);
     char *result;
     if (outputCharacters) {
-        NSString *text=[[NSString alloc] initWithCharacters:(const unichar *)outputCharacters length:(NSUInteger)outputLength];
-        // Java strings can contain unpaired UTF-16 surrogates. Their UTF-8 conversion fails;
-        // strdup(NULL) crashed TestFlight build 29 while returning a search response.
+        NSString *text=stringFromJava(outputCharacters,outputLength);
         const char *utf8=text.UTF8String;
-        result=utf8 ? strdup(utf8) : requestFailure("The plugin returned invalid Unicode text.");
+        result=utf8 ? strdup(utf8) : requestFailure("Could not convert the plugin response to UTF-8.");
         (*env)->ReleaseStringChars(env,output,outputCharacters);
     } else {
         if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionDescribe(env); (*env)->ExceptionClear(env); }

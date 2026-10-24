@@ -6,34 +6,37 @@
 extern char *TVAppleRuntimeRequest(const char *, const char *);
 static const char *resources;
 
-static void check(const char *input, BOOL error) {
+// Expects the exact response, or a localized embedded_request error when `expected` is NULL.
+static void check(const char *input, const char *expected) {
     char *response = TVAppleRuntimeRequest(resources, input);
     NSCAssert(response != NULL, @"Missing native response");
     NSData *data = [NSData dataWithBytes:response length:strlen(response)];
     NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
     NSCAssert([json isKindOfClass:NSDictionary.class], @"Invalid JSON response: %@", @(response));
-    if (error) {
+    if (!expected) {
         NSCAssert([json[@"error"] isKindOfClass:NSString.class], @"Missing error: %@", json);
         NSCAssert([json[@"errorCode"] isEqual:@"embedded_request"], @"Missing localized error code: %@", json);
     } else {
-        NSCAssert(strcmp(input, response) == 0, @"Response changed: %@", json);
+        NSCAssert(strcmp(expected, response) == 0, @"Expected %@, got %@", @(expected), @(response));
     }
     free(response);
 }
 
 static void *run(void *unused) {
     @autoreleasepool {
-        // TestFlight build 29 crashed at strdup(text.UTF8String) for malformed Java text.
-        check("high-surrogate", YES);
-        check("low-surrogate", YES);
-        check("exception", YES);
-        check("out-of-memory", YES);
-        check("no-response", YES);
-        check(NULL, YES);
-        check("\xff", YES);
-        check("{\"result\":\"中文、日本語、😀 and \\u0000\"}", NO);
-        check("{\"result\":\"\"}", NO);
-        check("{\"result\":\"recovered\"}", NO);
+        // TestFlight build 29 crashed at strdup(text.UTF8String) for unpaired surrogates in Java text.
+        // They become U+FFFD (EF BF BD) and the rest of the response is kept.
+        check("high-surrogate", "{\"result\":\"\xEF\xBF\xBD\"}");
+        check("low-surrogate", "{\"result\":\"\xEF\xBF\xBD\"}");
+        check("cut-emoji", "{\"result\":\"😀\xEF\xBF\xBD\"}");
+        check("reversed-pair", "{\"result\":\"\xEF\xBF\xBD\xEF\xBF\xBD\"}");
+        check("exception", NULL);
+        check("out-of-memory", NULL);
+        check("no-response", NULL);
+        check(NULL, NULL);
+        check("\xff", NULL);
+        const char *valid[] = {"{\"result\":\"中文、日本語、😀 and \\u0000\"}", "{\"result\":\"\"}", "{\"result\":\"recovered\"}"};
+        for (int i = 0; i < 3; i++) check(valid[i], valid[i]);
     }
     return NULL;
 }

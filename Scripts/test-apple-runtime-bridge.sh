@@ -12,4 +12,8 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter \
   Tests/Native/AppleRuntimeBridgeTest.m Runtime/AppleRuntime/Native/AppleRuntime.m \
   -L "$JDK/lib/server" -Wl,-rpath,"$JDK/lib/server" -ljvm -framework Foundation \
   -o "$OUT/AppleRuntimeBridgeTest"
-CFFIXED_USER_HOME="$OUT/home" "$OUT/AppleRuntimeBridgeTest" "$OUT"
+# The bridge sends stderr, and with it failed assertions, to the JVM log; show it on failure.
+# Run from $OUT so a JVM crash leaves its hs_err file there, not in the repository.
+LOG="$OUT/home/Library/Caches/embedded-jvm.log"
+rm -f "$LOG"
+(cd "$OUT" && CFFIXED_USER_HOME="$OUT/home" ./AppleRuntimeBridgeTest "$OUT") || { tail -40 "$LOG" 2>/dev/null; exit 1; }
