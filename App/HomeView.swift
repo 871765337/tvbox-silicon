@@ -247,12 +247,17 @@ private struct HomeFavoriteCard: View {
     }
 
     private func musicCard(_ track: MusicTrack) -> some View {
-        Button {
-            if drag?.active != true { store.music.play(track) }
-        } label: {
-            media(MusicArtwork(url: track.artwork, size: Self.thumb), title: track.title, subtitle: track.artistLine)
+        HStack(spacing: 10) {
+            Button {
+                if drag?.active != true { store.music.play(track) }
+            } label: {
+                media(MusicArtwork(url: track.artwork, size: Self.thumb), title: track.title, subtitle: track.artistLine)
+            }
+            .cardButton()
+            FavoriteHeartButton(item: .music(track), name: track.title)
+                .fixedSize()
+                .allowsHitTesting(drag?.active != true)
         }
-        .cardButton()
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
         .contentPanel()
     }
@@ -260,12 +265,17 @@ private struct HomeFavoriteCard: View {
     private func cloudCard(_ file: FavoriteCloudFile) -> some View {
         let cloud = CloudFile(id: file.fileID, name: file.fileName, isFolder: false, size: file.size)
         let driveName = CloudFiles.drive(key: file.driveKey)?.name ?? file.driveKey
-        return Button {
-            if drag?.active != true { store.play(file) }
-        } label: {
-            FileRowLabel(symbol: cloud.symbol, tint: cloud.tint, title: file.fileName, subtitle: driveName)
+        return HStack(spacing: 10) {
+            Button {
+                if drag?.active != true { store.play(file) }
+            } label: {
+                FileRowLabel(symbol: cloud.symbol, tint: cloud.tint, title: file.fileName, subtitle: driveName)
+            }
+            .cardButton()
+            FavoriteHeartButton(item: .cloud(file), name: file.fileName)
+                .fixedSize()
+                .allowsHitTesting(drag?.active != true)
         }
-        .cardButton()
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
         .contentPanel()
     }

@@ -478,7 +478,12 @@ struct FavoritesView: View {
             LazyVStack(alignment: .leading, spacing: MusicLayout.rowSpacing) {
                 ForEach(store.favorites.items(.music)) { item in
                     if case .music(let track) = item {
-                        MusicTrackRow(track: track) { store.music.play(track) }
+                        HStack(spacing: 10) {
+                            MusicTrackRow(track: track, showsFavoriteMark: false) { store.music.play(track) }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            FavoriteHeartButton(item: .music(track), name: track.title)
+                                .fixedSize()
+                        }
                     }
                 }
             }

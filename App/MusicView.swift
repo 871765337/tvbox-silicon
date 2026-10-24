@@ -288,6 +288,8 @@ struct MusicTrackRow: View {
     let track: MusicTrack
     /// Its place in an album or playlist, shown instead of the cover.
     var number: Int?
+    /// Off when a heart beside the row removes the favorite, so the row does not show a second heart.
+    var showsFavoriteMark = true
     let action: () -> Void
 
     var body: some View {
@@ -315,7 +317,7 @@ struct MusicTrackRow: View {
                     if let saved = MusicDownloadLibrary.shared.item(for: track) { DownloadState(status: saved.status, fraction: saved.fraction) }
                 }
                 .frame(width: DownloadState.size * 1.2)
-                if store.favorites.contains(.music(track)) {
+                if showsFavoriteMark, store.favorites.contains(.music(track)) {
                     Image(systemName: "heart.fill")
                         .font(.system(size: DownloadState.size, weight: .semibold))
                         .foregroundStyle(Brand.rose)

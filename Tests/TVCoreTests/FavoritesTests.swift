@@ -118,3 +118,20 @@ private func episode(_ id: String, flag: String, name: String, episodeID: String
     #expect(favorites.items(.cloud).isEmpty)
     #expect(favorites.items(.live).isEmpty)
 }
+
+@Test func listingVideoKeepsPosterTransportHeaders() throws {
+    let poster = URL(string: "https://img.example/art/@2x.jpg")!
+    let headers = ["Referer": "https://cdn.example/", "User-Agent": "Example Agent", "Cookie": "id=1"]
+    let saved = FavoriteVideo(origin: origin, sourceKey: "src", sourceName: "Source", videoID: "show", videoName: "Show", poster: poster, posterHeaders: headers, year: "2024")
+    let listing = try #require(saved.listingVideo())
+    let plain = try #require(PosterResource(address: poster.absoluteString, origin: origin))
+    #expect(listing.poster == plain.url)
+    #expect(listing.posterHeaders == headers)
+    #expect(listing.id == "show")
+    #expect(listing.name == "Show")
+    #expect(listing.year == "2024")
+    let bare = FavoriteVideo(origin: origin, sourceKey: "src", sourceName: "Source", videoID: "show", videoName: "Show", poster: poster, posterHeaders: [:], year: nil)
+    let withoutHeaders = try #require(bare.listingVideo())
+    #expect(withoutHeaders.poster == plain.url)
+    #expect(withoutHeaders.posterHeaders.isEmpty)
+}

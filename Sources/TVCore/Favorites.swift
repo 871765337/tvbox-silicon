@@ -34,8 +34,20 @@ public struct FavoriteVideo: Codable, Hashable, Sendable {
     public func listingVideo() -> Video? {
         var json: [String: JSONValue] = ["vod_id": .string(videoID), "vod_name": .string(videoName)]
         if let year { json["vod_year"] = .string(year) }
-        if let poster { json["vod_pic"] = .string(poster.absoluteString) }
+        if let poster { json["vod_pic"] = .string(posterField(poster)) }
         return Video(json: json, origin: origin)
+    }
+
+    /// `Video` reads artwork headers from the TVBox suffix on `vod_pic`.
+    private func posterField(_ poster: URL) -> String {
+        let headers = posterHeaders.filter { name, value in
+            name.range(of: "^[A-Za-z0-9-]+$", options: .regularExpression) != nil && !value.contains("\r") && !value.contains("\n")
+        }
+        guard !headers.isEmpty else { return poster.absoluteString }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        guard let data = try? encoder.encode(headers), let json = String(data: data, encoding: .utf8) else { return poster.absoluteString }
+        return poster.absoluteString + "@Headers=" + json
     }
 }
 
