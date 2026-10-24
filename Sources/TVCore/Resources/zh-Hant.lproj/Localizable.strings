@@ -863,7 +863,6 @@
 "Thanks! Your feedback is issue #%lld." = "謝謝！你的意見已提交為問題 #%lld。";
 "You've sent a lot of feedback. Please try again later." = "你傳送的意見太多了，請稍後再試。";
 "Couldn't send feedback. Please try again later." = "無法傳送意見，請稍後再試。";
-"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses." = "你的意見會作為公開問題發佈在映匣的 GitHub 頁面上，並附帶 App 與系統版本、裝置型號和語言。請勿填寫帳號、密碼或訂閱網址。";
 "Help Make Yingxia Better" = "幫助映匣變得更好";
 "Report a problem or share an idea. It goes straight to the developer." = "回報問題或分享你的想法，會直接送到開發者手中。";
 "Report a problem or share an idea" = "回報問題或分享想法";
@@ -874,6 +873,10 @@
 "What would make Yingxia better for you?" = "怎樣能讓映匣更好用？";
 "What's on your mind?" = "想說點什麼？";
 "Sent with your message" = "隨訊息一起傳送";
+"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model, the language and the included details. Please don't include accounts or passwords." = "你的意見會作為公開問題發佈在映匣的 GitHub 頁面上，並附帶 App 與系統版本、裝置型號、語言和附帶資訊。請勿填寫帳號或密碼。";
+"Included Details" = "附帶資訊";
+"Include Details" = "附帶資訊";
+"Your subscriptions and what you played lately help find the problem. Edit or remove anything you'd rather keep private." = "你的訂閱和最近播放的內容有助於找出問題。不想公開的內容可以修改或刪除。";
 "Thank You!" = "謝謝你！";
 "Your feedback is now issue #%lld on GitHub." = "你的意見已成為 GitHub 上的問題 #%lld。";
 "Send Another" = "再傳一則";

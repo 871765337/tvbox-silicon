@@ -49,6 +49,62 @@ public enum Feedback {
                        system: "\(system) \(ErrorReports.osVersion)", model: ErrorReports.model, language: L10n.resolvedLanguage())
     }
 
+    /// What the app was set up with and played lately, as text the page puts under the message for
+    /// the viewer to edit or delete before sending: the subscriptions (with why one last failed) and
+    /// the latest playback history. Sign-in parts of addresses are masked; the rest is public.
+    public static func context(subscriptions: [SubscriptionEntry], errors: [String: String] = [:],
+                               history: [PlaybackHistoryEntry], timeZone: TimeZone = .current) -> String {
+        var lines = ["Subscriptions:"]
+        if subscriptions.isEmpty { lines.append("- none") }
+        for entry in subscriptions.prefix(contextItems) {
+            let address = shareable(entry.address)
+            lines.append("- " + (entry.name.isEmpty ? address : "\(entry.name): \(address)") + (entry.enabled ? "" : " (off)"))
+            if let error = errors[entry.address] { lines.append("  - failed: " + error.prefix(200)) }
+        }
+        if subscriptions.count > contextItems { lines.append("- and \(subscriptions.count - contextItems) more") }
+        lines += ["", "Recently played:"]
+        if history.isEmpty { lines.append("- nothing") }
+        let time = Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZone: timeZone)
+            .year().month().day().time(includingFractionalSeconds: false).timeZone(separator: .omitted)
+        for entry in history.prefix(contextItems) {
+            let item = entry.context
+            let title = item.episodeName.isEmpty || item.episodeName == item.videoName ? item.videoName : "\(item.videoName) · \(item.episodeName)"
+            let source = item.sourceName.isEmpty || item.sourceName == item.sourceKey ? item.sourceKey : "\(item.sourceName) (\(item.sourceKey))"
+            let place = entry.duration > 0 ? "\(clock(entry.position)) / \(clock(entry.duration))" : clock(entry.position)
+            lines.append("- \(title), \(source), \(place), \(entry.updatedAt.formatted(time))")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    static let contextItems = 5
+
+    /// An address without what signs in with it: the user and password, and query values named
+    /// like a key or token. A local file keeps only its name.
+    static func shareable(_ address: String) -> String {
+        guard var parts = URLComponents(string: address), let scheme = parts.scheme?.lowercased() else { return address }
+        if scheme == "file" { return "file: " + (parts.path.split(separator: "/").last.map(String.init) ?? "") }
+        if parts.user != nil || parts.password != nil { parts.user = "***"; parts.password = nil }
+        let secret = ["token", "key", "pass", "pwd", "auth", "sign", "secret", "cookie", "session", "sid", "ticket", "uid", "user"]
+        parts.queryItems = parts.queryItems?.map { item in
+            let name = item.name.lowercased()
+            return secret.contains(where: name.contains) && item.value?.isEmpty == false ? URLQueryItem(name: item.name, value: "***") : item
+        }
+        return parts.string ?? address
+    }
+
+    private static func clock(_ seconds: Double) -> String {
+        let total = Int(seconds.rounded(.down))
+        let (h, m, s) = (total / 3600, total / 60 % 60, total % 60)
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
+    /// The message and, after a blank line, whatever is left of the context.
+    public static func combined(_ message: String, context: String) -> String {
+        let context = context.trimmingCharacters(in: .whitespacesAndNewlines)
+        let message = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        return context.isEmpty ? message : message + "\n\n" + context
+    }
+
     public static func send(_ message: String, kind: Kind, defaults: UserDefaults = .standard) async throws -> Issue {
         #if DEBUG
         // Debug builds and simulators only send with `-qaFeedback <url>` (e.g. a local `wrangler dev`).

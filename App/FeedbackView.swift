@@ -2,16 +2,27 @@ import SwiftUI
 import TVCore
 
 /// Settings › Send Feedback: a problem or an idea in the user's own words, posted as a public GitHub
-/// issue (Feedback). Once it is up, the page shows the issue's number and, off Apple TV, a link to it.
+/// issue (Feedback). Under the message go the subscriptions and what was played lately
+/// (Feedback.context), filled in when the page opens, for the viewer to edit or remove. Once the issue
+/// is up, the page shows its number and, off Apple TV, a link to it.
 struct FeedbackView: View {
+    @Environment(Store.self) private var store
     @State private var kind = Feedback.Kind.bug
     @State private var message = ""
+    @State private var context = ""
+    @State private var contextLoaded = false
     @State private var sending = false
     @State private var sent: Feedback.Issue?
     @State private var error: String?
 
     static var note: String {
-        L10n.text("Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses.")
+        L10n.text("Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model, the language and the included details. Please don't include accounts or passwords.")
+    }
+    static var contextNote: String {
+        L10n.text("Your subscriptions and what you played lately help find the problem. Edit or remove anything you'd rather keep private.")
+    }
+    private var freshContext: String {
+        Feedback.context(subscriptions: store.subscriptions, errors: store.subscriptionErrors, history: store.playbackHistory.entries)
     }
     private var empty: Bool { message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var thanks: String? { sent.map { L10n.text("Thanks! Your feedback is issue #%lld.", $0.number) } }
@@ -22,6 +33,11 @@ struct FeedbackView: View {
 
     var body: some View {
         content
+            .onAppear {
+                guard !contextLoaded else { return }
+                contextLoaded = true
+                context = freshContext
+            }
             #if DEBUG
             // `-qaFeedbackDraft <text>` fills in the message (typing on the TV's keyboard is slow), and
             // `-qaFeedbackSend 1` sends it, to the server named by `-qaFeedback <url>`. Once per launch: the
@@ -48,9 +64,17 @@ struct FeedbackView: View {
                 TVSettingsAction(title: sending ? L10n.text("Sending…") : L10n.text("Send"), busy: sending, action: send)
                     .disabled(sending || empty)
             }
+            // Typing a dozen lines with the remote is no way to edit them: the TV shows the details
+            // and sends them or not.
+            TVSettingsSection(title: L10n.text("Included Details"), footer: context.isEmpty ? Self.contextNote : context + "\n\n" + Self.contextNote) {
+                TVSettingsToggle(title: L10n.text("Include Details"), isOn: Binding {
+                    !context.isEmpty
+                } set: { context = $0 ? freshContext : "" })
+            }
         }
         #else
-        FeedbackPage(kind: $kind, message: $message, sending: sending, sent: $sent, error: error, send: send)
+        FeedbackPage(kind: $kind, message: $message, context: $context, freshContext: freshContext, sending: sending,
+                     sent: $sent, error: error, send: send)
         #endif
     }
 
@@ -60,8 +84,9 @@ struct FeedbackView: View {
         Task {
             defer { sending = false }
             do {
-                sent = try await Feedback.send(message, kind: kind)
+                sent = try await Feedback.send(Feedback.combined(message, context: context), kind: kind)
                 message = ""
+                context = freshContext
             } catch {
                 self.error = error.localizedDescription
             }
@@ -72,13 +97,16 @@ struct FeedbackView: View {
 #if !os(tvOS)
 // MARK: Send Feedback on the Mac, iPhone and iPad
 // A page of its own rather than a form: a short invitation, the three kinds as cards, a roomy editor
-// with Send in its bottom bar (⌘↩), and what goes with the message spelled out. Once the issue is
+// with Send in its bottom bar (⌘↩), the included details in an editor of their own, and what goes
+// with the message spelled out. Once the issue is
 // up, a thank-you card links to it. iPhone keeps the layout with smaller type and cards without
 // their blurbs, on the app's navy canvas.
 
 private struct FeedbackPage: View {
     @Binding var kind: Feedback.Kind
     @Binding var message: String
+    @Binding var context: String
+    let freshContext: String
     let sending: Bool
     @Binding var sent: Feedback.Issue?
     let error: String?
@@ -157,6 +185,7 @@ private struct FeedbackPage: View {
                 }
             }
             composer
+            included
             if let error {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Brand.amber)
@@ -193,9 +222,11 @@ private struct FeedbackPage: View {
             .padding(compact ? 10 : 14)
             Divider()
             HStack(spacing: 10) {
-                Text(verbatim: "\(message.count.formatted()) / \(Feedback.limit.formatted())")
+                // What is sent: the message and the included details.
+                let count = Feedback.combined(message, context: context).count
+                Text(verbatim: "\(count.formatted()) / \(Feedback.limit.formatted())")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(message.count > Feedback.limit ? AnyShapeStyle(Brand.amber) : AnyShapeStyle(.tertiary))
+                    .foregroundStyle(count > Feedback.limit ? AnyShapeStyle(Brand.amber) : AnyShapeStyle(.tertiary))
                 Spacer()
                 if sending { ProgressView().controlSize(.small) }
                 #if os(macOS)
@@ -217,6 +248,33 @@ private struct FeedbackPage: View {
         // Not on iPhone: the keyboard would cover the page before it has been read.
         .onAppear { editing = true }
         #endif
+    }
+
+    /// The subscriptions and recent plays, sent after the message as they read here.
+    private var included: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Label(L10n.text("Included Details"), systemImage: "list.bullet.rectangle.portrait")
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                Spacer()
+                if context != freshContext { Button(L10n.text("Reset")) { context = freshContext } }
+                if !context.isEmpty { Button(L10n.text("Remove"), role: .destructive) { context = "" } }
+            }
+            .buttonStyle(.borderless).font(.subheadline)
+            if !context.isEmpty {
+                TextEditor(text: $context)
+                    .font(.system(compact ? .footnote : .callout, design: .monospaced))
+                    .scrollContentBackground(.hidden)
+                    .frame(height: compact ? 160 : 180)
+                    .padding(compact ? 8 : 10)
+                    .background { Self.card.fill(Self.fill) }
+                    .overlay { Self.card.strokeBorder(Color.primary.opacity(0.08)) }
+            }
+            Text(FeedbackView.contextNote).font(compact ? .footnote : .callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 4)
+        .animation(.easeOut(duration: 0.2), value: context.isEmpty)
     }
 
     private var details: some View {
