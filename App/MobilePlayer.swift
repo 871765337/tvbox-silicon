@@ -507,7 +507,7 @@ struct MobilePlayerView: View {
         .accessibilityIdentifier("player.options")
     }
 
-    private static let speeds: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
+    private static let speeds: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4]
     private static func speedLabel(_ speed: Float) -> String {
         Double(speed).formatted(.number.precision(.fractionLength(0...2))) + "×"
     }

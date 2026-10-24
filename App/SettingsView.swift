@@ -412,7 +412,7 @@ struct FormSettingsView: View {
             }
             Section {
                 Picker(selection: $holdSpeed) {
-                    ForEach(SpeedBoost.rates, id: \.self) { Text($0.formatted(.number.precision(.fractionLength(0...2))) + "×").tag($0) }
+                    ForEach(SpeedBoost.startRates, id: \.self) { Text($0.formatted(.number.precision(.fractionLength(0...2))) + "×").tag($0) }
                 } label: {
                     FormLabel(symbol: "forward.fill", tint: .orange, title: L10n.text("Touch and Hold Speed"))
                 }

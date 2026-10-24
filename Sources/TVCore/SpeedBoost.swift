@@ -1,11 +1,13 @@
 import Foundation
 
 /// Touch and hold the picture to play faster, as in Douyin, YouTube, X and Telegram. The hold starts at the speed
-/// chosen in Settings; sliding sideways steps through `rates` (Telegram), and sliding down keeps the speed after the
-/// finger lifts (X), until its label is tapped.
+/// chosen in Settings; sliding sideways steps through `rates` (Telegram), down to half speed on the left, and sliding
+/// down keeps the speed after the finger lifts (X), until its label is tapped.
 public struct SpeedBoost: Equatable, Sendable {
     public static let key = "player.holdSpeed"
-    public static let rates: [Double] = [1.5, 2, 2.5, 3]
+    public static let rates: [Double] = [0.5, 1, 1.5, 2, 2.5, 3, 4]
+    /// The speeds a hold can start at: normal speed only on the way between slower and faster.
+    public static let startRates = rates.filter { $0 != 1 }
     public static let standard = 2.0
     /// Sideways distance, in points, from one rate to the next.
     public static let step = 50.0
