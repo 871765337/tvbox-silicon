@@ -30,6 +30,7 @@ import TVCore
     /// The last good copy of each subscription, by address.
     private(set) var documents: [String: Subscription] = [:]
     var favorites: [Channel] = []
+    let videoFavorites: VideoFavorites
     var importing = false
     var error: String?
     var notice: String?
@@ -74,6 +75,7 @@ import TVCore
         playbackHistory = .shared
         #endif
         pinnedSources = PinnedSources(defaults: playbackDefaults)
+        videoFavorites = VideoFavorites(defaults: defaults)
         autoPlayNext = defaults.object(forKey: "autoPlayNextEpisode") == nil || defaults.bool(forKey: "autoPlayNextEpisode")
         let saved = defaults.data(forKey: "subscriptions").flatMap { try? JSONDecoder().decode([SubscriptionEntry].self, from: $0) }
         var entries = saved ?? [], copies: [String: Subscription] = [:]
@@ -284,6 +286,13 @@ import TVCore
         defaults.set(try? JSONEncoder().encode(favorites), forKey: "favorites")
     }
     func isFavorite(_ channel: Channel) -> Bool { favorites.contains { Self.same($0, channel) } }
+    /// The source a saved show came from, found in any enabled subscription by its own origin and original key.
+    func catalogClient(for favorite: VideoFavorite) -> CatalogClient? {
+        guard let config = subscription,
+              let site = config.sites.first(where: { $0.origin(or: config.origin) == favorite.origin && $0.sourceKey == favorite.sourceKey })
+        else { return nil }
+        return CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL)
+    }
     /// A live room's title changes while it streams, so rooms match by their address.
     private static func same(_ saved: Channel, _ channel: Channel) -> Bool {
         saved.id == channel.id || (LiveCatalog.isRoom(channel.url) && saved.url == channel.url)

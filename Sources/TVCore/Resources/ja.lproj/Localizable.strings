@@ -15,6 +15,7 @@
 "Browse Live TV" = "ライブ TV を見る";
 "Live Playlists" = "ライブ再生リスト";
 "Favorite Channels" = "お気に入りのチャンネル";
+"Favorite Shows" = "お気に入りの作品";
 "Subscription Compatibility" = "配信設定の互換性";
 "Direct live streams and standard JSON sources are supported. The Mac app includes a local JAR runtime; plugin and source compatibility is still being tested." = "ライブ配信の直接 URL と標準 JSON ソースに対応しています。Mac 版には JAR の実行環境が内蔵されています。プラグインと配信ソースの互換性は検証中です。";
 "View All Sources" = "すべてのソースを表示";
@@ -38,7 +39,8 @@
 "Open Source Licenses" = "オープンソースライセンス";
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "TVBox JSON 配信設定、M3U / TXT ライブ再生リスト、type 1 / type 4 の標準 JSON API に対応しています。メディア形式はデバイスによって異なります。Mac のローカル JavaScript と Python プラグイン、およびすべてのプラットフォームの JAR プラグインは試験対応で、互換性は配信元によって異なります。";
 "No Favorites Yet" = "お気に入りはまだありません";
-"Tap the heart next to a live channel to save it on this device." = "ライブチャンネルの横にあるハートを押すと、このデバイスに保存できます。";
+"Tap the heart on a show's page or next to a live channel to save it on this device." = "作品の詳細ページやライブチャンネルの横にあるハートを押すと、このデバイスに保存できます。";
+"This show's source is no longer in your subscriptions." = "この作品のソースは、現在の配信設定にありません。";
 "Remove %@ from favorites" = "%@ をお気に入りから削除";
 "Add %@ to favorites" = "%@ をお気に入りに追加";
 "Connect a Live Subscription" = "ライブ配信設定を追加";
