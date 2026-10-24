@@ -1003,3 +1003,5 @@
 "Show on Watch Now" = "在“现在观看”中显示";
 "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "关闭的栏目只是不在“现在观看”中显示，播放记录、收藏、点播源和直播里的内容都还在。";
 "Choose what Watch Now shows in Settings." = "可在设置中选择“现在观看”显示哪些内容。";
+"Tab Bar Labels" = "标签栏文字";
+"Off shows only the icons in the tab bar along the bottom." = "关闭后，底部标签栏只显示图标。";

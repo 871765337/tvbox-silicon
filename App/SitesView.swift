@@ -377,7 +377,7 @@ struct SourceOrderCard: View {
                     Text(detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
-                Toggle(L10n.text("Custom Search Order"), isOn: enabled).labelsHidden().toggleStyle(.switch)
+                Toggle(L10n.text("Custom Search Order"), isOn: enabled).labelsHidden().toggleStyle(.switch).settingsSwitch()
                     .accessibilityIdentifier("sources.order.toggle")
             }
             if store.sourceOrder.enabled {
