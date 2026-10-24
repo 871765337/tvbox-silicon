@@ -90,3 +90,15 @@ private func historyContext(video: String = "series", episode: String = "1", sou
     #expect(!text.contains("headers"))
     #expect(!text.contains("address"))
 }
+
+@Test func detailsWithoutAPosterKeepTheListOrSavedOne() {
+    let list = URL(string: "https://img.example.com/list.jpg")!, own = URL(string: "https://img.example.com/own.jpg")!
+    let bare = Video(id: "1", name: "肖申克的救赎", year: "1994", episodes: [Episode(id: "0-0", name: "正片", address: "a", flag: "line")])
+    let kept = bare.keepingPoster(list, headers: ["Referer": "https://example.com/"])
+    #expect(kept.poster == list && kept.posterHeaders == ["Referer": "https://example.com/"])
+    #expect(kept.name == bare.name && kept.year == "1994" && kept.episodes == bare.episodes)
+    // A poster of its own wins, and no fallback leaves it as it was.
+    let posted = Video(id: "1", name: "x", poster: own)
+    #expect(posted.keepingPoster(list).poster == own)
+    #expect(bare.keepingPoster(nil).poster == nil)
+}

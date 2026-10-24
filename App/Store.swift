@@ -511,7 +511,9 @@ import TVCore
                 channel = try await client.playback(refreshed)
             }
             guard !Task.isCancelled, playing == previousPlayback, subscription?.origin == config.origin else { return }
-            playing = catalogChannel(channel, video: video, episode: episode, client: client, resumePosition: entry.resumePosition)
+            // A source whose details carry no poster keeps the one saved with the entry.
+            playing = catalogChannel(channel, video: video.keepingPoster(entry.context.poster, headers: entry.context.posterHeaders),
+                                     episode: episode, client: client, resumePosition: entry.resumePosition)
         } catch {
             guard !(error is CancellationError), !Task.isCancelled else { return }
             Diagnostics.shared.failure("catalog", "resume source=\(entry.context.sourceKey)", error)

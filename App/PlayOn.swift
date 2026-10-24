@@ -130,7 +130,8 @@ import AVKit
             resolved = try await client.playback(refreshed)
         }
         try Task.checkCancellation()
-        return store.catalogChannel(resolved, video: video, episode: episode, client: client, resumePosition: position)
+        return store.catalogChannel(resolved, video: video.keepingPoster(context.poster, headers: context.posterHeaders),
+                                    episode: episode, client: client, resumePosition: position)
     }
 }
 
