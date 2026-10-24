@@ -175,8 +175,9 @@ struct CatalogDanmakuSettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    Toggle(L10n.text("Show Danmaku"), isOn: $model.enabled).accessibilityIdentifier("danmaku.enabled")
+                    Toggle(L10n.text("Show Danmaku"), isOn: $model.enabled).settingsSwitch().accessibilityIdentifier("danmaku.enabled")
                     Toggle(L10n.text("Automatically match the current episode"), isOn: $model.automatic)
+                        .settingsSwitch()
                         .accessibilityIdentifier("danmaku.automatic")
                     Text(L10n.text("Matching comments appear automatically. If none match or the service is unavailable, the video stays clear."))
                         .font(.caption).foregroundStyle(.secondary)
@@ -203,7 +204,7 @@ struct CatalogDanmakuSettingsView: View {
                     }
                 }
                 Section {
-                    Toggle(L10n.text("Find official episodes for dmku"), isOn: $officialLookup)
+                    Toggle(L10n.text("Find official episodes for dmku"), isOn: $officialLookup).settingsSwitch()
                     Text(L10n.text("Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent."))
                         .font(.caption).foregroundStyle(.secondary)
                     HStack {

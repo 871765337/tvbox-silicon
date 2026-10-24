@@ -94,3 +94,10 @@ private func site(_ key: String, _ name: String, type: Int, api: String) -> [Str
     #expect(SubscriptionEntry(address: "https://raw.githubusercontent.com/qist/tvbox/master/fty.json").title == "qist/tvbox · fty.json")
     #expect(SubscriptionEntry(address: "https://repo.example").title == "repo.example")
 }
+
+@Test func aSubscriptionNameReplacesItsAddressAndBlankFallsBack() {
+    let address = "https://raw.githubusercontent.com/qist/tvbox/master/fty.json"
+    #expect(SubscriptionEntry(address: address).title == "qist/tvbox · fty.json")
+    #expect(SubscriptionEntry(address: address, name: " 饭太硬 ").title == "饭太硬")
+    #expect(SubscriptionEntry(address: address, name: "  ").title == "qist/tvbox · fty.json")
+}

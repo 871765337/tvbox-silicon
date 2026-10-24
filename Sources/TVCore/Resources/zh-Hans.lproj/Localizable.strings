@@ -371,6 +371,7 @@
 "%lld of %lld sources didn't respond, so results may be incomplete." = "%lld / %lld 个源未响应，结果可能不完整。";
 "Try another keyword." = "请更换关键词。";
 "Show Details" = "查看详情";
+"Hide Details" = "收起详情";
 "%lld of %lld sources responded" = "%lld / %lld 个源已响应";
 "First-time setup can take a few minutes. Keep the app open." = "首次准备可能需要几分钟，请保持 App 打开。";
 "This source requires Android features that the plugin runtime does not support yet." = "此源依赖插件运行时尚未支持的 Android 功能。";
@@ -873,6 +874,11 @@
 "View on GitHub" = "在 GitHub 上查看";
 "Thanks! Your feedback is issue #%lld." = "谢谢！你的反馈已提交为问题 #%lld。";
 "You've sent a lot of feedback. Please try again later." = "你发送的反馈太多了，请稍后再试。";
+"You're sending feedback too quickly. Wait a minute and try again." = "发送得太快了，请等一分钟再试。";
+"You can send %lld messages in 24 hours and have sent them all. You can send another after %@." = "每 24 小时最多可以发送 %lld 条反馈，你已经发满了。%@ 之后可以再发一条。";
+"You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow." = "每 24 小时最多可以发送 %lld 条反馈，你已经发满了，请明天再试。";
+"Today's feedback from everyone has reached its limit. You can send yours after %@." = "今天所有人的反馈总数已达上限。%@ 之后可以发送。";
+"Today's feedback from everyone has reached its limit. Please try again later." = "今天所有人的反馈总数已达上限，请稍后再试。";
 "Couldn't send feedback. Please try again later." = "无法发送反馈，请稍后再试。";
 "Help Make Yingxia Better" = "帮助映匣变得更好";
 "Report a problem or share an idea. It goes straight to the developer." = "报告问题或分享你的想法，会直接送到开发者手中。";
@@ -987,6 +993,8 @@
 "%lld s" = "%lld 秒";
 "Brightness" = "亮度";
 "Slide for Brightness and Volume" = "滑动调节亮度和音量";
+"Tab Bar Labels" = "标签栏文字";
+"Off shows only the icons in the tab bar along the bottom." = "关闭后，底部标签栏只显示图标。";
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "在视频左侧上下滑动调节亮度，在右侧上下滑动调节音量。";
 "Custom Search Order" = "自定义搜索顺序";
 "Sources at the top are searched first, and their results are listed first." = "排在前面的源优先搜索，结果也排在前面。";
@@ -1003,3 +1011,5 @@
 "Show on Watch Now" = "在“现在观看”中显示";
 "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "关闭的栏目只是不在“现在观看”中显示，播放记录、收藏、点播源和直播里的内容都还在。";
 "Choose what Watch Now shows in Settings." = "可在设置中选择“现在观看”显示哪些内容。";
+"Name" = "名称";
+"Name (optional)" = "名称（可选）";

@@ -113,6 +113,7 @@ struct MobilePlayerView: View {
         // Played here again (the Lock Screen, say): the other device no longer has it to itself.
         .onChange(of: session.paused) { _, paused in if !paused { playingOn = nil } }
         .onChange(of: nowPlayingState, initial: true) { nowPlaying.update(title: channel.name, session: session) }
+        .onChange(of: nowPlayingArtwork, initial: true) { _, artwork in nowPlaying.show(artwork, session: session) }
         // Pausing ends the faster speed in the session; another episode or quality plays at the chosen one.
         .onChange(of: session.boost == nil) { _, ended in if ended { boost = nil } }
         .onChange(of: clock.item) { endBoost() }
@@ -142,6 +143,13 @@ struct MobilePlayerView: View {
     private var nowPlayingState: NowPlayingState {
         NowPlayingState(title: channel.name, paused: session.paused, live: session.isLive, timeline: session.hasTimeline,
                         duration: clock.duration, speed: speed, boost: session.boost)
+    }
+
+    /// The poster the waiting screen shows, for the Lock Screen and Control Center.
+    private var nowPlayingArtwork: PlaybackArtwork {
+        let catalog = store.catalog(for: channel)
+        return PlaybackArtwork(poster: catalog?.video.poster ?? channel.historyContext?.poster,
+                               headers: catalog?.video.posterHeaders ?? channel.historyContext?.posterHeaders ?? [:])
     }
 
     // MARK: Taps and slides
@@ -1139,6 +1147,29 @@ private struct PlayerLayerView: UIViewRepresentable {
     }
 
     private var title = ""
+    private var artworkSource: PlaybackArtwork?
+    private var artwork: MPMediaItemArtwork?
+    private var artworkTask: Task<Void, Never>?
+
+    /// The video's poster beside its title, loaded once per poster; none until it has loaded.
+    func show(_ source: PlaybackArtwork, session: PlaybackSession) {
+        guard source != artworkSource else { return }
+        artworkSource = source; artwork = nil
+        artworkTask?.cancel()
+        guard let url = source.poster else { return }
+        artworkTask = Task { [weak self, weak session] in
+            guard let bitmap = await PosterPalette.image(url, headers: source.headers), !Task.isCancelled,
+                  let self, let session, self.artworkSource == source else { return }
+            self.artwork = Self.artwork(UIImage(cgImage: bitmap))
+            self.update(title: nil, session: session)
+        }
+    }
+
+    /// MediaPlayer asks for the image on its own queue: a closure made on the main actor would
+    /// trap there, checking it runs on the main thread.
+    private nonisolated static func artwork(_ image: UIImage) -> MPMediaItemArtwork {
+        MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+    }
 
     /// `title` nil keeps the one shown.
     func update(title: String?, session: PlaybackSession) {
@@ -1161,6 +1192,7 @@ private struct PlayerLayerView: UIViewRepresentable {
         if seekable, let duration = player.currentItem?.duration.seconds, duration.isFinite {
             info[MPMediaItemPropertyPlaybackDuration] = duration
         }
+        if let artwork { info[MPMediaItemPropertyArtwork] = artwork }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         MPNowPlayingInfoCenter.default().playbackState = session.paused ? .paused : .playing
     }
@@ -1168,6 +1200,7 @@ private struct PlayerLayerView: UIViewRepresentable {
     func stop() {
         for (command, target) in targets { command.removeTarget(target) }
         targets = []
+        artworkTask?.cancel(); artworkTask = nil; artworkSource = nil; artwork = nil
         // Music may already have taken Now Playing back as the player closed.
         let center = MPNowPlayingInfoCenter.default()
         if center.nowPlayingInfo?[MPNowPlayingInfoPropertyMediaType] as? UInt == MPNowPlayingInfoMediaType.video.rawValue {

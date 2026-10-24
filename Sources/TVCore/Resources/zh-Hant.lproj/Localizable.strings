@@ -371,6 +371,7 @@
 "%lld of %lld sources didn't respond, so results may be incomplete." = "%lld / %lld 個來源未回應，結果可能不完整。";
 "Try another keyword." = "請更換關鍵字。";
 "Show Details" = "查看詳細資訊";
+"Hide Details" = "收起詳細資訊";
 "%lld of %lld sources responded" = "%lld / %lld 個來源已回應";
 "First-time setup can take a few minutes. Keep the app open." = "首次準備可能需要幾分鐘，請保持 App 開啟。";
 "This source requires Android features that the plugin runtime does not support yet." = "此來源依賴外掛執行環境尚未支援的 Android 功能。";
@@ -873,6 +874,11 @@
 "View on GitHub" = "在 GitHub 上檢視";
 "Thanks! Your feedback is issue #%lld." = "謝謝！你的意見已提交為問題 #%lld。";
 "You've sent a lot of feedback. Please try again later." = "你傳送的意見太多了，請稍後再試。";
+"You're sending feedback too quickly. Wait a minute and try again." = "傳送得太快了，請等一分鐘再試。";
+"You can send %lld messages in 24 hours and have sent them all. You can send another after %@." = "每 24 小時最多可以傳送 %lld 則意見，你已經傳滿了。%@ 之後可以再傳一則。";
+"You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow." = "每 24 小時最多可以傳送 %lld 則意見，你已經傳滿了，請明天再試。";
+"Today's feedback from everyone has reached its limit. You can send yours after %@." = "今天所有人的意見總數已達上限。%@ 之後可以傳送。";
+"Today's feedback from everyone has reached its limit. Please try again later." = "今天所有人的意見總數已達上限，請稍後再試。";
 "Couldn't send feedback. Please try again later." = "無法傳送意見，請稍後再試。";
 "Help Make Yingxia Better" = "幫助映匣變得更好";
 "Report a problem or share an idea. It goes straight to the developer." = "回報問題或分享你的想法，會直接送到開發者手中。";
@@ -987,6 +993,8 @@
 "%lld s" = "%lld 秒";
 "Brightness" = "亮度";
 "Slide for Brightness and Volume" = "滑動調整亮度和音量";
+"Tab Bar Labels" = "標籤列文字";
+"Off shows only the icons in the tab bar along the bottom." = "關閉後，底部標籤列只顯示圖示。";
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "在影片左側上下滑動調整亮度，在右側上下滑動調整音量。";
 "Custom Search Order" = "自訂搜尋順序";
 "Sources at the top are searched first, and their results are listed first." = "排在前面的來源優先搜尋，結果也排在前面。";
@@ -1003,3 +1011,5 @@
 "Show on Watch Now" = "在「立即觀看」中顯示";
 "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "關閉的欄目只是不在「立即觀看」中顯示，播放記錄、收藏、點播來源和直播裡的內容都還在。";
 "Choose what Watch Now shows in Settings." = "可在設定中選擇「立即觀看」顯示哪些內容。";
+"Name" = "名稱";
+"Name (optional)" = "名稱（選填）";

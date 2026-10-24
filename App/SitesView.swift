@@ -377,7 +377,7 @@ struct SourceOrderCard: View {
                     Text(detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
-                Toggle(L10n.text("Custom Search Order"), isOn: enabled).labelsHidden().toggleStyle(.switch)
+                Toggle(L10n.text("Custom Search Order"), isOn: enabled).labelsHidden().toggleStyle(.switch).settingsSwitch()
                     .accessibilityIdentifier("sources.order.toggle")
             }
             if store.sourceOrder.enabled {
@@ -1086,7 +1086,8 @@ struct VideoDetailView: View {
         34
         #endif
     }
-    private func currentVideo() -> Video { detail ?? video }
+    /// The details, with the list's poster when the details came without one.
+    private func currentVideo() -> Video { (detail ?? video).keepingPoster(video.poster, headers: video.posterHeaders) }
 
     private func videoFavorite() -> FavoriteItem {
         .video(FavoriteVideo(origin: client.origin, site: client.site, video: currentVideo()))
@@ -1352,7 +1353,7 @@ struct VideoDetailView: View {
             } else {
                 let resolved = try await client.with(parses: store.subscription?.parseServices ?? []).resolvePlayback(plan, choice: plan.choices[0])
                 try Task.checkCancellation()
-                store.playing = store.catalogChannel(resolved, video: detail ?? video, episode: episode, client: client)
+                store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: client)
             }
         } catch { fail(episode, error) }
     }
@@ -1362,7 +1363,7 @@ struct VideoDetailView: View {
         do {
             let resolved = try await client.with(parses: store.subscription?.parseServices ?? []).resolvePlayback(plan, choice: choice)
             try Task.checkCancellation()
-            store.playing = store.catalogChannel(resolved, video: detail ?? video, episode: episode, client: client)
+            store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: client)
         } catch { fail(episode, error) }
     }
     #if !os(macOS)

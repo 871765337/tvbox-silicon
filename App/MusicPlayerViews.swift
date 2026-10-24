@@ -490,6 +490,7 @@ struct MusicSettingsView: View {
                                 Text(detail).font(.caption).foregroundStyle(.secondary)
                             }
                         }
+                        .settingsSwitch()
                     }
                     TextField(L10n.text("HYW key"), text: $music.preferences.hywKey)
                         .autocorrectionDisabled()

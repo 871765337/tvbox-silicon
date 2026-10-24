@@ -372,6 +372,7 @@
 "%lld of %lld sources didn't respond, so results may be incomplete." = "%lld of %lld sources didn't respond, so results may be incomplete.";
 "Try another keyword." = "Try another keyword.";
 "Show Details" = "Show Details";
+"Hide Details" = "Hide Details";
 "%lld of %lld sources responded" = "%lld of %lld sources responded";
 "First-time setup can take a few minutes. Keep the app open." = "First-time setup can take a few minutes. Keep the app open.";
 "This source requires Android features that the plugin runtime does not support yet." = "This source requires Android features that the plugin runtime does not support yet.";
@@ -874,6 +875,11 @@
 "View on GitHub" = "View on GitHub";
 "Thanks! Your feedback is issue #%lld." = "Thanks! Your feedback is issue #%lld.";
 "You've sent a lot of feedback. Please try again later." = "You've sent a lot of feedback. Please try again later.";
+"You're sending feedback too quickly. Wait a minute and try again." = "You're sending feedback too quickly. Wait a minute and try again.";
+"You can send %lld messages in 24 hours and have sent them all. You can send another after %@." = "You can send %lld messages in 24 hours and have sent them all. You can send another after %@.";
+"You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow." = "You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow.";
+"Today's feedback from everyone has reached its limit. You can send yours after %@." = "Today's feedback from everyone has reached its limit. You can send yours after %@.";
+"Today's feedback from everyone has reached its limit. Please try again later." = "Today's feedback from everyone has reached its limit. Please try again later.";
 "Couldn't send feedback. Please try again later." = "Couldn't send feedback. Please try again later.";
 "Help Make Yingxia Better" = "Help Make Yingxia Better";
 "Report a problem or share an idea. It goes straight to the developer." = "Report a problem or share an idea. It goes straight to the developer.";
@@ -988,6 +994,8 @@
 "%lld s" = "%lld s";
 "Brightness" = "Brightness";
 "Slide for Brightness and Volume" = "Slide for Brightness and Volume";
+"Tab Bar Labels" = "Tab Bar Labels";
+"Off shows only the icons in the tab bar along the bottom." = "Off shows only the icons in the tab bar along the bottom.";
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "Slide up or down on the left of the video to change the brightness, or on the right to change the volume.";
 "Custom Search Order" = "Custom Search Order";
 "Sources at the top are searched first, and their results are listed first." = "Sources at the top are searched first, and their results are listed first.";
@@ -1003,3 +1011,5 @@
 "Show on Watch Now" = "Show on Watch Now";
 "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything.";
 "Choose what Watch Now shows in Settings." = "Choose what Watch Now shows in Settings.";
+"Name" = "Name";
+"Name (optional)" = "Name (optional)";

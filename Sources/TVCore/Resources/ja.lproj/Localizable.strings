@@ -371,6 +371,7 @@
 "%lld of %lld sources didn't respond, so results may be incomplete." = "%lld / %lld ソースが応答しませんでした。結果が不完全な可能性があります。";
 "Try another keyword." = "別のキーワードを試してください。";
 "Show Details" = "詳細を表示";
+"Hide Details" = "詳細を隠す";
 "%lld of %lld sources responded" = "%lld / %lld ソースが応答";
 "First-time setup can take a few minutes. Keep the app open." = "初回の準備には数分かかることがあります。アプリを開いたままにしてください。";
 "This source requires Android features that the plugin runtime does not support yet." = "この配信ソースは、プラグイン実行環境で未対応のAndroid機能を必要とします。";
@@ -873,6 +874,11 @@
 "View on GitHub" = "GitHub で見る";
 "Thanks! Your feedback is issue #%lld." = "ご協力ありがとうございます。Issue #%lld として登録されました。";
 "You've sent a lot of feedback. Please try again later." = "フィードバックの送信が多すぎます。しばらくしてからもう一度お試しください。";
+"You're sending feedback too quickly. Wait a minute and try again." = "送信の間隔が短すぎます。1 分ほど待ってからもう一度お試しください。";
+"You can send %lld messages in 24 hours and have sent them all. You can send another after %@." = "フィードバックは 24 時間に %lld 件まで送信でき、すでに上限に達しています。%@ 以降にもう 1 件送信できます。";
+"You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow." = "フィードバックは 24 時間に %lld 件まで送信でき、すでに上限に達しています。明日もう一度お試しください。";
+"Today's feedback from everyone has reached its limit. You can send yours after %@." = "本日のフィードバックは全体の上限に達しました。%@ 以降に送信できます。";
+"Today's feedback from everyone has reached its limit. Please try again later." = "本日のフィードバックは全体の上限に達しました。しばらくしてからもう一度お試しください。";
 "Couldn't send feedback. Please try again later." = "フィードバックを送信できませんでした。しばらくしてからもう一度お試しください。";
 "Help Make Yingxia Better" = "映匣をもっと良くするために";
 "Report a problem or share an idea. It goes straight to the developer." = "不具合の報告やアイデアをお寄せください。開発者に直接届きます。";
@@ -987,6 +993,8 @@
 "%lld s" = "%lld 秒";
 "Brightness" = "明るさ";
 "Slide for Brightness and Volume" = "スライドで明るさと音量を調整";
+"Tab Bar Labels" = "タブバーのラベル";
+"Off shows only the icons in the tab bar along the bottom." = "オフにすると、下部のタブバーにアイコンだけを表示します。";
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "動画の左側を上下にスライドすると明るさ、右側では音量を調整できます。";
 "Custom Search Order" = "カスタム検索順";
 "Sources at the top are searched first, and their results are listed first." = "上にあるソースから先に検索し、その結果を先に表示します。";
@@ -1003,3 +1011,5 @@
 "Show on Watch Now" = "「今すぐ観る」に表示";
 "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "オフにした項目は「今すぐ観る」に表示されなくなるだけで、再生履歴、お気に入り、配信ソース、ライブ TV の内容はそのまま残ります。";
 "Choose what Watch Now shows in Settings." = "「今すぐ観る」に表示する内容は設定で選べます。";
+"Name" = "名前";
+"Name (optional)" = "名前（省略可）";

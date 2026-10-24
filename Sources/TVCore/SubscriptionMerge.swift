@@ -118,6 +118,7 @@ public struct SubscriptionEntry: Codable, Hashable, Identifiable, Sendable {
     /// Its name, else where it lives and its file: many subscriptions share a host such as
     /// raw.githubusercontent.com, so a GitHub address reads as its repository.
     public var title: String {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard name.isEmpty else { return name }
         guard let url = URL(string: address), let host = url.host() else { return address }
         let parts = url.pathComponents.filter { $0 != "/" }
