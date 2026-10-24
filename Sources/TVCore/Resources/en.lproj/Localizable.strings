@@ -875,7 +875,6 @@
 "Thanks! Your feedback is issue #%lld." = "Thanks! Your feedback is issue #%lld.";
 "You've sent a lot of feedback. Please try again later." = "You've sent a lot of feedback. Please try again later.";
 "Couldn't send feedback. Please try again later." = "Couldn't send feedback. Please try again later.";
-"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses." = "Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model and the language. Please don't include accounts, passwords or subscription addresses.";
 "Help Make Yingxia Better" = "Help Make Yingxia Better";
 "Report a problem or share an idea. It goes straight to the developer." = "Report a problem or share an idea. It goes straight to the developer.";
 "Report a problem or share an idea" = "Report a problem or share an idea";
@@ -886,6 +885,10 @@
 "What would make Yingxia better for you?" = "What would make Yingxia better for you?";
 "What's on your mind?" = "What's on your mind?";
 "Sent with your message" = "Sent with your message";
+"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model, the language and the included details. Please don't include accounts or passwords." = "Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model, the language and the included details. Please don't include accounts or passwords.";
+"Included Details" = "Included Details";
+"Include Details" = "Include Details";
+"Your subscriptions and what you played lately help find the problem. Edit or remove anything you'd rather keep private." = "Your subscriptions and what you played lately help find the problem. Edit or remove anything you'd rather keep private.";
 "Thank You!" = "Thank You!";
 "Your feedback is now issue #%lld on GitHub." = "Your feedback is now issue #%lld on GitHub.";
 "Send Another" = "Send Another";
