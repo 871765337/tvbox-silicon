@@ -337,6 +337,9 @@ struct FormSettingsView: View {
                     .labelsHidden()
                     .autocorrectionDisabled()
                     .onSubmit { add() }
+                TextField(L10n.text("Name (optional)"), text: $store.subscriptionName, prompt: Text(L10n.text("Name (optional)")))
+                    .labelsHidden()
+                    .onSubmit { add() }
                 subscriptionActions
                 #endif
             } header: {
@@ -712,6 +715,10 @@ private struct AddSubscriptionSheet: View {
                         .submitLabel(.done)
                         .focused($focused)
                         .onSubmit(add)
+                    TextField(L10n.text("Name (optional)"), text: $store.subscriptionName, prompt: Text(L10n.text("Name (optional)")))
+                        .labelsHidden()
+                        .submitLabel(.done)
+                        .onSubmit(add)
                 } footer: {
                     if let error = store.error { Text(error).foregroundStyle(Brand.amber) }
                     else { Text(L10n.text("Paste the address of a TVBox JSON subscription, an M3U or TXT live playlist, or an AList server.")) }
@@ -767,6 +774,12 @@ private struct SubscriptionDetailView: View {
                 }
                 .settingsSwitch()
                 .disabled(store.importing)
+                LabeledContent(L10n.text("Name")) {
+                    // Empty shows the name it would otherwise have.
+                    TextField(L10n.text("Name"), text: Binding(get: { current.name }, set: { store.renameSubscription(current, to: $0) }),
+                              prompt: Text(SubscriptionEntry(address: current.address).title))
+                        .labelsHidden().multilineTextAlignment(.trailing)
+                }
                 LabeledContent(L10n.text("Subscription URL")) {
                     Text(current.address).lineLimit(2).truncationMode(.middle).textSelection(.enabled).foregroundStyle(.secondary)
                 }
@@ -1529,6 +1542,7 @@ private struct TVSubscriptionPage: View {
                 TVSettingsToggle(title: L10n.text("Use This Subscription"),
                                  isOn: Binding(get: { current.enabled }, set: { on in Task { await store.setSubscription(current, enabled: on) } }))
                     .disabled(store.importing)
+                TVSettingsField(title: L10n.text("Name"), text: Binding(get: { current.name }, set: { store.renameSubscription(current, to: $0) }))
             }
             if store.subscriptions.count > 1 {
                 TVSettingsSection(title: L10n.text("Order")) {
@@ -1556,6 +1570,7 @@ private struct TVAddSubscriptionPage: View {
         TVSettingsSubpage(symbol: "plus.rectangle.on.rectangle", title: L10n.text("Add Subscription")) {
             TVSettingsSection(title: L10n.text("Subscription"), footer: store.error ?? store.notice) {
                 TVSettingsField(title: L10n.text("Subscription URL (TVBox JSON, M3U or TXT)"), text: $store.subscriptionAddress)
+                TVSettingsField(title: L10n.text("Name (optional)"), text: $store.subscriptionName)
                 TVSettingsAction(title: store.importing ? L10n.text("Importing…") : L10n.text("Add Subscription"), busy: store.importing) {
                     Task {
                         let before = store.subscriptions.count
