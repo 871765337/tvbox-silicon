@@ -972,3 +972,12 @@
 "Brightness" = "Brightness";
 "Slide for Brightness and Volume" = "Slide for Brightness and Volume";
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "Slide up or down on the left of the video to change the brightness, or on the right to change the volume.";
+"Custom Search Order" = "Custom Search Order";
+"Sources at the top are searched first, and their results are listed first." = "Sources at the top are searched first, and their results are listed first.";
+"Yingxia searches quick, reliable sources first." = "Yingxia searches quick, reliable sources first.";
+"Arrange" = "Arrange";
+"Arrange Sources" = "Arrange Sources";
+"Drag sources to reorder them. Sources at the top are searched first, and their results are listed first." = "Drag sources to reorder them. Sources at the top are searched first, and their results are listed first.";
+"Choose a source to move it. Sources at the top are searched first, and their results are listed first." = "Choose a source to move it. Sources at the top are searched first, and their results are listed first.";
+"Move to Top" = "Move to Top";
+"Move to Bottom" = "Move to Bottom";

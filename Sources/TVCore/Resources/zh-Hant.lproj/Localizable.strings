@@ -972,3 +972,12 @@
 "Brightness" = "亮度";
 "Slide for Brightness and Volume" = "滑動調整亮度和音量";
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "在影片左側上下滑動調整亮度，在右側上下滑動調整音量。";
+"Custom Search Order" = "自訂搜尋順序";
+"Sources at the top are searched first, and their results are listed first." = "排在前面的來源優先搜尋，結果也排在前面。";
+"Yingxia searches quick, reliable sources first." = "映匣會優先搜尋快速、穩定的來源。";
+"Arrange" = "排序";
+"Arrange Sources" = "調整來源順序";
+"Drag sources to reorder them. Sources at the top are searched first, and their results are listed first." = "拖曳來源即可調整順序。排在前面的來源優先搜尋，結果也排在前面。";
+"Choose a source to move it. Sources at the top are searched first, and their results are listed first." = "選擇一個來源來移動它。排在前面的來源優先搜尋，結果也排在前面。";
+"Move to Top" = "移到最前";
+"Move to Bottom" = "移到最後";
