@@ -12,7 +12,12 @@ const fail = key => { throw new Error(labels[key] || 'Hongguo is temporarily una
 const validID = value => typeof value === 'string' && /^[0-9]{1,30}$/.test(value);
 
 function html(url) {
-    const result = globalThis.req(url, { headers, timeout: 15000 });
+    // The site's gateway now and then answers 502 "upstream_unavailable"; asking again right away usually works.
+    let result;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        result = globalThis.req(url, { headers, timeout: 15000 });
+        if (!(result.code >= 500)) break;
+    }
     if (result.code !== 200 || !result.content || result.content.length > 8 * 1024 * 1024) fail('unavailable');
     return result.content;
 }
