@@ -1003,3 +1003,4 @@
 "Show on Watch Now" = "「今すぐ観る」に表示";
 "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "オフにした項目は「今すぐ観る」に表示されなくなるだけで、再生履歴、お気に入り、配信ソース、ライブ TV の内容はそのまま残ります。";
 "Choose what Watch Now shows in Settings." = "「今すぐ観る」に表示する内容は設定で選べます。";
+"Hide Details" = "詳細を隠す";
