@@ -448,7 +448,9 @@ struct GlobalSearchView: View {
         guard !keyword.isEmpty else { return }
         rememberQuery(keyword)
         inputFocused = false
-        model.search(keyword, config: config)
+        model.search(keyword, config: config) { [store] site in
+            store.hiddenSources.contains(site, origin: config.origin)
+        }
     }
 }
 /// What a running search is doing: overall progress, a time estimate, and one row per plugin

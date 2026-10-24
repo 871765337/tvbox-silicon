@@ -151,11 +151,11 @@ import Observation
     }
 
     public func search(_ query: String, config: Subscription, excluding hidden: @escaping @MainActor (Site) -> Bool = { _ in false }) {
-        excluded = hidden
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return }
         let identity = "\(config.origin)|\(config.importedAt.timeIntervalSince1970)"
         if subscriptionID != identity { reset(); subscriptionID = identity }
+        excluded = hidden
         if busy && keyword == value { return }
         stop()
         keyword = value; draft = value; results = []; completed = 0
