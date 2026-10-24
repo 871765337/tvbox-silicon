@@ -602,10 +602,7 @@
 "Pinned Group" = "Pinned Group";
 "Hide Source" = "Hide Source";
 "Unhide Source" = "Unhide Source";
-"Show Hidden Sources" = "Show Hidden Sources";
-"Show Hidden" = "Show Hidden";
-"Hide from Continue Watching" = "Hide from Continue Watching";
-"Show in Continue Watching" = "Show in Continue Watching";
+"Hidden Sources" = "Hidden Sources";
 "Hidden" = "Hidden";
 "Pinned Sources" = "Pinned Sources";
 "Search history" = "Search history";
@@ -997,3 +994,5 @@
 "Choose a source to move it. Sources at the top are searched first, and their results are listed first." = "Choose a source to move it. Sources at the top are searched first, and their results are listed first.";
 "Move to Top" = "Move to Top";
 "Move to Bottom" = "Move to Bottom";
+"Like" = "Like";
+"Unlike" = "Unlike";

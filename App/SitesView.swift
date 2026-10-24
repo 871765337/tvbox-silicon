@@ -4,9 +4,8 @@ import TVCore
 struct SitesView: View {
     @Environment(Store.self) private var store
     @State private var query = ""
-    /// Reset with the page, not with a pushed source: the state lives here and `prepared` keeps the default fold to once per visit.
-    @State private var includeHidden = false
     /// A group is open only when its id is here, so a group that shows up later starts folded.
+    /// Reset with the page, not with a pushed source: the state lives here and `prepared` keeps the default fold to once per visit.
     @State private var expanded: Set<String> = Self.defaultExpanded
     @State private var prepared = false
     private static let defaultExpanded: Set<String> = ["pinned", "builtIn"]
@@ -16,7 +15,7 @@ struct SitesView: View {
     var body: some View {
         Group {
             if let config = store.subscription {
-                let groups = store.sourceGroups(includeHidden: includeHidden).filtered(by: query)
+                let groups = store.sourceGroups(includeHidden: false).filtered(by: query)
                 let sites = store.orderedSites(config)
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Layout.cardSpacing) {
@@ -28,8 +27,7 @@ struct SitesView: View {
                             if expanded.contains(group.id) {
                                 LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
                                     ForEach(group.sites) { site in
-                                        let dimmed = includeHidden && store.hiddenSources.contains(site, origin: config.origin)
-                                        RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site, dimmed: dimmed) }.tileButton()
+                                        RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site, dimmed: group.kind == .hidden) }.tileButton()
                                             .contextMenu {
                                                 PinSourceButton(site: site, origin: config.origin)
                                                 HideSourceButton(site: site, origin: config.origin)
@@ -37,16 +35,11 @@ struct SitesView: View {
                                             }
                                     }
                                 }
+                                // Unfolds from under its header; folding only fades, as the groups below slide up.
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: -16)), removal: .opacity))
                             }
                         }
                     }.pageContainer()
-                }
-                .toolbar {
-                    Button { includeHidden.toggle() } label: {
-                        Label(L10n.text("Show Hidden Sources"), systemImage: includeHidden ? "eye.fill" : "eye")
-                    }
-                    .accessibilityAddTraits(includeHidden ? .isSelected : [])
-                    .accessibilityIdentifier("sources.showHidden")
                 }
                 .sheet(isPresented: $arranging) { SourceOrderEditor(sites: sites, automatic: store.automaticSites(config)) }
                 #if DEBUG
@@ -75,7 +68,7 @@ struct SitesView: View {
         .onChange(of: query) { old, new in
             if old.isEmpty && !new.isEmpty {
                 foldBeforeSearch = expanded
-                expanded.formUnion(store.sourceGroups(includeHidden: includeHidden).map(\.id))
+                expanded.formUnion(store.sourceGroups(includeHidden: false).map(\.id))
             } else if !old.isEmpty && new.isEmpty, let saved = foldBeforeSearch {
                 expanded = saved
                 foldBeforeSearch = nil
@@ -87,13 +80,17 @@ struct SitesView: View {
     private func groupHeader(_ group: SourceGroup) -> some View {
         let open = expanded.contains(group.id)
         let header = Button {
-            if open { expanded.remove(group.id) } else { expanded.insert(group.id) }
+            withAnimation(.snappy(duration: 0.3)) {
+                if open { expanded.remove(group.id) } else { expanded.insert(group.id) }
+            }
         } label: {
             HStack(spacing: 8) {
                 Text(L10n.text(group.title)).font(.headline).lineLimit(1)
                 Text("\(group.sites.count)").font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
                 Spacer(minLength: 8)
-                Image(systemName: open ? "chevron.down" : "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                // One chevron that turns, rather than two symbols swapped.
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(open ? 90 : 0))
             }
             .contentShape(Rectangle())
         }
@@ -106,7 +103,7 @@ struct SitesView: View {
                 .draggable(group.id)
                 .dropDestination(for: String.self) { items, _ in
                     guard query.isEmpty, let address = items.first else { return false }
-                    store.moveSourceGroup(address, onto: group.id, includeHidden: includeHidden)
+                    store.moveSourceGroup(address, onto: group.id, includeHidden: false)
                     return true
                 }
         } else {
@@ -117,9 +114,8 @@ struct SitesView: View {
         #endif
     }
 
-    /// The default view of the page: hidden sources out, subscription groups folded.
+    /// The default view of the page: subscription groups and hidden sources folded.
     private func applyDefaultFold() {
-        includeHidden = false
         expanded = Self.defaultExpanded
         foldBeforeSearch = nil
     }

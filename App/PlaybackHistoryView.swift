@@ -9,12 +9,9 @@ struct PlaybackHistoryView: View {
     @State private var selected = Set<String>()
     @State private var confirmsDelete = false
     @State private var deletionIDs = Set<String>()
-    /// Shows titles hidden from Continue Watching. Leaving it off never changes the home row.
-    @State private var includeHidden = false
     private var history: PlaybackHistory { store.playbackHistory }
     private var entries: [PlaybackHistoryEntry] {
-        history.entries.filter { includeHidden || !history.isHidden($0.id) }
-            .filter { query.isEmpty || $0.context.videoName.localizedCaseInsensitiveContains(query) || $0.context.sourceName.localizedCaseInsensitiveContains(query) }
+        history.entries.filter { query.isEmpty || $0.context.videoName.localizedCaseInsensitiveContains(query) || $0.context.sourceName.localizedCaseInsensitiveContains(query) }
     }
 
     var body: some View {
@@ -29,15 +26,6 @@ struct PlaybackHistoryView: View {
         }
         .screenBackdrop()
         .tabTitle(L10n.text("Playback History"))
-        #if !os(tvOS)
-        .toolbar {
-            Button { includeHidden.toggle() } label: {
-                Label(L10n.text("Show Hidden"), systemImage: includeHidden ? "eye.fill" : "eye")
-            }
-            .accessibilityAddTraits(includeHidden ? .isSelected : [])
-            .accessibilityIdentifier("history.showHidden")
-        }
-        #endif
         .onChange(of: history.entries.isEmpty) { _, empty in if empty { managing = false; selected.removeAll() } }
         // Leaving the page gives up a title still being prepared.
         .onDisappear { if store.playing == nil { store.cancelResume() } }
@@ -60,7 +48,7 @@ struct PlaybackHistoryView: View {
                 header
                 LazyVGrid(columns: Layout.posterColumns, spacing: Layout.gridRowSpacing) {
                     ForEach(entries) { entry in
-                        HistoryCard(entry: entry, selection: managing ? selected.contains(entry.id) : nil, details: true, dimmed: includeHidden && history.isHidden(entry.id)) { tap(entry) }
+                        HistoryCard(entry: entry, selection: managing ? selected.contains(entry.id) : nil, details: true) { tap(entry) }
                     }
                 }
                 .tvFocusSection()
@@ -98,12 +86,6 @@ struct PlaybackHistoryView: View {
                 Button(L10n.text("Done")) { managing = false; selected.removeAll() }
                     .controlButton(prominent: true).accessibilityIdentifier("history.manage")
             } else {
-                #if os(tvOS)
-                Button { includeHidden.toggle() } label: {
-                    Label(L10n.text("Show Hidden"), systemImage: includeHidden ? "eye.fill" : "eye")
-                }
-                .controlButton().accessibilityIdentifier("history.showHidden")
-                #endif
                 Button { managing = true } label: {
                     Label(L10n.text("Manage history"), systemImage: "checklist").lineLimit(1).fixedSize()
                 }
@@ -150,8 +132,6 @@ struct HistoryCard: View {
     /// Whether the card is selected while managing history; nil outside managing.
     var selection: Bool? = nil
     var details = false
-    /// A title hidden from Continue Watching, shown faded on the history page.
-    var dimmed = false
     /// Replaces resuming, for managing.
     var action: (() -> Void)? = nil
     @State private var hovering = false
@@ -172,33 +152,22 @@ struct HistoryCard: View {
                 .padding(8)
                 .allowsHitTesting(drag?.active != true)
         }
+        #if !os(tvOS)
+        // The menu lifts the whole card. Lifted from the poster alone, it left the heart drawn above
+        // the poster behind: alone over the hole for a moment, then gone under the blur, a flicker.
+        .contextMenu { menu }
+        #endif
         .overlay(alignment: .topTrailing) {
             if selection == nil, hovering {
-                HStack(spacing: 6) { historyHide; historyRemove }
+                historyRemove
                     .padding(8)
                     .transition(.opacity)
             }
         }
+        #if !os(tvOS)
         .onHover { hovering = $0 }
         .animation(.smooth(duration: 0.15), value: hovering)
-    }
-
-    /// Hides this title from Continue Watching, or shows it there again. Not a delete.
-    private var historyHide: some View {
-        let hidden = store.playbackHistory.isHidden(entry.id)
-        return Button {
-            guard drag?.active != true else { return }
-            store.playbackHistory.toggleHidden(entry.id)
-        } label: {
-            Image(systemName: hidden ? "eye" : "eye.slash")
-                .font(.system(size: 10, weight: .semibold)).foregroundStyle(.white)
-                .frame(width: 22, height: 22)
-                .background(.black.opacity(0.55), in: Circle())
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(L10n.text(hidden ? "Show in Continue Watching" : "Hide from Continue Watching"))
-        .allowsHitTesting(drag?.active != true)
+        #endif
     }
 
     /// Red remove control. A pointer shows it; the context menu stays for touch and the remote.
@@ -269,15 +238,16 @@ struct HistoryCard: View {
             .frame(maxWidth: details ? .infinity : nil, alignment: .leading)
         }
         .cardButton()
-        .opacity(dimmed ? 0.45 : 1)
         .accessibilityAddTraits(selection == true ? [.isSelected] : [])
         .accessibilityIdentifier((selection != nil ? "history.select." : "history.resume.") + entry.context.videoID)
-        .contextMenu {
-            FavoriteMenuButton(item: entry.favoriteItem(), name: entry.context.videoName)
-            Button(L10n.text(store.playbackHistory.isHidden(entry.id) ? "Show in Continue Watching" : "Hide from Continue Watching"), systemImage: store.playbackHistory.isHidden(entry.id) ? "eye" : "eye.slash") {
-                store.playbackHistory.toggleHidden(entry.id)
-            }
-            Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) { store.playbackHistory.remove(entry.id) }
-        }
+        #if os(tvOS)
+        // The remote opens a menu on the focused button, so it stays here.
+        .contextMenu { menu }
+        #endif
+    }
+
+    @ViewBuilder private var menu: some View {
+        FavoriteMenuButton(item: entry.favoriteItem(), name: entry.context.videoName)
+        Button(L10n.text("Remove from history"), systemImage: "trash", role: .destructive) { store.playbackHistory.remove(entry.id) }
     }
 }

@@ -68,26 +68,6 @@ private func historyContext(video: String = "series", episode: String = "1", sou
     #expect(PlaybackHistory(file: file).entries == history.entries)
 }
 
-@Test @MainActor func playbackHistoryHideKeepsTheRowAndLeavesContinueWatching() throws {
-    let name = UUID().uuidString
-    let defaults = UserDefaults(suiteName: name)!
-    defer { defaults.removePersistentDomain(forName: name) }
-    let file = FileManager.default.temporaryDirectory.appending(path: name + ".json")
-    defer { try? FileManager.default.removeItem(at: file) }
-    let history = PlaybackHistory(file: file, defaults: defaults)
-    history.record(historyContext(), position: 40, duration: 1800)
-    let id = history.entries[0].id
-    history.toggleHidden(id)
-    #expect(history.isHidden(id))
-    #expect(history.entries.count == 1)
-    #expect(PlaybackHistory(file: file, defaults: defaults).isHidden(id))
-    history.toggleHidden(id)
-    #expect(history.isHidden(id) == false)
-    history.toggleHidden(id)
-    history.remove(id)
-    #expect(PlaybackHistory(file: file, defaults: defaults).isHidden(id) == false)
-}
-
 @Test func historyResumeClampsChangedDurationsAndCoexistsWithSegmentSkipping() {
     #expect(PlaybackHistoryEntry.resumeTarget(143.5, duration: 1800) == 143.5)
     #expect(PlaybackHistoryEntry.resumeTarget(143.5, duration: 100) == 99.75)

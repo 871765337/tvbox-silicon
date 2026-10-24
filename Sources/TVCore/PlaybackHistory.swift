@@ -84,13 +84,10 @@ extension PlaybackHistoryEntry {
     public static let shared = PlaybackHistory()
     public static let limit = 200
     public private(set) var entries: [PlaybackHistoryEntry] = []
-    /// Titles kept out of Continue Watching. Playback History can still show them.
-    public private(set) var hiddenIDs: Set<String> = []
     public private(set) var persistenceError: String?
     private let file: URL
     private let cache: MediaCache
     private let defaults: UserDefaults
-    private static let hiddenKey = "hiddenHistory.v1"
 
     public init(file: URL? = nil, cache: MediaCache = .shared, defaults: UserDefaults = .standard) {
         self.cache = cache; self.defaults = defaults
@@ -100,7 +97,6 @@ extension PlaybackHistoryEntry {
         let directory = URL.applicationSupportDirectory
         #endif
         self.file = file ?? directory.appending(path: "playback-history-v1.json")
-        hiddenIDs = Set(defaults.stringArray(forKey: Self.hiddenKey) ?? [])
         if let data = try? Data(contentsOf: self.file), data.count <= 2 * 1024 * 1024,
            let decoded = try? JSONDecoder().decode([PlaybackHistoryEntry].self, from: data) {
             var seen = Set<String>()
@@ -122,41 +118,16 @@ extension PlaybackHistoryEntry {
         let dropped = entries.dropFirst(Self.limit)
         for entry in dropped { clean(entry) }
         entries = Array(entries.prefix(Self.limit))
-        let stale = hiddenIDs.subtracting(Set(entries.map(\.id)))
-        if !stale.isEmpty {
-            hiddenIDs = hiddenIDs.subtracting(stale)
-            persistHidden()
-        }
         prioritizeCaches()
         persist()
-    }
-
-    public func isHidden(_ id: String) -> Bool { hiddenIDs.contains(id) }
-
-    /// Hides one title from Continue Watching, or shows it there again. The history row stays.
-    public func toggleHidden(_ id: String) {
-        var next = hiddenIDs
-        if next.contains(id) { next.remove(id) } else { next.insert(id) }
-        hiddenIDs = next
-        persistHidden()
     }
 
     public func remove(_ id: String) { remove(Set([id])) }
     public func remove(_ ids: Set<String>) {
         for entry in entries where ids.contains(entry.id) { clean(entry) }
-        entries.removeAll { ids.contains($0.id) }
-        if !hiddenIDs.isDisjoint(with: ids) {
-            hiddenIDs = hiddenIDs.subtracting(ids)
-            persistHidden()
-        }
-        prioritizeCaches(); persist()
+        entries.removeAll { ids.contains($0.id) }; prioritizeCaches(); persist()
     }
-    public func clear() {
-        for entry in entries { clean(entry) }
-        entries.removeAll()
-        if !hiddenIDs.isEmpty { hiddenIDs = []; persistHidden() }
-        prioritizeCaches(); persist()
-    }
+    public func clear() { for entry in entries { clean(entry) }; entries.removeAll(); prioritizeCaches(); persist() }
     private func prioritizeCaches() {
         cache.prioritize(Set(entries.flatMap { entry in
             [entry.id] + (entry.context.poster.map { [PosterResource.artworkScope($0)] } ?? [])
@@ -172,10 +143,6 @@ extension PlaybackHistoryEntry {
         !entry.context.sourceKey.isEmpty && !entry.context.videoID.isEmpty &&
         entry.position.isFinite && entry.position >= 0 && entry.duration.isFinite && entry.duration >= 0 &&
         entry.updatedAt.timeIntervalSince1970.isFinite
-    }
-
-    private func persistHidden() {
-        defaults.set(hiddenIDs.sorted(), forKey: Self.hiddenKey)
     }
 
     private func persist() {

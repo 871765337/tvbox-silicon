@@ -602,10 +602,7 @@
 "Pinned Group" = "置顶";
 "Hide Source" = "隐藏源";
 "Unhide Source" = "取消隐藏";
-"Show Hidden Sources" = "显示已隐藏";
-"Show Hidden" = "显示已隐藏";
-"Hide from Continue Watching" = "从继续观看中隐藏";
-"Show in Continue Watching" = "在继续观看中显示";
+"Hidden Sources" = "已隐藏的源";
 "Hidden" = "已隐藏";
 "Pinned Sources" = "置顶点播源";
 "Search history" = "搜索播放历史";
@@ -997,3 +994,5 @@
 "Choose a source to move it. Sources at the top are searched first, and their results are listed first." = "选择一个源来移动它。排在前面的源优先搜索，结果也排在前面。";
 "Move to Top" = "移到最前";
 "Move to Bottom" = "移到最后";
+"Like" = "喜欢";
+"Unlike" = "取消喜欢";

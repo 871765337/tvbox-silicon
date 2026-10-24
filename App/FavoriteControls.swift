@@ -34,8 +34,10 @@ struct FavoriteMenuButton: View {
     let name: String
     var body: some View {
         let on = store.favorites.contains(item)
-        Button(on ? L10n.text("Remove %@ from favorites", name) : L10n.text("Add %@ to favorites", name), systemImage: on ? "heart.slash" : "heart") {
+        // A menu row is short: the title is already on the card it was opened from.
+        Button(L10n.text(on ? "Unlike" : "Like"), systemImage: on ? "heart.slash" : "heart") {
             store.favorites.toggle(item)
         }
+        .accessibilityLabel(on ? L10n.text("Remove %@ from favorites", name) : L10n.text("Add %@ to favorites", name))
     }
 }

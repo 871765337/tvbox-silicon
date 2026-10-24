@@ -287,11 +287,10 @@ struct GlobalSearchView: View {
         return L10n.text("%lld of %lld sources responded", model.completed - model.failures.count, model.total)
     }
 
+    /// Always one row. Stacking them here let the summary keep them beside it on a phone, as a lopsided
+    /// column; too narrow a row now moves the whole row under the summary instead.
     private func searchActions(_ config: Subscription) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) { searchActionButtons(config) }
-            VStack(alignment: .leading, spacing: 8) { searchActionButtons(config) }
-        }
+        HStack(spacing: 8) { searchActionButtons(config) }.fixedSize()
     }
 
     /// tvOS pills lead with a symbol, as the search pill does; elsewhere the title stands alone.
