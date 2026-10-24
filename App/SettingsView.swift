@@ -368,6 +368,10 @@ struct FormSettingsView: View {
                 FormLink(symbol: "externaldrive.fill.badge.person.crop", tint: .brown, title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
             }
 
+            Section {
+                FormLink(symbol: AppSection.home.icon, tint: Brand.cyan, title: L10n.text("Watch Now")) { WatchNowSettingsView() }
+            }
+
             #if os(macOS)
             Section {
                 if store.extrasUnlocked {
@@ -1227,6 +1231,9 @@ struct TVSettingsView: View {
                     TVSettingsLink(title: L10n.text("Douyin"), value: douyinSummary) { DouyinAccountView() }
                 }
                 TVSettingsLink(title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
+            }
+            TVSettingsSection {
+                TVSettingsLink(title: L10n.text("Watch Now")) { WatchNowSettingsView() }
             }
             TVSettingsSection(title: L10n.text("Playback"), footer: playbackFooter) {
                 if store.extrasUnlocked {

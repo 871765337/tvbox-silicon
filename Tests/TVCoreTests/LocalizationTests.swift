@@ -19,6 +19,15 @@ import Testing
     #expect(L10n.text("Sources", language: "ja-JP") == "配信ソース")
     #expect(L10n.text("An unknown English key", language: "ja") == "An unknown English key")
 }
+@Test func watchNowSettingsAreTranslated() {
+    let expected = ["en": "Show on Watch Now", "zh-Hans": "在“现在观看”中显示", "zh-Hant": "在「立即觀看」中顯示", "ja": "「今すぐ観る」に表示"]
+    for language in L10n.supportedLanguages {
+        #expect(L10n.text("Show on Watch Now", language: language) == expected[language])
+        if language != "en" {
+            #expect(L10n.text("Choose what Watch Now shows in Settings.", language: language) != "Choose what Watch Now shows in Settings.")
+        }
+    }
+}
 @Test func formattedTranslationsPreserveArguments() {
     #expect(L10n.text("The source %@ returned HTTP %lld.", "example.com", 403, language: "en") == "The source example.com returned HTTP 403.")
     #expect(L10n.text("Page %lld of %lld", 2, 12, language: "ja") == "2 / 12 ページ")
