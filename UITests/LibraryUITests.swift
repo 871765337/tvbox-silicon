@@ -106,6 +106,28 @@ final class LibraryUITests: XCTestCase {
         wait(app.staticTexts["player.qa.position"], "value.doubleValue >= %@.doubleValue", "35")
         XCTAssertEqual(app.alerts.count, 0)
     }
+    @MainActor func testHoldingThePicturePlaysFasterAndSlidingDownKeepsIt() {
+        continueAfterFailure = false
+        let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1"])
+        let position = app.staticTexts["player.qa.position"]
+        wait(position, "value.doubleValue >= %@.doubleValue", "1")
+        let picture = app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.55))
+        let boost = app.buttons["player.boost"]
+        // Letting go goes back to the chosen speed.
+        picture.press(forDuration: 1)
+        XCTAssertFalse(boost.waitForExistence(timeout: 1))
+        // Sliding down keeps it.
+        picture.press(forDuration: 1, thenDragTo: picture.withOffset(CGVector(dx: 0, dy: 120)))
+        XCTAssertTrue(boost.waitForExistence(timeout: 5))
+        XCTAssertEqual(boost.value as? String, "2×")
+        let start = Double(position.value as? String ?? "") ?? 0
+        sleep(4)
+        let end = Double(position.value as? String ?? "") ?? 0
+        XCTAssertGreaterThan(end - start, 6)
+        boost.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: boost)
+        waitForExpectations(timeout: 5)
+    }
     @MainActor func testNativePlayerAutomaticallyAdvancesToNextEpisode() {
         continueAfterFailure = false
         let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1", "-qaStartAt", "296", "-autoPlayNextEpisode", "1"])

@@ -964,3 +964,7 @@
 "Couldn't Play on %@" = "Couldn't Play on %@";
 "Play from Other Devices" = "Play from Other Devices";
 "With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player." = "With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player.";
+"Touch and Hold Speed" = "Touch and Hold Speed";
+"Touch and hold the video to play at this speed. Slide sideways to change it, or slide down to keep it after you let go." = "Touch and hold the video to play at this speed. Slide sideways to change it, or slide down to keep it after you let go.";
+"Slide sideways to change the speed, or down to keep it" = "Slide sideways to change the speed, or down to keep it";
+"Back to Normal Speed" = "Back to Normal Speed";

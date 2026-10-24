@@ -38,6 +38,10 @@ struct MobilePlayerView: View {
     /// Devices with Yingxia open, for the Play On button; and the one the video was sent to.
     @State private var tvBrowser = PlayOnBrowser()
     @State private var playingOn: String?
+    /// Touching and holding the picture plays faster while the finger is down, or after sliding down kept it.
+    @State private var boost: SpeedBoost?
+    @State private var holding = false
+    @AppStorage(SpeedBoost.key) private var holdSpeed = SpeedBoost.standard
 
     var body: some View {
         ZStack {
@@ -53,9 +57,10 @@ struct MobilePlayerView: View {
             if pip.active { pipPlaceholder }
             if playingOn != nil { Color.black.ignoresSafeArea() }
             // A tap on the picture shows or hides the controls; a tap on a control keeps them up (see `rows`).
-            Color.clear.contentShape(Rectangle()).ignoresSafeArea()
-                .onTapGesture(perform: toggleChrome)
+            // Touching and holding it plays faster.
+            PictureGestures(tap: toggleChrome, hold: held).ignoresSafeArea()
                 .accessibilityHidden(true)
+            boostLabel
             if let playingOn {
                 PlayOnPlaceholder(receiver: playingOn) {
                     self.playingOn = nil
@@ -77,6 +82,14 @@ struct MobilePlayerView: View {
         // Played here again (the Lock Screen, say): the other device no longer has it to itself.
         .onChange(of: session.paused) { _, paused in if !paused { playingOn = nil } }
         .onChange(of: nowPlayingState, initial: true) { nowPlaying.update(title: channel.name, session: session) }
+        // Pausing ends the faster speed in the session; another episode or quality plays at the chosen one.
+        .onChange(of: session.boost == nil) { _, ended in if ended { boost = nil } }
+        .onChange(of: clock.item) { endBoost() }
+        .sensoryFeedback(trigger: boost) { old, new in
+            guard let new else { return nil }
+            guard let old else { return .impact(weight: .light) }
+            return new.locked != old.locked ? .impact(weight: .medium) : new.rate != old.rate ? .selection : nil
+        }
         .task(id: clock.item.map(ObjectIdentifier.init)) { await tracks.load(clock.item) }
         .sheet(isPresented: $showsDanmakuList) {
             DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
@@ -92,11 +105,82 @@ struct MobilePlayerView: View {
         var timeline: Bool
         var duration: Double
         var speed: Float
+        var boost: Float?
     }
 
     private var nowPlayingState: NowPlayingState {
         NowPlayingState(title: channel.name, paused: session.paused, live: session.isLive, timeline: session.hasTimeline,
-                        duration: clock.duration, speed: speed)
+                        duration: clock.duration, speed: speed, boost: session.boost)
+    }
+
+    // MARK: Touch and hold
+
+    /// Only while a video with a timeline plays here.
+    private var boosts: Bool { showsTransport && seekable && !session.paused && playingOn == nil && !pip.active }
+
+    private func held(_ phase: PictureGestures.Hold) {
+        switch phase {
+        case .began:
+            guard boosts else { return }
+            // A new hold replaces a kept speed: it ends with the finger unless slid down again.
+            let started = SpeedBoost(rate: holdSpeed)
+            boost = started; holding = true
+            session.setBoost(Float(started.rate))
+            // The picture to itself, as in YouTube and Douyin.
+            if chromeVisible { toggleChrome() }
+        case .moved(let offset):
+            guard holding, var moved = boost else { return }
+            moved.moved(x: offset.width, y: offset.height)
+            guard moved != boost else { return }
+            if moved.rate != boost?.rate { session.setBoost(Float(moved.rate)) }
+            boost = moved
+        case .ended:
+            guard holding else { return }
+            holding = false
+            if boost?.locked != true { endBoost() }
+        }
+    }
+
+    private func endBoost() {
+        boost = nil; holding = false
+        session.setBoost(nil)
+    }
+
+    /// The faster speed at the top, as in Douyin and YouTube; once kept, a tap on it goes back to the chosen speed.
+    @ViewBuilder private var boostLabel: some View {
+        if let boost {
+            let rate = session.boost ?? Float(boost.rate)
+            VStack(spacing: 8) {
+                Button(action: endBoost) {
+                    HStack(spacing: 6) {
+                        if boost.locked { Image(systemName: "lock.fill") }
+                        Text(Self.speedLabel(rate))
+                        Image(systemName: "forward.fill")
+                    }
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .glassSurface(.regular, in: Capsule())
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .allowsHitTesting(boost.locked)
+                .accessibilityLabel(L10n.text("Back to Normal Speed"))
+                .accessibilityValue(Self.speedLabel(rate))
+                .accessibilityIdentifier("player.boost")
+                if holding && !boost.locked {
+                    Text(L10n.text("Slide sideways to change the speed, or down to keep it"))
+                        .font(.caption).shadow(color: .black.opacity(0.6), radius: 4)
+                        .accessibilityHidden(true)
+                }
+            }
+            .foregroundStyle(.white)
+            .environment(\.colorScheme, .dark)
+            // Below the top row when the controls show.
+            .padding(.top, chromeVisible ? 112 : 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .animation(.easeOut(duration: 0.2), value: chromeVisible)
+            .transition(.opacity)
+        }
     }
 
     /// Play, skip and the seek bar wait for the stream: while it connects or after it fails, only the top row shows.
@@ -527,6 +611,47 @@ private struct AirPlayButton: UIViewRepresentable {
     func updateUIView(_ view: AVRoutePickerView, context: Context) {}
 }
 
+/// The picture's own gestures, in UIKit: a tap, and a touch and hold followed while the finger moves. SwiftUI's long
+/// press ends where a drag would begin, and a tap beside it can fire as the held finger lifts.
+private struct PictureGestures: UIViewRepresentable {
+    enum Hold { case began, moved(CGSize), ended }
+    let tap: () -> Void
+    let hold: (Hold) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pressed(_:)))
+        press.minimumPressDuration = 0.35
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped))
+        // A touch that lifts before the hold begins is a tap, at once.
+        tap.require(toFail: press)
+        view.addGestureRecognizer(press)
+        view.addGestureRecognizer(tap)
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) { context.coordinator.parent = self }
+
+    @MainActor final class Coordinator: NSObject {
+        var parent: PictureGestures?
+        private var start = CGPoint.zero
+
+        @objc func tapped() { parent?.tap() }
+
+        @objc func pressed(_ press: UILongPressGestureRecognizer) {
+            let location = press.location(in: press.view)
+            switch press.state {
+            case .began: start = location; parent?.hold(.began)
+            case .changed: parent?.hold(.moved(CGSize(width: location.x - start.x, height: location.y - start.y)))
+            case .ended, .cancelled, .failed: parent?.hold(.ended)
+            default: break
+            }
+        }
+    }
+}
+
 /// The picture in an AVPlayerLayer, which Picture in Picture takes over while it runs.
 private struct PlayerLayerView: UIViewRepresentable {
     let player: AVPlayer
@@ -782,7 +907,7 @@ private struct PlayerLayerView: UIViewRepresentable {
             MPMediaItemPropertyTitle: self.title,
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.video.rawValue,
             MPNowPlayingInfoPropertyIsLiveStream: session.isLive,
-            MPNowPlayingInfoPropertyPlaybackRate: session.paused ? 0.0 : Double(player.defaultRate),
+            MPNowPlayingInfoPropertyPlaybackRate: session.paused ? 0.0 : Double(session.boost ?? player.defaultRate),
             MPNowPlayingInfoPropertyDefaultPlaybackRate: Double(player.defaultRate),
         ]
         let elapsed = player.currentTime().seconds
