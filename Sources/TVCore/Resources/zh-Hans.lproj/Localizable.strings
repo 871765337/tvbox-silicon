@@ -1000,3 +1000,6 @@
 "The plugin runtime could not complete this request. Try again or use another source." = "插件运行时无法完成此请求，请重试或使用其他来源。";
 "Like" = "喜欢";
 "Unlike" = "取消喜欢";
+"Show on Watch Now" = "在“现在观看”中显示";
+"A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "关闭的栏目只是不在“现在观看”中显示，播放记录、收藏、点播源和直播里的内容都还在。";
+"Choose what Watch Now shows in Settings." = "可在设置中选择“现在观看”显示哪些内容。";

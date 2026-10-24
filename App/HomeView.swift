@@ -9,19 +9,25 @@ struct HomeView: View {
     #if os(tvOS)
     @FocusState private var primaryFocused: Bool
     #endif
+    @AppStorage(HomeSection.continueWatching.key) private var showsContinueWatching = true
+    @AppStorage(HomeSection.pinnedSources.key) private var showsPinnedSources = true
+    @AppStorage(HomeSection.recommendations.key) private var showsRecommendations = true
+    @AppStorage(HomeSection.favorites.key) private var showsFavorites = true
+    @AppStorage(HomeSection.liveTV.key) private var showsLiveTV = true
 
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
                 VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
-                    if !store.playbackHistory.entries.isEmpty { continueWatching }
+                    if showsContinueWatching, !store.playbackHistory.entries.isEmpty { continueWatching }
                     if let config = store.subscription {
-                        if store.orderedSites(config).contains(where: { store.pinnedSources.contains($0, origin: config.origin) }) {
+                        if showsPinnedSources, store.orderedSites(config).contains(where: { store.pinnedSources.contains($0, origin: config.origin) }) {
                             pinnedSources(config)
                         }
-                        RecommendationsView(config: config)
-                        if !store.favorites.items.isEmpty { favorites }
-                        if !config.lives.isEmpty { playlists(config).id("live") }
+                        if showsRecommendations { RecommendationsView(config: config) }
+                        if showsFavorites, !store.favorites.items.isEmpty { favorites }
+                        if showsLiveTV, !config.lives.isEmpty { playlists(config).id("live") }
+                        if !(showsContinueWatching || showsPinnedSources || showsRecommendations || showsFavorites || showsLiveTV) { allHidden }
                     } else {
                         welcome
                     }
@@ -142,6 +148,18 @@ struct HomeView: View {
     }
 
     // MARK: Sections
+
+    /// Every section switched off in Settings: say so, rather than leave a blank page.
+    private var allHidden: some View {
+        ContentUnavailableView {
+            Label(L10n.text("Watch Now"), systemImage: AppSection.home.icon)
+        } description: {
+            Text(L10n.text("Choose what Watch Now shows in Settings."))
+        } actions: {
+            Button(L10n.text("Settings")) { store.section = .settings }.controlButton()
+        }
+        .frame(maxWidth: .infinity).padding(.top, 60)
+    }
 
     private func pinnedSources(_ config: Subscription) -> some View {
         VStack(alignment: .leading, spacing: Layout.headerSpacing) {
@@ -361,4 +379,72 @@ private struct PosterWall: View {
 private enum PosterSurface {
     static let base = Color(light: Color(red: 0.88, green: 0.905, blue: 0.94), dark: Color(red: 0.065, green: 0.09, blue: 0.165))
     static let raised = Color(light: Color(red: 0.83, green: 0.86, blue: 0.91), dark: Color(red: 0.11, green: 0.15, blue: 0.25))
+}
+
+/// A section of Watch Now that Settings can hide. Each one shows until it is switched off.
+enum HomeSection: String, CaseIterable, Identifiable {
+    case continueWatching, pinnedSources, recommendations, favorites, liveTV
+    var id: String { rawValue }
+    /// The switch's key in the user defaults.
+    var key: String { "homeShows." + rawValue }
+    var title: String {
+        switch self {
+        case .continueWatching: L10n.text("Continue Watching")
+        case .pinnedSources: L10n.text("Pinned Sources")
+        case .recommendations: L10n.text("Recommendations")
+        case .favorites: L10n.text("Favorites")
+        case .liveTV: L10n.text("Live TV")
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .continueWatching: AppSection.history.icon
+        case .pinnedSources: "pin.fill"
+        case .recommendations: "sparkles"
+        case .favorites: AppSection.favorites.icon
+        case .liveTV: AppSection.live.icon
+        }
+    }
+    var tint: Color {
+        switch self {
+        case .continueWatching: Brand.amber
+        case .pinnedSources: .purple
+        case .recommendations: .orange
+        case .favorites: Brand.rose
+        case .liveTV: .red
+        }
+    }
+}
+
+/// Settings → Watch Now: which sections the page shows.
+struct WatchNowSettingsView: View {
+    var body: some View {
+        SettingsPage(title: L10n.text("Watch Now"), symbol: AppSection.home.icon) {
+            SettingsGroup(title: L10n.text("Show on Watch Now"),
+                          footer: L10n.text("A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything.")) {
+                ForEach(HomeSection.allCases) { HomeSectionToggle(section: $0) }
+            }
+        }
+    }
+}
+
+/// One section's switch, stored under the section's own key.
+private struct HomeSectionToggle: View {
+    let section: HomeSection
+    @AppStorage private var shown: Bool
+    init(section: HomeSection) {
+        self.section = section
+        _shown = AppStorage(wrappedValue: true, section.key)
+    }
+    var body: some View {
+        Group {
+            #if os(tvOS)
+            TVSettingsToggle(title: section.title, isOn: $shown)
+            #else
+            Toggle(isOn: $shown) { FormLabel(symbol: section.symbol, tint: section.tint, title: section.title) }
+                .settingsSwitch()
+            #endif
+        }
+        .accessibilityIdentifier("settings.home." + section.rawValue)
+    }
 }

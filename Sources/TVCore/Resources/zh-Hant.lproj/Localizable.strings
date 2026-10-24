@@ -1000,3 +1000,6 @@
 "The plugin runtime could not complete this request. Try again or use another source." = "外掛執行環境無法完成此請求，請重試或使用其他來源。";
 "Like" = "喜歡";
 "Unlike" = "取消喜歡";
+"Show on Watch Now" = "在「立即觀看」中顯示";
+"A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "關閉的欄目只是不在「立即觀看」中顯示，播放記錄、收藏、點播來源和直播裡的內容都還在。";
+"Choose what Watch Now shows in Settings." = "可在設定中選擇「立即觀看」顯示哪些內容。";
