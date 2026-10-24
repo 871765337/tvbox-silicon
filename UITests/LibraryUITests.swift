@@ -128,6 +128,22 @@ final class LibraryUITests: XCTestCase {
         expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: boost)
         waitForExpectations(timeout: 5)
     }
+    @MainActor func testDoubleTappingASideSkipsAndSlidingAcrossSeeks() {
+        continueAfterFailure = false
+        let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1", "-qaStartAt", "60"])
+        let position = app.staticTexts["player.qa.position"]
+        wait(position, "value.doubleValue >= %@.doubleValue", "60")
+        func now() -> Double { Double(position.value as? String ?? "") ?? 0 }
+        let before = now()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.55)).doubleTap()
+        wait(position, "value.doubleValue <= %@.doubleValue", String(before - 5), timeout: 5)
+        // Half the picture's width is 90 seconds of this five-minute video.
+        let from = now()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.55))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.55)))
+        wait(position, "value.doubleValue >= %@.doubleValue", String(from + 80))
+        XCTAssertFalse(app.descendants(matching: .any)["player.swipeSeek"].exists)
+    }
     @MainActor func testNativePlayerAutomaticallyAdvancesToNextEpisode() {
         continueAfterFailure = false
         let app = launch(extra: ["-qaResetHistory", "1", "-qaResetPlayerSettings", "1", "-qaStartAt", "296", "-autoPlayNextEpisode", "1"])

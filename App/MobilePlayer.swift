@@ -42,6 +42,15 @@ struct MobilePlayerView: View {
     @State private var boost: SpeedBoost?
     @State private var holding = false
     @AppStorage(SpeedBoost.key) private var holdSpeed = SpeedBoost.standard
+    /// Double taps on a side skip (YouTube); the run's total shows on that side for a moment.
+    @State private var taps = PictureTaps()
+    @State private var skipped: (forward: Bool, total: Double)?
+    @State private var skippedTask: Task<Void, Never>?
+    /// Controls a tap just brought up let a second tap through to the picture, which may be a double tap.
+    @State private var settling = false
+    @State private var settleTask: Task<Void, Never>?
+    /// Sliding sideways across the picture: where the slide began.
+    @State private var swipeStart: Double?
 
     var body: some View {
         ZStack {
@@ -57,17 +66,19 @@ struct MobilePlayerView: View {
             if pip.active { pipPlaceholder }
             if playingOn != nil { Color.black.ignoresSafeArea() }
             // A tap on the picture shows or hides the controls; a tap on a control keeps them up (see `rows`).
-            // Touching and holding it plays faster.
-            PictureGestures(tap: toggleChrome, hold: held).ignoresSafeArea()
+            // Two taps on a side skip, touching and holding plays faster, and sliding sideways seeks.
+            PictureGestures(tap: tapped, hold: held, swipe: swiped).ignoresSafeArea()
                 .accessibilityHidden(true)
             boostLabel
+            skippedLabel
+            swipeLabel
             if let playingOn {
                 PlayOnPlaceholder(receiver: playingOn) {
                     self.playingOn = nil
                     if session.paused { session.togglePlayback() }
                 }
             }
-            controls.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
+            controls.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible && !settling)
         }
         .animation(.easeInOut(duration: 0.7), value: waiting == nil)
         .animation(.easeInOut(duration: 0.4), value: waiting?.starting)
@@ -111,6 +122,109 @@ struct MobilePlayerView: View {
     private var nowPlayingState: NowPlayingState {
         NowPlayingState(title: channel.name, paused: session.paused, live: session.isLive, timeline: session.hasTimeline,
                         duration: clock.duration, speed: speed, boost: session.boost)
+    }
+
+    // MARK: Taps and slides
+
+    private func tapped(_ x: CGFloat, _ width: CGFloat) {
+        let zone = PictureTaps.zone(x: x, width: width, seekable: seekable && showsTransport && playingOn == nil && !pip.active)
+        switch taps.tap(at: ProcessInfo.processInfo.systemUptime, in: zone) {
+        case .toggleControls:
+            let showing = !chromeVisible
+            toggleChrome()
+            if showing { settle() }
+        case .togglePlayback:
+            toggleChrome()
+            session.togglePlayback()
+        case .skip(let seconds, let total, let first):
+            if first { toggleChrome() }
+            session.skip(seconds)
+            nowPlaying.update(title: channel.name, session: session)
+            skipped = (seconds > 0, total)
+            skippedTask?.cancel()
+            skippedTask = Task {
+                try? await Task.sleep(for: .seconds(PictureTaps.streak + 0.1))
+                if !Task.isCancelled { skipped = nil }
+            }
+        }
+    }
+
+    /// For as long as a second tap would make a double tap, it reaches the picture rather than the controls it showed.
+    private func settle() {
+        settling = true
+        settleTask?.cancel()
+        settleTask = Task {
+            try? await Task.sleep(for: .seconds(PictureTaps.interval))
+            if !Task.isCancelled { settling = false }
+        }
+    }
+
+    private func swiped(_ phase: PictureGestures.Swipe) {
+        switch phase {
+        case .began:
+            guard showsTransport, seekable, clock.duration > 0, playingOn == nil, !pip.active else { return }
+            let start = clock.currentPosition
+            swipeStart = start
+            clock.scrub(to: start)
+            if chromeVisible { toggleChrome() }
+        case .moved(let x, let width):
+            guard let swipeStart else { return }
+            clock.scrub(to: PictureSeek.target(from: swipeStart, moved: x, width: width, duration: clock.duration))
+        case .ended:
+            guard swipeStart != nil else { return }
+            swipeStart = nil
+            clock.endScrub()
+            nowPlaying.update(title: channel.name, session: session)
+        }
+    }
+
+    /// How far a run of double taps skipped, on its side.
+    @ViewBuilder private var skippedLabel: some View {
+        if let skipped {
+            VStack(spacing: 6) {
+                Image(systemName: skipped.forward ? "goforward" : "gobackward").font(.title)
+                Text((skipped.forward ? "+" : "\u{2212}") + L10n.text("%lld s", Int(skipped.total)))
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+            }
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.5), radius: 6)
+            .frame(width: 120, height: 120)
+            .background(.black.opacity(0.25), in: Circle())
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: skipped.forward ? .trailing : .leading)
+            .padding(.horizontal, 40)
+            .allowsHitTesting(false)
+            .transition(.opacity)
+            .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("player.tapSkip")
+            .accessibilityValue("\(skipped.forward ? "+" : "-")\(Int(skipped.total))")
+        }
+    }
+
+    /// Where a slide across the picture will seek to: the frame there, the time and how far it moves.
+    @ViewBuilder private var swipeLabel: some View {
+        if let swipeStart {
+            let target = clock.scrubbing ?? swipeStart
+            let moved = target - swipeStart
+            VStack(spacing: 10) {
+                if let preview = clock.preview {
+                    Image(decorative: preview, scale: 1).resizable().aspectRatio(contentMode: .fit)
+                        .frame(width: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                Text(SeekBar.format(target) + " / " + SeekBar.format(clock.duration))
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                Text((moved < 0 ? "\u{2212}" : "+") + SeekBar.format(abs(moved)))
+                    .font(.subheadline.monospacedDigit()).foregroundStyle(.white.opacity(0.75))
+            }
+            .foregroundStyle(.white)
+            .padding(16)
+            .glassSurface(.regular, in: RoundedRectangle(cornerRadius: 20))
+            .environment(\.colorScheme, .dark)
+            .allowsHitTesting(false)
+            .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("player.swipeSeek")
+            .accessibilityValue("\(Int(target))")
+        }
     }
 
     // MARK: Touch and hold
@@ -611,12 +725,15 @@ private struct AirPlayButton: UIViewRepresentable {
     func updateUIView(_ view: AVRoutePickerView, context: Context) {}
 }
 
-/// The picture's own gestures, in UIKit: a tap, and a touch and hold followed while the finger moves. SwiftUI's long
-/// press ends where a drag would begin, and a tap beside it can fire as the held finger lifts.
+/// The picture's own gestures, in UIKit: taps, a touch and hold followed while the finger moves, and a sideways slide.
+/// SwiftUI's long press ends where a drag would begin, and a tap beside it can fire as the held finger lifts.
 private struct PictureGestures: UIViewRepresentable {
     enum Hold { case began, moved(CGSize), ended }
-    let tap: () -> Void
+    enum Swipe { case began, moved(x: CGFloat, width: CGFloat), ended }
+    /// Where the tap landed across the picture, and the picture's width.
+    let tap: (CGFloat, CGFloat) -> Void
     let hold: (Hold) -> Void
+    let swipe: (Swipe) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -624,21 +741,27 @@ private struct PictureGestures: UIViewRepresentable {
         let view = UIView()
         let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pressed(_:)))
         press.minimumPressDuration = 0.35
-        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped))
-        // A touch that lifts before the hold begins is a tap, at once.
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped(_:)))
+        // A touch that lifts before the hold begins is a tap, at once; each tap of a double tap comes on its own.
         tap.require(toFail: press)
-        view.addGestureRecognizer(press)
-        view.addGestureRecognizer(tap)
+        // A finger that moves before the hold begins slides instead.
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.panned(_:)))
+        pan.maximumNumberOfTouches = 1
+        pan.delegate = context.coordinator
+        for recognizer in [press, tap, pan] { view.addGestureRecognizer(recognizer) }
         return view
     }
 
     func updateUIView(_ view: UIView, context: Context) { context.coordinator.parent = self }
 
-    @MainActor final class Coordinator: NSObject {
+    @MainActor final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var parent: PictureGestures?
         private var start = CGPoint.zero
 
-        @objc func tapped() { parent?.tap() }
+        @objc func tapped(_ tap: UITapGestureRecognizer) {
+            guard let view = tap.view else { return }
+            parent?.tap(tap.location(in: view).x, view.bounds.width)
+        }
 
         @objc func pressed(_ press: UILongPressGestureRecognizer) {
             let location = press.location(in: press.view)
@@ -648,6 +771,23 @@ private struct PictureGestures: UIViewRepresentable {
             case .ended, .cancelled, .failed: parent?.hold(.ended)
             default: break
             }
+        }
+
+        @objc func panned(_ pan: UIPanGestureRecognizer) {
+            guard let view = pan.view else { return }
+            switch pan.state {
+            case .began: parent?.swipe(.began)
+            case .changed: parent?.swipe(.moved(x: pan.translation(in: view).x, width: view.bounds.width))
+            case .ended, .cancelled, .failed: parent?.swipe(.ended)
+            default: break
+            }
+        }
+
+        /// Only sideways slides; up and down are left to the system's edges and the controls.
+        func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer else { return true }
+            let velocity = pan.velocity(in: pan.view)
+            return abs(velocity.x) > abs(velocity.y)
         }
     }
 }
