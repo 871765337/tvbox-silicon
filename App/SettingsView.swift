@@ -292,6 +292,7 @@ struct FormSettingsView: View {
     #if os(iOS)
     @State private var addingSubscription = false
     @AppStorage(SpeedBoost.key) private var holdSpeed = SpeedBoost.standard
+    @AppStorage(PictureLevel.key) private var slidesLevels = true
     #endif
     #if os(macOS)
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
@@ -419,6 +420,14 @@ struct FormSettingsView: View {
                 if !store.extrasUnlocked { Text(L10n.text("Playback")) }
             } footer: {
                 Text(L10n.text("Touch and hold the video to play at this speed. Slide sideways to change it, or slide down to keep it after you let go."))
+            }
+            Section {
+                Toggle(isOn: $slidesLevels) {
+                    FormLabel(symbol: "sun.max.fill", tint: .yellow, title: L10n.text("Slide for Brightness and Volume"))
+                }
+                .settingsSwitch()
+            } footer: {
+                Text(L10n.text("Slide up or down on the left of the video to change the brightness, or on the right to change the volume."))
             }
             #endif
             if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {

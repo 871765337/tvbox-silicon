@@ -47,3 +47,14 @@ import Testing
     #expect(PictureSeek.target(from: 100, moved: .nan, width: 900, duration: 120) == 100)
     #expect(PictureSeek.target(from: 100, moved: 10, width: 0, duration: 120) == 100)
 }
+
+@Test func slidingUpOrDownSetsALevelAwayFromTheEdges() {
+    #expect(PictureLevel.value(from: 0.5, moved: -300, height: 800) == 1)
+    #expect(PictureLevel.value(from: 0.5, moved: 150, height: 800) == 0.25)
+    #expect(PictureLevel.value(from: 0.2, moved: 600, height: 800) == 0)
+    #expect(PictureLevel.value(from: 0.4, moved: .nan, height: 800) == 0.4)
+    #expect(PictureLevel.value(from: 0.4, moved: 10, height: 0) == 0.4)
+    #expect(!PictureLevel.slides(fromY: 20, height: 800))
+    #expect(PictureLevel.slides(fromY: 400, height: 800))
+    #expect(!PictureLevel.slides(fromY: 780, height: 800))
+}

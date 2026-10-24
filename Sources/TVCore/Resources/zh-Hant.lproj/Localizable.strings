@@ -969,3 +969,6 @@
 "Slide sideways to change the speed, or down to keep it" = "左右滑動調整倍速，向下滑動鎖定";
 "Back to Normal Speed" = "恢復正常速度";
 "%lld s" = "%lld 秒";
+"Brightness" = "亮度";
+"Slide for Brightness and Volume" = "滑動調整亮度和音量";
+"Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "在影片左側上下滑動調整亮度，在右側上下滑動調整音量。";
