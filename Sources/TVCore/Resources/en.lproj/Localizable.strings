@@ -372,6 +372,7 @@
 "%lld of %lld sources didn't respond, so results may be incomplete." = "%lld of %lld sources didn't respond, so results may be incomplete.";
 "Try another keyword." = "Try another keyword.";
 "Show Details" = "Show Details";
+"Hide Details" = "Hide Details";
 "%lld of %lld sources responded" = "%lld of %lld sources responded";
 "First-time setup can take a few minutes. Keep the app open." = "First-time setup can take a few minutes. Keep the app open.";
 "This source requires Android features that the plugin runtime does not support yet." = "This source requires Android features that the plugin runtime does not support yet.";
@@ -1003,4 +1004,3 @@
 "Show on Watch Now" = "Show on Watch Now";
 "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything.";
 "Choose what Watch Now shows in Settings." = "Choose what Watch Now shows in Settings.";
-"Hide Details" = "Hide Details";
