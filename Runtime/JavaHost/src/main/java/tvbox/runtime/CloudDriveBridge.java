@@ -2,6 +2,10 @@ package tvbox.runtime;
 
 import com.sun.net.httpserver.HttpServer;
 import org.json.*;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -380,29 +384,76 @@ public final class CloudDriveBridge implements AutoCloseable {
         Class<?> pan = spiderClass;
         while (pan != null && !pan.getName().equals("com.github.catvod.spider.Pan")) pan = pan.getSuperclass();
         if (pan == null) return false;
+        FtyQuarkAccount account = null;
         try {
-            if (!pan.getField("yq").getType().getName().equals("com.github.catvod.spider.Cloud_quark")) return false;
-        } catch (NoSuchFieldException absent) { return false; }
-        // Inspected FTY releases rename this helper, while retaining this complete contract
-        // (N0 since the 2026-10-21 release, whose xU is an unrelated class the checks below skip).
+            for (var field : pan.getDeclaredFields())
+                if (field.getType().getName().equals("com.github.catvod.spider.Cloud_quark")) account = ftyQuarkAccount(field.getType());
+        } catch (ReflectiveOperationException | LinkageError | IOException unreadable) { account = null; }
+        if (account == null) { System.err.println("CLOUD_ACCOUNT_UNSUPPORTED quark"); return false; }
         // Never alter verification methods or success flags: the plugin validates the cookie.
-        for (String name : List.of("xU", "Z", "N0")) {
-            try {
-                Class<?> type = Class.forName("com.github.catvod.spider.merge." + name, false, spiderClass.getClassLoader());
-                var singleton = type.getMethod("Zm");
-                var web = type.getField("F5"); var mobile = type.getField("W");
-                if (singleton.getReturnType() != type || !java.lang.reflect.Modifier.isStatic(singleton.getModifiers())
-                    || web.getType() != String.class || mobile.getType() != String.class
-                    || type.getField("ee").getType() != String.class
-                    || type.getMethod("Gd").getReturnType() != boolean.class
-                    || type.getMethod("k", String.class).getReturnType() != boolean.class) continue;
-                Object account = singleton.invoke(null);
-                web.set(account, cookie); mobile.set(account, ticket);
-                System.err.println("CLOUD_ACCOUNT_RESTORED quark");
-                return true;
-            } catch (ClassNotFoundException | NoSuchFieldException | NoSuchMethodException unsupported) { }
+        Object instance = account.singleton().invoke(null);
+        account.web().set(instance, cookie); account.mobile().set(instance, ticket);
+        System.err.println("CLOUD_ACCOUNT_RESTORED quark");
+        return true;
+    }
+
+    /** FTY's Quark account singleton and the fields that hold its web cookie and mobile ticket. */
+    record FtyQuarkAccount(java.lang.reflect.Method singleton, java.lang.reflect.Field web, java.lang.reflect.Field mobile) {}
+
+    /**
+     * FTY renames its Quark account class, and lately its members too, in most releases (merge.xU,
+     * Z, N0, then k), so the account is found by what its code does, not by name. Cloud_quark keeps
+     * its name and fetches the account through exactly one static singleton. In the account class,
+     * the sign-in response handler {@code (okhttp3.Response, String) -> boolean} stores the web cookie
+     * and the static {@code (account, String)} setter stores the mobile ticket. Each must store exactly
+     * one public String field, or nothing is restored. Only these two classes are read.
+     */
+    static FtyQuarkAccount ftyQuarkAccount(Class<?> quark) throws ReflectiveOperationException, IOException {
+        byte[] code = classBytes(quark);
+        if (code == null) return null;
+        var singletons = new HashSet<String>();
+        new ClassReader(code).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                return new MethodVisitor(Opcodes.ASM9) {
+                    @Override public void visitMethodInsn(int opcode, String owner, String method, String type, boolean isInterface) {
+                        if (opcode == Opcodes.INVOKESTATIC && type.equals("()L" + owner + ";") && owner.startsWith("com/github/catvod/spider/merge/"))
+                            singletons.add(owner + "." + method);
+                    }
+                };
+            }
+        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        if (singletons.size() != 1) return null;
+        String call = singletons.iterator().next(), owner = call.substring(0, call.lastIndexOf('.'));
+        Class<?> type = Class.forName(owner.replace('/', '.'), false, quark.getClassLoader());
+        code = classBytes(type);
+        if (code == null) return null;
+        var web = new HashSet<String>(); var mobile = new HashSet<String>();
+        new ClassReader(code).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                boolean instance = (access & Opcodes.ACC_STATIC) == 0;
+                Set<String> stored = instance && descriptor.equals("(Lokhttp3/Response;Ljava/lang/String;)Z") ? web
+                    : !instance && descriptor.equals("(L" + owner + ";Ljava/lang/String;)V") ? mobile : null;
+                return stored == null ? null : new MethodVisitor(Opcodes.ASM9) {
+                    @Override public void visitFieldInsn(int opcode, String fieldOwner, String field, String fieldType) {
+                        if (opcode == Opcodes.PUTFIELD && fieldOwner.equals(owner) && fieldType.equals("Ljava/lang/String;")) stored.add(field);
+                    }
+                };
+            }
+        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        if (web.size() != 1 || mobile.size() != 1 || web.equals(mobile)) return null;
+        var singleton = type.getMethod(call.substring(call.lastIndexOf('.') + 1));
+        var webField = type.getField(web.iterator().next()); var mobileField = type.getField(mobile.iterator().next());
+        if (!java.lang.reflect.Modifier.isStatic(singleton.getModifiers()) || singleton.getReturnType() != type
+            || java.lang.reflect.Modifier.isStatic(webField.getModifiers()) || java.lang.reflect.Modifier.isStatic(mobileField.getModifiers())) return null;
+        return new FtyQuarkAccount(singleton, webField, mobileField);
+    }
+
+    private static byte[] classBytes(Class<?> type) throws IOException {
+        ClassLoader loader = type.getClassLoader();
+        if (loader == null) return null;
+        try (InputStream input = loader.getResourceAsStream(type.getName().replace('.', '/') + ".class")) {
+            return input == null ? null : input.readAllBytes();
         }
-        return false;
     }
 
     /** The Cloud-based Wogg family accepts inline cookies under different keys than FTY. */
