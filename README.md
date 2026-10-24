@@ -12,8 +12,8 @@
 <p align="center">
   <a href="https://yingxia.getmegaportal.com"><b>yingxia.getmegaportal.com</b></a>
   &nbsp;·&nbsp;
-  <a href="https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-macos-arm64.dmg">Download for Mac</a>
-  (<a href="https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-macos-x86_64.dmg">Intel</a>)
+  <a href="https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-arm64.dmg">Download for Mac</a>
+  (<a href="https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-x86_64.dmg">Intel</a>)
   &nbsp;·&nbsp;
   <a href="Docs/INSTALL.md">Install on iPhone, iPad &amp; Apple TV</a>
   &nbsp;·&nbsp;
@@ -58,9 +58,9 @@ Yingxia (映匣) plays your TVBox subscriptions the way an Apple app should: liv
 
 | Platform | Status |
 | --- | --- |
-| **Mac** (macOS 15+, Apple silicon or Intel) | ✅ Free download for [Apple silicon](https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-macos-arm64.dmg) or [Intel](https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-macos-x86_64.dmg), signed and notarized |
-| **Apple TV** (tvOS 17+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-tvos.ipa) and [sideload it](Docs/INSTALL.md#install-on-apple-tv) |
-| **iPhone & iPad** (iOS 18+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.11/Yingxia-1.7.11-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad), or add the [AltStore source](Docs/INSTALL.md#altstore-and-sidestore) |
+| **Mac** (macOS 15+, Apple silicon or Intel) | ✅ Free download for [Apple silicon](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-arm64.dmg) or [Intel](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-x86_64.dmg), signed and notarized |
+| **Apple TV** (tvOS 17+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-tvos.ipa) and [sideload it](Docs/INSTALL.md#install-on-apple-tv) |
+| **iPhone & iPad** (iOS 18+) | 🧪 Preview. [Download the IPA](https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-ios.ipa) and [sideload it](Docs/INSTALL.md#install-on-iphone-or-ipad), or add the [AltStore source](Docs/INSTALL.md#altstore-and-sidestore) |
 
 The iPhone, iPad and Apple TV apps aren't on the App Store yet. The [install guide](Docs/INSTALL.md) walks you through installing them with your own Apple account (a free one works), keeping them signed, and fixing common problems.
 

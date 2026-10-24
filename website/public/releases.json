@@ -1,6 +1,143 @@
 {
   "releases": [
     {
+      "version": "1.7.12",
+      "build": 31,
+      "date": "2026-10-25",
+      "links": {
+        "macos": "https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-arm64.dmg",
+        "macos-x86_64": "https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-macos-x86_64.dmg",
+        "ios": "https://yingxia.getmegaportal.com/#install-ios",
+        "tvos": "https://yingxia.getmegaportal.com/#install-tv"
+      },
+      "features": [
+        {
+          "symbol": "heart",
+          "title": {
+            "en": "Favorite anything",
+            "zh-Hans": "什么都能收藏",
+            "zh-Hant": "什麼都能收藏",
+            "ja": "なんでもお気に入りに"
+          },
+          "detail": {
+            "en": "Heart a film, a single episode, a song, a cloud file or a history item, not just shows and channels. Favorites groups them by kind; an episode, song or file plays right away.",
+            "zh-Hans": "除了剧集和频道，现在还可以收藏电影、单集、歌曲、网盘文件和播放历史中的条目。“收藏”按类型分组，点按单集、歌曲或文件即可直接播放。",
+            "zh-Hant": "除了劇集和頻道，現在還可以收藏電影、單集、歌曲、網盤檔案和播放記錄中的項目。「收藏」按類型分組，點按單集、歌曲或檔案即可直接播放。",
+            "ja": "番組やチャンネルだけでなく、映画、単独のエピソード、曲、クラウドファイル、再生履歴の項目もハートで保存できます。「お気に入り」は種類ごとにまとまり、エピソード・曲・ファイルはすぐに再生されます。"
+          }
+        },
+        {
+          "symbol": "folder",
+          "title": {
+            "en": "Sources grouped by subscription",
+            "zh-Hans": "点播源按订阅分组",
+            "zh-Hant": "隨選來源按訂閱分組",
+            "ja": "配信ソースを登録ごとにまとめて表示"
+          },
+          "detail": {
+            "en": "The Sources page puts each subscription's sources in a folder you can open, close and drag into order. Hide Source takes one out of Watch Now and search; a source that keeps failing is hidden for you. Both wait in Hidden Sources at the bottom.",
+            "zh-Hans": "“点播源”页面把每个订阅的源放进可展开、折叠和拖动排序的分组。“隐藏源”会把它从“现在观看”和搜索中去掉；连续失败的源会自动隐藏。它们都在底部的“已隐藏的源”中。",
+            "zh-Hant": "「隨選來源」頁面把每個訂閱的來源放進可展開、收合和拖移排序的群組。「隱藏來源」會把它從「立即觀看」和搜尋中移除；持續失敗的來源會自動隱藏。它們都在底部的「已隱藏的來源」中。",
+            "ja": "「配信ソース」ページでは、登録ごとのソースが開閉やドラッグで並べ替えできるフォルダにまとまります。「ソースを隠す」で「今すぐ観る」と検索から外せ、失敗が続くソースは自動で隠れます。どちらも一番下の「隠したソース」にあります。"
+          }
+        },
+        {
+          "symbol": "switch.2",
+          "title": {
+            "en": "Choose what Watch Now shows",
+            "zh-Hans": "自选“现在观看”的内容",
+            "zh-Hant": "自選「立即觀看」的內容",
+            "ja": "「今すぐ観る」に表示するものを選べる"
+          },
+          "detail": {
+            "en": "Settings › Watch Now has a switch for Continue Watching, Pinned Sources, Recommendations, Favorites and Live TV. Turning one off only hides it there.",
+            "zh-Hans": "“设置 › 现在观看”为“继续观看”“置顶点播源”“推荐”“收藏”和“直播”各提供一个开关，关闭后只是不在首页显示。",
+            "zh-Hant": "「設定 › 立即觀看」為「繼續觀看」「置頂點播來源」「推薦」「收藏」和「直播」各提供一個開關，關閉後只是不在首頁顯示。",
+            "ja": "「設定 › 今すぐ観る」で「視聴を続ける」「固定したソース」「おすすめ」「お気に入り」「ライブ TV」をそれぞれオン・オフできます。オフにしてもそこに表示されなくなるだけです。"
+          }
+        },
+        {
+          "symbol": "xmark.circle",
+          "title": {
+            "en": "Remove one at a time",
+            "zh-Hans": "单条删除",
+            "zh-Hant": "單條刪除",
+            "ja": "1 件ずつ削除"
+          },
+          "detail": {
+            "en": "Remove a single recent search with the × next to it. On the Mac, hover over a Continue Watching or Playback History card and click its delete button.",
+            "zh-Hans": "点按旁边的 × 即可删除单条搜索历史。在 Mac 上，将指针移到“继续观看”或“播放历史”的卡片上，点按删除按钮即可删除这一条。",
+            "zh-Hant": "點按旁邊的 × 即可刪除單條搜尋記錄。在 Mac 上，將指標移到「繼續觀看」或「播放記錄」的卡片上，點按刪除按鈕即可刪除這一條。",
+            "ja": "検索履歴は横の × で 1 件ずつ削除できます。Mac では「視聴を続ける」や「再生履歴」のカードにポインタを置き、削除ボタンをクリックします。"
+          }
+        },
+        {
+          "symbol": "bubble.left.and.text.bubble.right",
+          "title": {
+            "en": "Feedback with the details",
+            "zh-Hans": "反馈附带详细信息",
+            "zh-Hant": "回饋附帶詳細資訊",
+            "ja": "フィードバックに詳しい情報を添付"
+          },
+          "detail": {
+            "en": "Send Feedback now adds your subscriptions and recent plays, so a problem can be tracked down. You can edit or remove them first, and tokens and passwords in addresses are hidden.",
+            "zh-Hans": "“反馈问题”现在会附带你的订阅和最近播放，方便查找问题。发送前可以编辑或删除，地址中的令牌和密码会被隐藏。",
+            "zh-Hant": "「意見回饋」現在會附帶你的訂閱和最近播放，方便找出問題。傳送前可以編輯或移除，位址中的權杖和密碼會被隱藏。",
+            "ja": "「フィードバックを送信」に登録と最近の再生が添付され、問題を調べやすくなりました。送信前に編集や削除ができ、アドレス内のトークンやパスワードは伏せられます。"
+          }
+        },
+        {
+          "symbol": "puzzlepiece.extension",
+          "title": {
+            "en": "More sources work",
+            "zh-Hans": "更多点播源恢复正常",
+            "zh-Hant": "更多隨選來源恢復正常",
+            "ja": "より多くのソースが動作"
+          },
+          "detail": {
+            "en": "Subscriptions whose JAR sources all failed as incompatible load again, 玩偶哥哥's Quark lines use your Quark sign-in with the latest FTY jar, and a brief Hongguo server error no longer empties its search results.",
+            "zh-Hans": "所有 JAR 源都显示“插件不兼容”的订阅可以重新加载；使用最新 FTY jar 时，玩偶哥哥的夸克线路会沿用你的夸克登录；红果服务器短暂出错时，搜索结果不再为空。",
+            "zh-Hant": "所有 JAR 來源都顯示「外掛不相容」的訂閱可以重新載入；使用最新 FTY jar 時，玩偶哥哥的夸克線路會沿用你的夸克登入；紅果伺服器短暫出錯時，搜尋結果不再是空的。",
+            "ja": "すべての JAR ソースが「互換性なし」で失敗していた登録が再び読み込めます。最新の FTY jar でも玩偶哥哥の夸克（Quark）回線が Quark のサインインを使い、紅果のサーバが一時的にエラーを返しても検索結果が空になりません。"
+          }
+        },
+        {
+          "symbol": "play.rectangle",
+          "title": {
+            "en": "Large Quark and UC videos play",
+            "zh-Hans": "夸克和 UC 的大视频可以播放",
+            "zh-Hant": "夸克和 UC 的大影片可以播放",
+            "ja": "Quark と UC の大きな動画を再生"
+          },
+          "detail": {
+            "en": "In Cloud Files, a video too large for a free account to download now plays from the drive's transcoded copy instead of stopping with an error.",
+            "zh-Hans": "在“网盘文件”中，免费账号无法下载的大视频现在会改播网盘的转码版本，而不是报错停止。",
+            "zh-Hant": "在「網盤檔案」中，免費帳號無法下載的大影片現在會改播網盤的轉碼版本，而不是顯示錯誤並停止。",
+            "ja": "「クラウドファイル」で、無料アカウントではダウンロードできない大きな動画も、エラーで止まらずにドライブの変換済みコピーで再生されます。"
+          }
+        },
+        {
+          "symbol": "checkmark.shield",
+          "title": {
+            "en": "No more crash in search",
+            "zh-Hans": "搜索不再闪退",
+            "zh-Hant": "搜尋不再閃退",
+            "ja": "検索でクラッシュしなくなりました"
+          },
+          "detail": {
+            "en": "A source answering with damaged text could close Yingxia during a search on iPhone, iPad and Apple TV. The rest of its answer now shows instead.",
+            "zh-Hans": "在 iPhone、iPad 和 Apple TV 上，点播源返回损坏的文字时，搜索可能导致映匣闪退。现在会照常显示其余内容。",
+            "zh-Hant": "在 iPhone、iPad 和 Apple TV 上，隨選來源傳回損壞的文字時，搜尋可能導致映匣閃退。現在會照常顯示其餘內容。",
+            "ja": "iPhone・iPad・Apple TV で、ソースが壊れた文字を返すと検索中に映匣が終了することがありました。今は残りの内容がそのまま表示されます。"
+          },
+          "platforms": [
+            "ios",
+            "tvos"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.11",
       "build": 30,
       "date": "2026-10-24",
