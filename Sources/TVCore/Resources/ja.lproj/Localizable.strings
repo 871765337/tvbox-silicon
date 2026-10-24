@@ -595,6 +595,9 @@
 "Hide Source" = "ソースを隠す";
 "Unhide Source" = "再表示";
 "Show Hidden Sources" = "隠したソースを表示";
+"Show Hidden" = "隠した項目を表示";
+"Hide from Continue Watching" = "「視聴を続ける」から隠す";
+"Show in Continue Watching" = "「視聴を続ける」に表示";
 "Hidden" = "非表示";
 "Pinned Sources" = "固定したソース";
 "Search history" = "視聴履歴を検索";

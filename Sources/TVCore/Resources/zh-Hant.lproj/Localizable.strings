@@ -595,6 +595,9 @@
 "Hide Source" = "隱藏來源";
 "Unhide Source" = "取消隱藏";
 "Show Hidden Sources" = "顯示已隱藏";
+"Show Hidden" = "顯示已隱藏";
+"Hide from Continue Watching" = "從繼續觀看中隱藏";
+"Show in Continue Watching" = "在繼續觀看中顯示";
 "Hidden" = "已隱藏";
 "Pinned Sources" = "置頂點播來源";
 "Search history" = "搜尋播放歷史";

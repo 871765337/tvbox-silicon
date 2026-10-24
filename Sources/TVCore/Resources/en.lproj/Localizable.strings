@@ -595,6 +595,9 @@
 "Hide Source" = "Hide Source";
 "Unhide Source" = "Unhide Source";
 "Show Hidden Sources" = "Show Hidden Sources";
+"Show Hidden" = "Show Hidden";
+"Hide from Continue Watching" = "Hide from Continue Watching";
+"Show in Continue Watching" = "Show in Continue Watching";
 "Hidden" = "Hidden";
 "Pinned Sources" = "Pinned Sources";
 "Search history" = "Search history";

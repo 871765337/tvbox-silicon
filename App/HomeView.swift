@@ -14,7 +14,7 @@ struct HomeView: View {
         ScrollViewReader { reader in
             ScrollView {
                 VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
-                    if !store.playbackHistory.entries.isEmpty { continueWatching }
+                    if !continueEntries.isEmpty { continueWatching }
                     if let config = store.subscription {
                         if store.orderedSites(config).contains(where: { store.pinnedSources.contains($0, origin: config.origin) }) {
                             pinnedSources(config)
@@ -156,12 +156,17 @@ struct HomeView: View {
         }.accessibilityIdentifier("home.pinnedSources")
     }
 
+    /// Hidden titles stay in Playback History and never return to this row.
+    private var continueEntries: [PlaybackHistoryEntry] {
+        store.playbackHistory.entries.filter { !store.playbackHistory.isHidden($0.id) }
+    }
+
     private var continueWatching: some View {
         VStack(alignment: .leading, spacing: Layout.headerSpacing) {
             SectionHeader(title: L10n.text("Continue Watching")) { store.section = .history }
             ChipRow {
                 HStack(spacing: Layout.cardSpacing) {
-                    ForEach(store.playbackHistory.entries.prefix(12)) { HistoryCard(entry: $0) }
+                    ForEach(continueEntries.prefix(12)) { HistoryCard(entry: $0) }
                 }.padding(.vertical, 6)
             }
         }

@@ -545,6 +545,14 @@ private struct IgnoreStripDragCardStyle: PrimitiveButtonStyle {
 /// A saved film. The heart is a sibling of the poster button, so it does not open the title.
 private struct FavoriteFilmCard: View {
     let video: FavoriteVideo
+    @State private var hovering = false
+    private var heartRevealed: Bool {
+        #if os(macOS)
+        hovering
+        #else
+        true
+        #endif
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -555,10 +563,14 @@ private struct FavoriteFilmCard: View {
                     Text(video.videoName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
                 }
             }
-            FavoriteHeartButton(item: .video(video), name: video.videoName)
+            FavoriteHeartButton(item: .video(video), name: video.videoName, onArtwork: true, revealed: heartRevealed)
                 .fixedSize()
                 .padding(8)
         }
+        #if os(macOS)
+        .onHover { hovering = $0 }
+        .animation(.smooth(duration: 0.15), value: hovering)
+        #endif
     }
 }
 
@@ -566,6 +578,14 @@ private struct FavoriteFilmCard: View {
 private struct FavoriteEpisodeCard: View {
     @Environment(Store.self) private var store
     let episode: FavoriteEpisode
+    @State private var hovering = false
+    private var heartRevealed: Bool {
+        #if os(macOS)
+        hovering
+        #else
+        true
+        #endif
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -581,10 +601,14 @@ private struct FavoriteEpisodeCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .cardButton()
-            FavoriteHeartButton(item: .episode(episode), name: episode.video.videoName)
+            FavoriteHeartButton(item: .episode(episode), name: episode.video.videoName, onArtwork: true, revealed: heartRevealed)
                 .fixedSize()
                 .padding(8)
         }
+        #if os(macOS)
+        .onHover { hovering = $0 }
+        .animation(.smooth(duration: 0.15), value: hovering)
+        #endif
     }
 }
 
