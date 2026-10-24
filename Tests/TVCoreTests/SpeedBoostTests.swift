@@ -8,14 +8,18 @@ import Testing
     #expect(boost.rate == 2)
     boost.moved(x: 50, y: 0)
     #expect(boost.rate == 2.5)
-    boost.moved(x: 500, y: 0)
+    boost.moved(x: 100, y: 0)
     #expect(boost.rate == 3)
+    boost.moved(x: 500, y: 0)
+    #expect(boost.rate == 4)
     boost.moved(x: -60, y: 0)
     #expect(boost.rate == 1.5)
+    boost.moved(x: -100, y: 0)
+    #expect(boost.rate == 1)
     boost.moved(x: -500, y: 0)
-    #expect(boost.rate == 1.5)
+    #expect(boost.rate == 0.5)
     boost.moved(x: .nan, y: .infinity)
-    #expect(boost.rate == 1.5 && !boost.locked)
+    #expect(boost.rate == 0.5 && !boost.locked)
 }
 
 @Test func slidingDownKeepsTheSpeedAfterLettingGo() {
@@ -31,7 +35,14 @@ import Testing
 
 @Test func holdSpeedStartsAtTheNearestRate() {
     #expect(SpeedBoost(rate: 3).rate == 3)
-    #expect(SpeedBoost(rate: 7).rate == 3)
-    #expect(SpeedBoost(rate: 1).rate == 1.5)
+    #expect(SpeedBoost(rate: 4).rate == 4)
+    #expect(SpeedBoost(rate: 7).rate == 4)
+    #expect(SpeedBoost(rate: 0.5).rate == 0.5)
+    #expect(SpeedBoost(rate: 0.1).rate == 0.5)
     #expect(SpeedBoost(rate: .nan).rate == SpeedBoost.standard)
+}
+
+@Test func holdsStartSlowerOrFasterButNotAtNormalSpeed() {
+    #expect(SpeedBoost.startRates == [0.5, 1.5, 2, 2.5, 3, 4])
+    #expect(SpeedBoost.startRates.contains(SpeedBoost.standard))
 }

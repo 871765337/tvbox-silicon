@@ -272,13 +272,14 @@ import TVCore
         if player.rate != 0 { player.rate = speed }
     }
 
-    /// A faster rate while the picture is held (`SpeedBoost`); nil plays at the chosen speed again. It never becomes
+    /// Another rate while the picture is held (`SpeedBoost`); nil plays at the chosen speed again. It never becomes
     /// the chosen speed, so the speed menu and a later play keep the one picked there. Pausing ends it.
+    /// Up to 4× even where the item says it can't fast-forward: an HLS stream without I-frame playlists says so, yet
+    /// plays at 3× and 4× in full, as the menu's speeds do.
     private(set) var boost: Float?
     func setBoost(_ rate: Float?) {
         guard rate == nil || !paused else { return }
-        // Above 2× only where the item says it can fast-forward.
-        boost = rate.map { player.currentItem?.canPlayFastForward == false ? min($0, 2) : $0 }
+        boost = rate
         if player.rate != 0 { player.rate = boost ?? player.defaultRate }
     }
     private var generation = UUID()

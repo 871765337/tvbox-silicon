@@ -959,7 +959,7 @@ private struct DesktopNativePlayer: NSViewRepresentable {
         view.showsFullScreenToggleButton = true
         view.allowsPictureInPicturePlayback = true
         view.showsSharingServiceButton = false
-        view.speeds = [0.5, 0.75, 1, 1.25, 1.5, 2].map { AVPlaybackSpeed(rate: Float($0), localizedName: "\($0)×") }
+        view.speeds = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4].map { AVPlaybackSpeed(rate: Float($0), localizedName: "\($0)×") }
         return view
     }
     func updateNSView(_ view: AVPlayerView, context: Context) {
