@@ -294,6 +294,7 @@ struct FormSettingsView: View {
     #endif
     #if os(macOS)
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
+    @AppStorage(PlayOnController.key) private var receivesPlayOn = true
     #endif
     private var version: String? {
         (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String).flatMap { $0.isEmpty ? nil : L10n.text("Version %@", $0) }
@@ -379,6 +380,14 @@ struct FormSettingsView: View {
                     .onChange(of: receivesCasts) { _, on in
                         if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
                     }
+                }
+                Toggle(isOn: $receivesPlayOn) {
+                    FormLabel(symbol: "play.tv.fill", tint: Brand.indigo, title: L10n.text("Play from Other Devices"),
+                              subtitle: L10n.text("With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player."))
+                }
+                .settingsSwitch()
+                .onChange(of: receivesPlayOn) { _, on in
+                    if on { PlayOnController.shared.start(store) } else { PlayOnController.shared.stop() }
                 }
                 FormLink(symbol: "play.fill", tint: Brand.indigo, title: L10n.text("Play a URL")) { PlayURLView() }
             } header: {
@@ -1178,6 +1187,7 @@ struct TVSettingsView: View {
     @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
     @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
+    @AppStorage(PlayOnController.key) private var receivesPlayOn = true
     @AppStorage(ErrorReports.key) private var sendsErrorReports = true
 
     var body: some View {
@@ -1197,8 +1207,7 @@ struct TVSettingsView: View {
                 }
                 TVSettingsLink(title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
             }
-            TVSettingsSection(title: L10n.text("Playback"),
-                              footer: store.extrasUnlocked ? L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia")) : nil) {
+            TVSettingsSection(title: L10n.text("Playback"), footer: playbackFooter) {
                 if store.extrasUnlocked {
                     TVSettingsToggle(title: L10n.text("Show Danmaku"), isOn: $showsDanmaku)
                     TVSettingsToggle(title: L10n.text("Cast from the Bilibili App"), isOn: $receivesCasts)
@@ -1206,6 +1215,10 @@ struct TVSettingsView: View {
                             if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
                         }
                 }
+                TVSettingsToggle(title: L10n.text("Play from Other Devices"), isOn: $receivesPlayOn)
+                    .onChange(of: receivesPlayOn) { _, on in
+                        if on { PlayOnController.shared.start(store) } else { PlayOnController.shared.stop() }
+                    }
                 TVSettingsLink(title: L10n.text("Play a URL")) { TVPlayURLPage() }
             }
             if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
@@ -1231,6 +1244,12 @@ struct TVSettingsView: View {
         .tabTitle(L10n.text("Settings"))
         // Refreshed whenever Settings reappears, so a sign-in on the account page shows here.
         .onAppear { bilibiliSummary = BilibiliAccount.load().summary; douyinSummary = DouyinAccount.load().summary; cloudSummary = CloudProvider.summary() }
+    }
+
+    private var playbackFooter: String {
+        let phones = L10n.text("With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player.")
+        guard store.extrasUnlocked else { return phones }
+        return L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia")) + "\n" + phones
     }
 
     private var subscriptionSection: some View {

@@ -58,6 +58,9 @@ import TVCore
                 .task { BilibiliCastController.shared.start(store) }
                 .onChange(of: store.extrasUnlocked) { _, unlocked in if unlocked { BilibiliCastController.shared.start(store) } }
                 #endif
+                #if os(tvOS) || os(macOS)
+                .task { PlayOnController.shared.start(store) }
+                #endif
                 #if os(iOS)
                 .onOpenURL { url in if let link = DouyinHandoff.Link(url) { douyinHandoff = link } }
                 .sheet(item: $douyinHandoff) { DouyinHandoffView(link: $0) }
@@ -73,6 +76,11 @@ import TVCore
                     // Phones only see the TV while the app is open.
                     if phase == .background { BilibiliCastController.shared.stop() }
                     if phase == .active { BilibiliCastController.shared.start(store) }
+                    #endif
+                    #if os(tvOS)
+                    // As for Bilibili casts: other devices only see the TV while the app is open.
+                    if phase == .background { PlayOnController.shared.stop() }
+                    if phase == .active { PlayOnController.shared.start(store) }
                     #endif
                     #if !os(macOS)
                     if phase == .background { DownloadsLifecycle.enteredBackground() }

@@ -35,6 +35,9 @@ struct MobilePlayerView: View {
     @State private var fillsScreen = false
     @State private var speed: Float = 1
     @State private var showsDanmakuList = false
+    /// Devices with Yingxia open, for the Play On button; and the one the video was sent to.
+    @State private var tvBrowser = PlayOnBrowser()
+    @State private var playingOn: String?
 
     var body: some View {
         ZStack {
@@ -48,10 +51,17 @@ struct MobilePlayerView: View {
             // The artwork dissolves into the first frame.
             if let waiting { waiting.view.ignoresSafeArea().transition(.opacity) }
             if pip.active { pipPlaceholder }
+            if playingOn != nil { Color.black.ignoresSafeArea() }
             // A tap on the picture shows or hides the controls; a tap on a control keeps them up (see `rows`).
             Color.clear.contentShape(Rectangle()).ignoresSafeArea()
                 .onTapGesture(perform: toggleChrome)
                 .accessibilityHidden(true)
+            if let playingOn {
+                PlayOnPlaceholder(receiver: playingOn) {
+                    self.playingOn = nil
+                    if session.paused { session.togglePlayback() }
+                }
+            }
             controls.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
         }
         .animation(.easeInOut(duration: 0.7), value: waiting == nil)
@@ -61,8 +71,11 @@ struct MobilePlayerView: View {
             speed = session.player.defaultRate
             nowPlaying.start(session)
             nowPlaying.update(title: channel.name, session: session)
+            tvBrowser.start()
         }
-        .onDisappear { clock.detach(); nowPlaying.stop() }
+        .onDisappear { clock.detach(); nowPlaying.stop(); tvBrowser.stop() }
+        // Played here again (the Lock Screen, say): the other device no longer has it to itself.
+        .onChange(of: session.paused) { _, paused in if !paused { playingOn = nil } }
         .onChange(of: nowPlayingState, initial: true) { nowPlaying.update(title: channel.name, session: session) }
         .task(id: clock.item.map(ObjectIdentifier.init)) { await tracks.load(clock.item) }
         .sheet(isPresented: $showsDanmakuList) {
@@ -132,10 +145,18 @@ struct MobilePlayerView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
-            AirPlayButton()
-                .frame(width: 44, height: 44)
-                .glassSurface(.regular.interactive(), in: Circle())
-                .contentShape(Circle())
+            // With Yingxia found on an Apple TV or Mac, one menu holds those and AirPlay.
+            if tvBrowser.receivers.isEmpty {
+                AirPlayButton()
+                    .frame(width: 44, height: 44)
+                    .glassSurface(.regular.interactive(), in: Circle())
+                    .contentShape(Circle())
+            } else {
+                PlayOnButton(channel: channel, session: session, browser: tvBrowser) { receiver in
+                    session.player.pause()
+                    playingOn = receiver
+                }
+            }
             if pip.supported {
                 Button { pip.toggle() } label: {
                     Image(systemName: pip.active ? "pip.exit" : "pip.enter").font(.headline).frame(width: 22, height: 22)

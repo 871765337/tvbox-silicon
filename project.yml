@@ -44,7 +44,9 @@ targetTemplates:
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ja]
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
-        NSLocalNetworkUsageDescription: Connect to the local media and subscription services you configure.
+        NSLocalNetworkUsageDescription: Connect to the local media and subscription services you configure, and find Yingxia on your other devices.
+        # Play On (Sources/TVCore/PlayOn.swift): iOS browses and advertises only the Bonjour types listed here.
+        NSBonjourServices: [_yingxia._tcp]
         UILaunchScreen: {}
         UIBackgroundModes: [audio]
 targets:

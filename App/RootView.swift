@@ -136,6 +136,10 @@ struct RootView: View {
         // A video and a song never play over each other.
         .onChange(of: store.playing) { _, channel in if channel != nil { store.music.pause() } }
         .modifier(PlayerPresentation(playing: $store.playing))
+        #if os(tvOS) || os(macOS)
+        // What another device sent, while it opens.
+        .overlay { PlayOnIncoming().animation(.spring(duration: 0.4), value: PlayOnController.shared.incoming?.title) }
+        #endif
         .updatePresentation(updates, playing: store.playing != nil)
         .announcementPresentation(announcements, blocked: messageWaits)
         .alert(L10n.text("Unable to Complete"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
