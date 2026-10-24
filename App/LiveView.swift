@@ -514,13 +514,26 @@ struct FavoriteVideoOpener<Label: View>: View {
     var body: some View {
         if let listing = video.listingVideo(), let client = store.catalogClient(for: video) {
             RouteLink { VideoDetailView(video: listing, client: client) } label: { label }
-                .cardButton()
+                .buttonStyle(IgnoreStripDragCardStyle(drag: drag))
         } else {
             Button {
                 if drag?.active != true { store.reportMissingFavoriteSource() }
             } label: { label }
             .cardButton()
         }
+    }
+}
+
+/// NavigationLink activates on mouse-up; ignore that click while the home strip is dragging.
+private struct IgnoreStripDragCardStyle: PrimitiveButtonStyle {
+    var drag: StripDrag?
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            if drag?.active != true { configuration.trigger() }
+        } label: {
+            configuration.label
+        }
+        .cardButton()
     }
 }
 
