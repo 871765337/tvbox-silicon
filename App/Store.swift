@@ -79,6 +79,9 @@ import TVCore
         #endif
         pinnedSources = PinnedSources(defaults: playbackDefaults)
         hiddenSources = HiddenSources(defaults: playbackDefaults)
+        #if os(macOS) || os(iOS)
+        WebSniff.install(WKWebSniffer())
+        #endif
         sourceOrder = SourceOrder(defaults: playbackDefaults)
         favorites = Favorites(defaults: defaults)
         SourceHideReports.report = { [hiddenSources] site, origin, error in
@@ -123,8 +126,8 @@ import TVCore
                 ?? Site.builtInSites.first(where: { $0.key == item.source.siteKey }) else {
             throw TVError.unsupported(L10n.text("%@ is no longer in your subscription, so this download can't continue.", item.source.siteName))
         }
-        let client = CatalogClient(site: site, origin: config?.origin ?? URL(string: "https://example.invalid/")!, jarURL: config?.spiderURL)
-            .with(parses: config?.parseServices ?? [])
+        let base = CatalogClient(site: site, origin: config?.origin ?? URL(string: "https://example.invalid/")!, jarURL: config?.spiderURL)
+        let client = config.map { base.applying($0) } ?? base
         let plan = try await client.preparePlayback(item.source.episode, forDownload: true)
         let channel = try await client.resolvePlayback(plan, choice: plan.choices[0])
         // A cloud-drive file downloads straight from its CDN, as it plays: through the plugin's
@@ -513,7 +516,7 @@ import TVCore
         }
         let previousPlayback = playing
         do {
-            let client = CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL).with(parses: config.parseServices)
+            let client = CatalogClient(site: site, origin: config.origin, jarURL: config.spiderURL).applying(config)
             // Plugin/API sources resolve an episode again. Direct-file APIs must refresh
             // their detail first so an expiring media address never becomes a resume shortcut.
             var video = try await client.detail(entry.context.videoID, cached: site.type == 3 || site.type == 4)

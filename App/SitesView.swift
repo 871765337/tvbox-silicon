@@ -1351,7 +1351,8 @@ struct VideoDetailView: View {
             if plan.choices.count > 1 {
                 pendingPlan = plan; pendingEpisode = episode; choosingQuality = true
             } else {
-                let resolved = try await client.with(parses: store.subscription?.parseServices ?? []).resolvePlayback(plan, choice: plan.choices[0])
+                let playback = store.subscription.map { client.applying($0) } ?? client
+                let resolved = try await playback.resolvePlayback(plan, choice: plan.choices[0])
                 try Task.checkCancellation()
                 store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: client)
             }
@@ -1361,7 +1362,8 @@ struct VideoDetailView: View {
         busy = true; loadingEpisode = episode.id
         defer { busy = false; pendingPlan = nil; pendingEpisode = nil; loadingEpisode = nil }
         do {
-            let resolved = try await client.with(parses: store.subscription?.parseServices ?? []).resolvePlayback(plan, choice: choice)
+            let playback = store.subscription.map { client.applying($0) } ?? client
+            let resolved = try await playback.resolvePlayback(plan, choice: choice)
             try Task.checkCancellation()
             store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: client)
         } catch { fail(episode, error) }
