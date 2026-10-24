@@ -84,7 +84,7 @@ struct SitesView: View {
         .accessibilityAddTraits(.isHeader)
         .accessibilityIdentifier("sources.group." + group.id)
         #if !os(tvOS)
-        if case .subscription = group.kind {
+        if case .subscription = group.kind, query.isEmpty {
             header
                 .draggable(group.id)
                 .dropDestination(for: String.self) { items, _ in
