@@ -874,6 +874,11 @@
 "View on GitHub" = "GitHub で見る";
 "Thanks! Your feedback is issue #%lld." = "ご協力ありがとうございます。Issue #%lld として登録されました。";
 "You've sent a lot of feedback. Please try again later." = "フィードバックの送信が多すぎます。しばらくしてからもう一度お試しください。";
+"You're sending feedback too quickly. Wait a minute and try again." = "送信の間隔が短すぎます。1 分ほど待ってからもう一度お試しください。";
+"You can send %lld messages in 24 hours and have sent them all. You can send another after %@." = "フィードバックは 24 時間に %lld 件まで送信でき、すでに上限に達しています。%@ 以降にもう 1 件送信できます。";
+"You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow." = "フィードバックは 24 時間に %lld 件まで送信でき、すでに上限に達しています。明日もう一度お試しください。";
+"Today's feedback from everyone has reached its limit. You can send yours after %@." = "本日のフィードバックは全体の上限に達しました。%@ 以降に送信できます。";
+"Today's feedback from everyone has reached its limit. Please try again later." = "本日のフィードバックは全体の上限に達しました。しばらくしてからもう一度お試しください。";
 "Couldn't send feedback. Please try again later." = "フィードバックを送信できませんでした。しばらくしてからもう一度お試しください。";
 "Help Make Yingxia Better" = "映匣をもっと良くするために";
 "Report a problem or share an idea. It goes straight to the developer." = "不具合の報告やアイデアをお寄せください。開発者に直接届きます。";

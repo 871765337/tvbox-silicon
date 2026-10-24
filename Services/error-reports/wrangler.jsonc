@@ -13,7 +13,7 @@
   // Per IP address (kept in memory only). An app sends at most once every six hours.
   "ratelimits": [
     { "name": "LIMITER", "namespace_id": "4101", "simple": { "limit": 10, "period": 60 } },
-    // Feedback is typed by hand: two a minute is plenty. The Worker also caps each day (src/index.ts).
+    // Feedback is typed by hand: two a minute is plenty (FEEDBACK_PER_MINUTE in src/index.ts, which also caps each day).
     { "name": "FEEDBACK_LIMITER", "namespace_id": "4102", "simple": { "limit": 2, "period": 60 } }
   ],
   // Feedback becomes an issue here. The token is a secret: wrangler secret put GITHUB_TOKEN.

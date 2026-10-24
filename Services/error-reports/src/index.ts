@@ -95,6 +95,13 @@ const FEEDBACK_MAX = 5000;
 // In any 24 hours: per install, and for everyone together, so a flood can't bury the repository.
 const FEEDBACK_PER_INSTALL = 5;
 const FEEDBACK_PER_DAY = 50;
+// FEEDBACK_LIMITER's, in wrangler.jsonc.
+const FEEDBACK_PER_MINUTE = 2;
+
+// Which cap refused it, how many it allows and in how many seconds one more fits, so the app can say so
+// (`Feedback.refusal` in Sources/TVCore/Feedback.swift).
+const tooMany = (limit: "minute" | "install" | "everyone", max: number, retryAfter: number) =>
+  Response.json({ limit, max, retryAfter }, { status: 429, headers: { "retry-after": String(retryAfter) } });
 const LABELS: Record<string, string[]> = { bug: ["feedback", "bug"], idea: ["feedback", "enhancement"], other: ["feedback"] };
 const SYSTEMS: Record<string, string> = { macos: "macOS", ios: "iOS", tvos: "tvOS" };
 
@@ -121,7 +128,7 @@ export function issue(body: any) {
 
 async function feedback(request: Request, env: Env): Promise<Response> {
   if (!env.GITHUB_TOKEN) return new Response(null, { status: 503 });
-  if (!(await env.FEEDBACK_LIMITER.limit({ key: address(request) })).success) return new Response(null, { status: 429 });
+  if (!(await env.FEEDBACK_LIMITER.limit({ key: address(request) })).success) return tooMany("minute", FEEDBACK_PER_MINUTE, 60);
   const body = await parse(request);
   if (body instanceof Response) return body;
   const install = text(body?.install, 36);
@@ -133,7 +140,15 @@ async function feedback(request: Request, env: Env): Promise<Response> {
   const now = Math.floor(Date.now() / 1000);
   const sent = await env.DB.prepare("SELECT COUNT(*) AS everyone, COALESCE(SUM(install = ?), 0) AS mine FROM feedback WHERE received >= ?")
     .bind(install, now - 86400).first<{ everyone: number; mine: number }>();
-  if (sent && (sent.mine >= FEEDBACK_PER_INSTALL || sent.everyone >= FEEDBACK_PER_DAY)) return new Response(null, { status: 429 });
+  if (sent && (sent.mine >= FEEDBACK_PER_INSTALL || sent.everyone >= FEEDBACK_PER_DAY)) {
+    const mine = sent.mine >= FEEDBACK_PER_INSTALL;
+    const max = mine ? FEEDBACK_PER_INSTALL : FEEDBACK_PER_DAY;
+    // The max-th newest message still counted: once it is a day old, one more fits.
+    const oldest = await env.DB.prepare(
+      `SELECT received FROM feedback WHERE ${mine ? "install = ? AND " : ""}received >= ? ORDER BY received DESC LIMIT 1 OFFSET ?`,
+    ).bind(...(mine ? [install] : []), now - 86400, max - 1).first<{ received: number }>();
+    return tooMany(mine ? "install" : "everyone", max, oldest ? Math.max(60, oldest.received + 86400 - now) : 3600);
+  }
 
   const response = await fetch(`${env.GITHUB_API ?? "https://api.github.com"}/repos/${env.FEEDBACK_REPO}/issues`, {
     method: "POST",

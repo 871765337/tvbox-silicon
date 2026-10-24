@@ -875,6 +875,11 @@
 "View on GitHub" = "View on GitHub";
 "Thanks! Your feedback is issue #%lld." = "Thanks! Your feedback is issue #%lld.";
 "You've sent a lot of feedback. Please try again later." = "You've sent a lot of feedback. Please try again later.";
+"You're sending feedback too quickly. Wait a minute and try again." = "You're sending feedback too quickly. Wait a minute and try again.";
+"You can send %lld messages in 24 hours and have sent them all. You can send another after %@." = "You can send %lld messages in 24 hours and have sent them all. You can send another after %@.";
+"You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow." = "You can send %lld messages in 24 hours and have sent them all. Please try again tomorrow.";
+"Today's feedback from everyone has reached its limit. You can send yours after %@." = "Today's feedback from everyone has reached its limit. You can send yours after %@.";
+"Today's feedback from everyone has reached its limit. Please try again later." = "Today's feedback from everyone has reached its limit. Please try again later.";
 "Couldn't send feedback. Please try again later." = "Couldn't send feedback. Please try again later.";
 "Help Make Yingxia Better" = "Help Make Yingxia Better";
 "Report a problem or share an idea. It goes straight to the developer." = "Report a problem or share an idea. It goes straight to the developer.";

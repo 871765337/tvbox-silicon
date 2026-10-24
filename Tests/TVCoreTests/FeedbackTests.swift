@@ -49,3 +49,17 @@ import Testing
     #expect(Feedback.combined(" It stutters \n", context: "Subscriptions:\n- none\n") == "It stutters\n\nSubscriptions:\n- none")
     #expect(Feedback.combined("It stutters", context: " \n") == "It stutters")
 }
+
+@Test func feedbackSaysWhichLimitRefusedIt() {
+    let now = Date(timeIntervalSince1970: 1_792_870_000)
+    func refusal(_ body: String) -> Feedback.Failure { Feedback.refusal(Data(body.utf8), now: now) }
+    #expect(refusal(#"{"limit":"install","max":5,"retryAfter":3600}"#) == .installLimit(max: 5, until: now.addingTimeInterval(3600)))
+    #expect(refusal(#"{"limit":"minute","max":2,"retryAfter":60}"#) == .tooFast)
+    #expect(refusal(#"{"limit":"everyone","max":50,"retryAfter":7200}"#) == .everyoneLimit(until: now.addingTimeInterval(7200)))
+    #expect(refusal(#"{"limit":"everyone","max":50}"#) == .everyoneLimit(until: nil))
+    // A server from before it named the cap answers an empty 429.
+    #expect(refusal("") == .tooMany)
+    #expect(refusal(#"{"limit":"other"}"#) == .tooMany)
+    #expect(Feedback.Failure.installLimit(max: 5, until: nil).errorDescription?.contains("5") == true)
+    #expect(Feedback.Failure.installLimit(max: 5, until: now).errorDescription?.contains(Feedback.moment(now)) == true)
+}
