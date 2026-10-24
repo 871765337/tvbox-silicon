@@ -161,6 +161,8 @@ import TVCore
             }
             player.play()
         } else { player.pause() }
+        // The button follows the tap at once; the player's status (observed below) confirms it a moment later.
+        paused = player.rate == 0
     }
 
     func skip(_ seconds: Double) {

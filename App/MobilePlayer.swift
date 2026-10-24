@@ -541,19 +541,27 @@ struct MobilePlayerView: View {
     // MARK: Middle and bottom
 
     private var centerRow: some View {
-        HStack(spacing: 20) {
-            if let previous = store.step(back: true, from: channel, session: session) {
+        let previous = store.step(back: true, from: channel, session: session)
+        let next = store.step(back: false, from: channel, session: session)
+        return HStack(spacing: 20) {
+            if let previous {
                 Button { previous.go() } label: { Image(systemName: "backward.end.fill") }
                     .buttonStyle(PlayerCircleStyle(size: 44))
                     .disabled(previous.busy)
                     .accessibilityLabel(L10n.text("Previous Episode"))
+            } else if next != nil {
+                // The first episode: keep play in the middle.
+                Color.clear.frame(width: 44, height: 44)
             }
             if seekable {
                 Button { session.skip(-10); sought() } label: { Image(systemName: "gobackward.10") }
                     .buttonStyle(PlayerCircleStyle(size: 52))
                     .accessibilityLabel(L10n.text("Back 10 seconds"))
             }
-            Button { session.togglePlayback() } label: { Image(systemName: session.paused ? "play.fill" : "pause.fill") }
+            Button { session.togglePlayback() } label: {
+                // Swapped as the music player's is.
+                Image(systemName: session.paused ? "play.fill" : "pause.fill").contentTransition(.symbolEffect(.replace))
+            }
                 .buttonStyle(PlayerCircleStyle(size: 68))
                 .accessibilityLabel(L10n.text(session.paused ? "Play" : "Pause"))
                 .accessibilityIdentifier("player.playPause")
@@ -562,11 +570,14 @@ struct MobilePlayerView: View {
                     .buttonStyle(PlayerCircleStyle(size: 52))
                     .accessibilityLabel(L10n.text("Forward 10 seconds"))
             }
-            if let next = store.step(back: false, from: channel, session: session) {
+            if let next {
                 Button { next.go() } label: { Image(systemName: "forward.end.fill") }
                     .buttonStyle(PlayerCircleStyle(size: 44))
                     .disabled(next.busy)
                     .accessibilityLabel(L10n.text("Next Episode"))
+            } else if previous != nil {
+                // The last episode: keep play in the middle.
+                Color.clear.frame(width: 44, height: 44)
             }
         }
         .simultaneousGesture(TapGesture().onEnded { poke() })
@@ -805,6 +816,9 @@ private struct PlayerCircleStyle: ButtonStyle {
             .glassSurface(.regular.interactive(), in: Circle())
             .contentShape(Circle())
             .opacity(enabled ? (configuration.isPressed ? 0.72 : 1) : 0.38)
+            // Gives under the finger, so a tap shows before the player answers.
+            .scaleEffect(configuration.isPressed ? 0.9 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.65), value: configuration.isPressed)
     }
 }
 
