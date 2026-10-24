@@ -160,10 +160,6 @@ struct RootView: View {
     #endif
     private var platformTabs: some View {
         tabView
-            #if os(iOS)
-            // The system tab bar keeps the labels it was built with, so switching them rebuilds it.
-            .id(showsTabLabels)
-            #endif
             #if os(tvOS)
             .musicSidebarHeader()
             // Now Playing is not a page: choosing it opens the full-screen player over the section
@@ -250,12 +246,9 @@ struct RootView: View {
         #if os(tvOS)
         if item == .nowPlaying { MusicTabLabel() } else { Label(item.title, systemImage: item.icon) }
         #else
-        if phoneTabs && !showsTabLabels {
-            // The icon alone; VoiceOver still reads the name.
-            Image(systemName: item.icon).accessibilityLabel(item.title)
-        } else {
-            Label(item.title, systemImage: item.icon)
-        }
+        // Only the title changes, so the tab bar updates in place; VoiceOver still reads the name.
+        Label { Text(phoneTabs && !showsTabLabels ? "" : item.title) } icon: { Image(systemName: item.icon) }
+            .accessibilityLabel(item.title)
         #endif
     }
 
