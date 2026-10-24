@@ -19,6 +19,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "1.7.12",
+          "buildVersion": "31",
+          "date": "2026-10-25",
+          "localizedDescription": "• 什么都能收藏\n• 点播源按订阅分组\n• 自选“现在观看”的内容\n• 单条删除\n• 反馈附带详细信息\n• 更多点播源恢复正常\n• 夸克和 UC 的大视频可以播放\n• 搜索不再闪退\n\n• Favorite anything\n• Sources grouped by subscription\n• Choose what Watch Now shows\n• Remove one at a time\n• Feedback with the details\n• More sources work\n• Large Quark and UC videos play\n• No more crash in search",
+          "downloadURL": "https://download.getmegaportal.com/yingxia/1.7.12/Yingxia-1.7.12-ios.ipa",
+          "size": 72414549,
+          "sha256": "131c78a8e2b43f2d11278c1662fceda50a0e473ad50e2ea61c215b76b15fe273",
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "1.7.11",
           "buildVersion": "30",
           "date": "2026-10-24",
