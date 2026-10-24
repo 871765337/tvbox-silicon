@@ -39,20 +39,62 @@ private func document(_ origin: String, keys: [String]) throws -> Subscription {
         entry("https://off.example/c.json", name: "Off", enabled: false),
         entry("https://two.example/b.json", name: "Two", enabled: true),
     ]
-    var show = first.sites[0]
-    show.provenance = SourceProvenance(origin: first.origin, spider: nil)
-    var secret = first.sites[1]
-    secret.provenance = SourceProvenance(origin: first.origin, spider: nil)
+    let merged = try #require(Subscription.merge([first, second]))
+    let secret = try #require(merged.sites.first { $0.key == "secret" })
     let documents = [
-        "https://one.example/a.json": Subscription(origin: first.origin, importedAt: first.importedAt, sites: [show, secret], lives: [], raw: first.raw),
+        "https://one.example/a.json": first,
         "https://two.example/b.json": second,
     ]
-    let hidden = SourceGroups.make(entries: entries, documents: documents, builtIns: [], builtInOrigin: first.origin, pinOrder: [secret], userHidden: { $0.key == "other" }, includeHidden: false, jarURL: nil)
+    let hidden = SourceGroups.make(entries: entries, documents: documents, builtIns: [], builtInOrigin: first.origin, mergedSites: merged.sites, pinOrder: [secret], userHidden: { $0.key == "other" }, includeHidden: false, jarURL: nil)
     #expect(hidden.map(\.id) == ["pinned", "https://one.example/a.json"])
     #expect(hidden[0].sites.map(\.key) == ["secret"])
     #expect(hidden[1].sites.map(\.key) == ["show"])
-    let shown = SourceGroups.make(entries: entries, documents: documents, builtIns: [], builtInOrigin: first.origin, pinOrder: [secret], userHidden: { $0.key == "other" }, includeHidden: true, jarURL: nil)
+    let shown = SourceGroups.make(entries: entries, documents: documents, builtIns: [], builtInOrigin: first.origin, mergedSites: merged.sites, pinOrder: [secret], userHidden: { $0.key == "other" }, includeHidden: true, jarURL: nil)
     #expect(shown.map(\.id) == ["pinned", "https://one.example/a.json", "https://two.example/b.json"])
+}
+
+private func document(_ origin: String, sites: [(key: String, api: String)]) throws -> Subscription {
+    let items = sites.map { #"{"key":"\#($0.key)","name":"\#($0.key)","type":1,"api":"\#($0.api)"}"# }.joined(separator: ",")
+    return try Subscription.parse(Data(#"{"sites":[\#(items)]}"#.utf8), origin: URL(string: origin)!)
+}
+
+@Test func laterSubscriptionGroupHoldsItsMergedSites() throws {
+    let first = try document("https://one.example/a.json", sites: [
+        (key: "same", api: "https://api.example/same"),
+        (key: "clash", api: "https://api.example/one"),
+    ])
+    let second = try document("https://two.example/b.json", sites: [
+        (key: "copy", api: "https://api.example/same"),
+        (key: "clash", api: "https://api.example/two"),
+    ])
+    let merged = try #require(Subscription.merge([first, second]))
+    let entries = [
+        entry("https://one.example/a.json", name: "One", enabled: true),
+        entry("https://two.example/b.json", name: "Two", enabled: true),
+    ]
+    let documents = [
+        "https://one.example/a.json": first,
+        "https://two.example/b.json": second,
+    ]
+    let groups = SourceGroups.make(entries: entries, documents: documents, builtIns: [], builtInOrigin: first.origin, mergedSites: merged.sites, pinOrder: [], userHidden: { _ in false }, includeHidden: false, jarURL: nil)
+    #expect(groups.map(\.id) == ["https://one.example/a.json", "https://two.example/b.json"])
+    #expect(groups[0].sites.map(\.key).sorted() == ["clash", "same"])
+    let later = groups[1]
+    #expect(later.sites.count == 1)
+    let renamed = try #require(later.sites.first)
+    #expect(renamed.key == "clash@" + second.tag)
+    #expect(renamed.sourceKey == "clash")
+    #expect(!later.sites.contains { $0.key == "copy" })
+    #expect(renamed.origin(or: first.origin) == second.origin)
+}
+
+@Test func droppingAGroupMovesItTowardTheTarget() {
+    let displayed = ["jia", "yi", "bing"]
+    #expect(SubscriptionOrder.moving("jia", onto: "bing", in: displayed) == ["yi", "bing", "jia"])
+    #expect(SubscriptionOrder.moving("jia", onto: "yi", in: displayed) == ["yi", "jia", "bing"])
+    #expect(SubscriptionOrder.moving("bing", onto: "jia", in: displayed) == ["bing", "jia", "yi"])
+    #expect(SubscriptionOrder.moving("jia", onto: "jia", in: displayed) == displayed)
+    #expect(SubscriptionOrder.moving("jia", onto: "missing", in: displayed) == displayed)
 }
 
 @Test func draggingAVisibleSubscriptionLeavesTheHiddenSlot() {

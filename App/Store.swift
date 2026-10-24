@@ -227,15 +227,13 @@ import TVCore
         saveSubscriptionList()
         rebuildSubscription()
     }
-    func moveSourceGroup(_ address: String, before target: String, includeHidden: Bool) {
+    func moveSourceGroup(_ address: String, onto target: String, includeHidden: Bool) {
         let shown = sourceGroups(includeHidden: includeHidden).compactMap { group -> String? in
             guard case .subscription(let value) = group.kind else { return nil }
             return value
         }
-        guard address != target, var next = Optional(shown), let from = next.firstIndex(of: address), next.contains(target) else { return }
-        let moved = next.remove(at: from)
-        let index = next.firstIndex(of: target) ?? next.endIndex
-        next.insert(moved, at: index)
+        let next = SubscriptionOrder.moving(address, onto: target, in: shown)
+        guard next != shown else { return }
         subscriptions = SubscriptionOrder.applying(displayed: next, to: subscriptions)
         saveSubscriptionList()
         rebuildSubscription()
@@ -321,7 +319,7 @@ import TVCore
     func sourceGroups(includeHidden: Bool) -> [SourceGroup] {
         guard let config = subscription else { return [] }
         let pins = pinnedSources.arrange(config.sites, origin: config.origin).filter { pinnedSources.contains($0, origin: config.origin) }
-        return SourceGroups.make(entries: subscriptions, documents: documents, builtIns: config.sites.filter(\.isBuiltIn), builtInOrigin: config.origin, pinOrder: pins, userHidden: { hiddenSources.contains($0, origin: config.origin) }, includeHidden: includeHidden, jarURL: config.spiderURL)
+        return SourceGroups.make(entries: subscriptions, documents: documents, builtIns: config.sites.filter(\.isBuiltIn), builtInOrigin: config.origin, mergedSites: config.sites, pinOrder: pins, userHidden: { hiddenSources.contains($0, origin: config.origin) }, includeHidden: includeHidden, jarURL: config.spiderURL)
     }
 
     func catalogChannel(_ resolved: Channel, video: Video, episode: Episode, client: CatalogClient,

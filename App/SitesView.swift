@@ -89,7 +89,7 @@ struct SitesView: View {
                 .draggable(group.id)
                 .dropDestination(for: String.self) { items, _ in
                     guard query.isEmpty, let address = items.first else { return false }
-                    store.moveSourceGroup(address, before: group.id, includeHidden: includeHidden)
+                    store.moveSourceGroup(address, onto: group.id, includeHidden: includeHidden)
                     return true
                 }
         } else {

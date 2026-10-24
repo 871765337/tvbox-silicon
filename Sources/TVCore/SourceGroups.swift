@@ -24,7 +24,7 @@ public struct SourceGroup: Equatable, Sendable, Identifiable {
 }
 
 public enum SourceGroups {
-    public static func make(entries: [SubscriptionEntry], documents: [String: Subscription], builtIns: [Site], builtInOrigin: URL, pinOrder: [Site], userHidden: (Site) -> Bool, includeHidden: Bool, jarURL: URL?) -> [SourceGroup] {
+    public static func make(entries: [SubscriptionEntry], documents: [String: Subscription], builtIns: [Site], builtInOrigin: URL, mergedSites: [Site], pinOrder: [Site], userHidden: (Site) -> Bool, includeHidden: Bool, jarURL: URL?) -> [SourceGroup] {
         func isPinned(_ site: Site, fallback: URL) -> Bool {
             let origin = site.origin(or: fallback)
             return pinOrder.contains { $0.sourceKey == site.sourceKey && $0.origin(or: fallback) == origin }
@@ -38,8 +38,8 @@ public enum SourceGroups {
         let builtInSites = builtIns.filter { eligible($0) && !isPinned($0, fallback: builtInOrigin) }
         if !builtInSites.isEmpty { groups.append(SourceGroup(kind: .builtIn, title: "Built-in", sites: builtInSites)) }
         for entry in entries where entry.enabled {
-            guard let document = documents[entry.address] else { continue }
-            let own = document.sites.filter { !$0.isBuiltIn && !isPinned($0, fallback: document.origin) && eligible($0) }
+            guard let origin = documents[entry.address]?.origin else { continue }
+            let own = mergedSites.filter { !$0.isBuiltIn && $0.provenance?.origin == origin && !isPinned($0, fallback: origin) && eligible($0) }
             let arranged = SourceStrategy.arrange(own, where: { _ in true })
             if !arranged.isEmpty { groups.append(SourceGroup(kind: .subscription(entry.address), title: entry.title, sites: arranged)) }
         }
@@ -48,6 +48,17 @@ public enum SourceGroups {
 }
 
 public enum SubscriptionOrder {
+    /// The displayed addresses after `address` is dropped onto the header of `target`. Dropping onto an
+    /// earlier header inserts before it, onto a later header inserts after it. Indexes are from before the removal.
+    public static func moving(_ address: String, onto target: String, in displayed: [String]) -> [String] {
+        guard address != target, let from = displayed.firstIndex(of: address), let to = displayed.firstIndex(of: target) else { return displayed }
+        var next = displayed
+        next.remove(at: from)
+        // After the removal a later target sits at `to - 1`, so inserting at `to` lands after it.
+        next.insert(address, at: to)
+        return next
+    }
+
     public static func applying(displayed: [String], to subscriptions: [SubscriptionEntry]) -> [SubscriptionEntry] {
         let shown = Set(displayed)
         var next = displayed.makeIterator()
