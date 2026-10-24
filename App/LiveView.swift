@@ -414,7 +414,7 @@ struct FavoritesView: View {
     @Environment(Store.self) private var store
     var body: some View {
         Group {
-            if store.favorites.isEmpty {
+            if store.favorites.liveChannels.isEmpty {
                 EmptyPage(symbol: AppSection.favorites.icon, title: L10n.text("No Favorites Yet"),
                           message: L10n.text("Tap the heart next to a live channel to save it on this device."),
                           action: AppSection.live.title, actionSymbol: AppSection.live.icon, perform: { store.section = .live })
@@ -422,7 +422,7 @@ struct FavoritesView: View {
             else {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: Layout.cardMin), spacing: 12)], spacing: 12) {
-                        ForEach(store.favorites) { ChannelCard(channel: $0) }
+                        ForEach(store.favorites.liveChannels) { ChannelCard(channel: $0) }
                     }.pageContainer()
                 }
             }

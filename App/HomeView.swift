@@ -20,7 +20,7 @@ struct HomeView: View {
                             pinnedSources(config)
                         }
                         RecommendationsView(config: config)
-                        if !store.favorites.isEmpty { favorites }
+                        if !store.favorites.liveChannels.isEmpty { favorites }
                         if !config.lives.isEmpty { playlists(config).id("live") }
                     } else {
                         welcome
@@ -172,7 +172,7 @@ struct HomeView: View {
             SectionHeader(title: L10n.text("Favorites")) { store.section = .favorites }
             ChipRow {
                 HStack(spacing: Layout.cardSpacing) {
-                    ForEach(store.favorites.prefix(12)) { ChannelCard(channel: $0).frame(width: Layout.cardMin) }
+                    ForEach(store.favorites.liveChannels.prefix(12)) { ChannelCard(channel: $0).frame(width: Layout.cardMin) }
                 }.padding(.vertical, 6)
             }
         }

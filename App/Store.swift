@@ -30,7 +30,7 @@ import TVCore
     var subscriptionErrors: [String: String] = [:]
     /// The last good copy of each subscription, by address.
     private(set) var documents: [String: Subscription] = [:]
-    var favorites: [Channel] = []
+    let favorites: Favorites
     var importing = false
     var error: String?
     var notice: String?
@@ -76,6 +76,7 @@ import TVCore
         #endif
         pinnedSources = PinnedSources(defaults: playbackDefaults)
         hiddenSources = HiddenSources(defaults: playbackDefaults)
+        favorites = Favorites(defaults: defaults)
         SourceHideReports.report = { [hiddenSources] site, origin, error in
             hiddenSources.note(site, origin: origin, error: error, health: .shared)
         }
@@ -103,7 +104,6 @@ import TVCore
             defaults.removeObject(forKey: "subscription")
         }
         rebuildSubscription(resetting: false)
-        if let data = defaults.data(forKey: "favorites") { favorites = (try? JSONDecoder().decode([Channel].self, from: data)) ?? [] }
         DownloadLibrary.shared.resolver = { [weak self] item in
             guard let self else { throw CancellationError() }
             return try await self.resolveDownload(item)
@@ -299,16 +299,8 @@ import TVCore
         }
         section = .search
     }
-    func toggleFavorite(_ channel: Channel) {
-        if let index = favorites.firstIndex(where: { Self.same($0, channel) }) { favorites.remove(at: index) }
-        else { favorites.append(channel) }
-        defaults.set(try? JSONEncoder().encode(favorites), forKey: "favorites")
-    }
-    func isFavorite(_ channel: Channel) -> Bool { favorites.contains { Self.same($0, channel) } }
-    /// A live room's title changes while it streams, so rooms match by their address.
-    private static func same(_ saved: Channel, _ channel: Channel) -> Bool {
-        saved.id == channel.id || (LiveCatalog.isRoom(channel.url) && saved.url == channel.url)
-    }
+    func toggleFavorite(_ channel: Channel) { favorites.toggle(.live(channel)) }
+    func isFavorite(_ channel: Channel) -> Bool { favorites.contains(.live(channel)) }
 
     func orderedSites(_ config: Subscription) -> [Site] {
         let sites = SourceLists.browsable(config.sites, jarURL: config.spiderURL) { hiddenSources.contains($0, origin: config.origin) }
