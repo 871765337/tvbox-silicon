@@ -4,9 +4,12 @@ import TVCore
 struct SitesView: View {
     @Environment(Store.self) private var store
     @State private var query = ""
-    /// Reset with the page, not with a pushed source: the state lives here and `.task(id:)` only reapplies it on a section change.
+    /// Reset with the page, not with a pushed source: the state lives here and `prepared` keeps the default fold to once per visit.
     @State private var includeHidden = false
-    @State private var collapsed: Set<String> = []
+    /// A group is open only when its id is here, so a group that shows up later starts folded.
+    @State private var expanded: Set<String> = Self.defaultExpanded
+    @State private var prepared = false
+    private static let defaultExpanded: Set<String> = ["pinned", "builtIn"]
     /// The fold as it was when a search began; restored when the search is cleared.
     @State private var foldBeforeSearch: Set<String>?
     var body: some View {
@@ -17,7 +20,7 @@ struct SitesView: View {
                     LazyVStack(alignment: .leading, spacing: Layout.cardSpacing) {
                         ForEach(groups) { group in
                             groupHeader(group)
-                            if !collapsed.contains(group.id) {
+                            if expanded.contains(group.id) {
                                 LazyVGrid(columns: Layout.cardColumns, spacing: Layout.cardSpacing) {
                                     ForEach(group.sites) { site in
                                         let dimmed = includeHidden && store.hiddenSources.contains(site, origin: config.origin)
@@ -43,22 +46,30 @@ struct SitesView: View {
         }
         .screenBackdrop()
         .catalogSearchable(text: $query, prompt: L10n.text("Find a source")).tabTitle(L10n.text("Sources"))
-        .task(id: store.section) { applyDefaultFold() }
+        .task(id: store.section) {
+            if store.section == .sites && !prepared {
+                applyDefaultFold()
+                prepared = true
+            }
+        }
+        .onChange(of: store.section) { _, new in
+            if new != .sites { prepared = false }
+        }
         .onChange(of: query) { old, new in
             if old.isEmpty && !new.isEmpty {
-                foldBeforeSearch = collapsed
-                collapsed.subtract(store.sourceGroups(includeHidden: includeHidden).map(\.id))
+                foldBeforeSearch = expanded
+                expanded.formUnion(store.sourceGroups(includeHidden: includeHidden).map(\.id))
             } else if !old.isEmpty && new.isEmpty, let saved = foldBeforeSearch {
-                collapsed = saved
+                expanded = saved
                 foldBeforeSearch = nil
             }
         }
     }
 
     private func groupHeader(_ group: SourceGroup) -> some View {
-        let open = !collapsed.contains(group.id)
+        let open = expanded.contains(group.id)
         return Button {
-            if open { collapsed.insert(group.id) } else { collapsed.remove(group.id) }
+            if open { expanded.remove(group.id) } else { expanded.insert(group.id) }
         } label: {
             HStack(spacing: 8) {
                 Text(L10n.text(group.title)).font(.headline).lineLimit(1)
@@ -76,10 +87,7 @@ struct SitesView: View {
     /// The default view of the page: hidden sources out, subscription groups folded.
     private func applyDefaultFold() {
         includeHidden = false
-        collapsed = Set(store.sourceGroups(includeHidden: false).filter { group in
-            if case .subscription = group.kind { return true }
-            return false
-        }.map(\.id))
+        expanded = Self.defaultExpanded
         foldBeforeSearch = nil
     }
 }
