@@ -19,6 +19,8 @@ struct GlobalSearchView: View {
     @Environment(Store.self) private var store
     @FocusState private var inputFocused: Bool
     @State private var showFailures = false
+    /// The sources being searched right now, under the summary; folded away unless asked for.
+    @AppStorage("searchShowsActivity") private var showsActivity = false
     /// Whether the end of the results is on screen, so finished pages can ask for the next.
     @State private var endVisible = false
     @AppStorage("videoSearchHistory") private var historyData = Data()
@@ -75,11 +77,18 @@ struct GlobalSearchView: View {
         #else
         searchResults
             .scrollPosition(id: $model.scrollID)
-            .topBar { if let config = store.subscription { searchHeader(config) } }
+            // A hard edge: the summary, the activity and the source chips are a tall bar, and results showed through it.
+            .topBar(hardEdge: true) { if let config = store.subscription, showsHeader { searchHeader(config) } }
             .screenBackdrop()
             .screenTitle(L10n.text("Global Search"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            // The system search bar, as on Sources, so the two pages line up under their titles. Only the
+            // keyboard's Search key searches; clearing the field goes back to the recent searches.
+            .searchable(text: $model.draft, placement: .navigationBarDrawer(displayMode: .always), prompt: Text(L10n.text("Search videos")))
+            .searchFocused($inputFocused)
+            .onSubmit(of: .search) { if let config = store.subscription { submit(config) } }
+            .onChange(of: model.draft) { _, draft in if draft.isEmpty && !model.keyword.isEmpty { model.reset() } }
             .scrollDismissesKeyboard(.interactively)
             #endif
             .sheet(isPresented: $showFailures) { failureDetails }
@@ -92,6 +101,23 @@ struct GlobalSearchView: View {
                 if let config = store.subscription { model.resumeSuspended(config: config) }
             }
             .onDisappear { endVisible = false; model.suspend() }
+            #if DEBUG
+            // `-qaSection search -qaQuery <text>` searches once the subscription has loaded, for screenshots.
+            .task(id: store.subscription?.origin) {
+                guard QALaunch.section == .search, model.keyword.isEmpty, let config = store.subscription,
+                      let text = UserDefaults.standard.string(forKey: "qaQuery") else { return }
+                model.draft = text; submit(config)
+            }
+            #endif
+        #endif
+    }
+
+    /// On iPhone and iPad the search bar is the system's, so the bar below it waits for a search.
+    private var showsHeader: Bool {
+        #if os(iOS)
+        !model.keyword.isEmpty
+        #else
+        true
         #endif
     }
 
@@ -175,7 +201,7 @@ struct GlobalSearchView: View {
     private func searchHeader(_ config: Subscription) -> some View {
         @Bindable var model = model
         return VStack(alignment: .leading, spacing: 14) {
-            #if !os(tvOS)
+            #if os(macOS)
             let trimmed = model.draft.trimmingCharacters(in: .whitespacesAndNewlines)
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").font(.system(size: 17, weight: .medium))
@@ -236,8 +262,9 @@ struct GlobalSearchView: View {
                 // the source chips below, so the remote passed them by. As a section, moving onto the row lands on them.
                 .focusSection()
                 #endif
-                if model.busy {
+                if model.busy && showsActivity {
                     SearchActivityList(origin: config.origin, completed: model.completed, total: model.total, runStart: model.runStart)
+                        .transition(.opacity)
                 }
                 if sourceItems.count > 1 {
                     #if os(tvOS)
@@ -261,7 +288,12 @@ struct GlobalSearchView: View {
         }
         .frame(maxWidth: model.keyword.isEmpty ? 760 : Layout.maxWidth - Layout.gutter * 2)
         .frame(maxWidth: .infinity)
+        #if os(iOS)
+        // Right under the search bar, which has its own margin.
+        .padding(.horizontal, Layout.gutter).padding(.top, 6).padding(.bottom, 12)
+        #else
         .padding(.horizontal, Layout.gutter).padding(.vertical, 16)
+        #endif
     }
 
     private var searchSummary: some View {
@@ -305,6 +337,13 @@ struct GlobalSearchView: View {
     @ViewBuilder private func searchActionButtons(_ config: Subscription) -> some View {
         if model.busy {
             Button { model.stop() } label: { searchActionLabel(L10n.text("Stop"), symbol: "stop.fill") }.searchAction()
+            let title = L10n.text(showsActivity ? "Hide Details" : "Show Details")
+            Button { withAnimation(.smooth(duration: 0.25)) { showsActivity.toggle() } } label: {
+                Image(systemName: "chevron.down").font(.footnote.weight(.semibold))
+                    .rotationEffect(.degrees(showsActivity ? 180 : 0))
+            }
+            .searchAction()
+            .accessibilityLabel(title).help(title)
         } else if model.completed < model.total {
             Button { model.resume(config: config) } label: { searchActionLabel(L10n.text("Continue search"), symbol: "arrow.clockwise") }.searchAction()
         }
@@ -337,7 +376,7 @@ struct GlobalSearchView: View {
     }
 
     private var idle: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: idleSpacing) {
             #if os(tvOS)
             Text(L10n.text("Search all available sources in your subscription.")).font(.body).foregroundStyle(.secondary)
             if !history.isEmpty {
@@ -368,19 +407,19 @@ struct GlobalSearchView: View {
                                     Text(item).font(.body).lineLimit(1)
                                     Spacer(minLength: 0)
                                 }
-                                .padding(.leading, 18).frame(minHeight: 52).frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.leading, 18).frame(minHeight: 48).frame(maxWidth: .infinity, alignment: .leading)
                                 .contentShape(Rectangle())
                             }.buttonStyle(.plain)
                             Button { removeSearch(item) } label: {
                                 Image(systemName: "xmark").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                                    .frame(width: 36, height: 52)
+                                    .frame(width: 36, height: 48)
                                     .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(L10n.text("Remove"))
                             Button { useHistory(item) } label: {
                                 Image(systemName: "arrow.up.left").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                                    .padding(.trailing, 18).frame(height: 52)
+                                    .padding(.trailing, 18).frame(height: 48)
                                     .contentShape(Rectangle())
                             }.buttonStyle(.plain)
                         }
@@ -391,6 +430,14 @@ struct GlobalSearchView: View {
             }
             #endif
         }
+    }
+
+    private var idleSpacing: CGFloat {
+        #if os(tvOS)
+        22
+        #else
+        8
+        #endif
     }
 
     private var failureDetails: some View {

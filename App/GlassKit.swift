@@ -64,10 +64,11 @@ extension View {
 
     #if !os(tvOS)
     /// A bar pinned to the top that content scrolls under: a soft scroll edge on OS 26, a bar material before.
-    @ViewBuilder func topBar<Bar: View>(@ViewBuilder _ bar: () -> Bar) -> some View {
+    /// `hardEdge` for a tall bar, which content must not show through.
+    @ViewBuilder func topBar<Bar: View>(hardEdge: Bool = false, @ViewBuilder _ bar: () -> Bar) -> some View {
         let bar = bar()
         if #available(macOS 26, iOS 26, *) {
-            scrollEdgeEffectStyle(.soft, for: .top).safeAreaBar(edge: .top, spacing: 0) { bar }
+            scrollEdgeEffectStyle(hardEdge ? .hard : .soft, for: .top).safeAreaBar(edge: .top, spacing: 0) { bar }
         } else {
             safeAreaInset(edge: .top, spacing: 0) { bar.background(.bar) }
         }

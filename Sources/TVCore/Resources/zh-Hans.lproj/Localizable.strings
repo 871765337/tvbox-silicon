@@ -371,6 +371,7 @@
 "%lld of %lld sources didn't respond, so results may be incomplete." = "%lld / %lld 个源未响应，结果可能不完整。";
 "Try another keyword." = "请更换关键词。";
 "Show Details" = "查看详情";
+"Hide Details" = "收起详情";
 "%lld of %lld sources responded" = "%lld / %lld 个源已响应";
 "First-time setup can take a few minutes. Keep the app open." = "首次准备可能需要几分钟，请保持 App 打开。";
 "This source requires Android features that the plugin runtime does not support yet." = "此源依赖插件运行时尚未支持的 Android 功能。";
