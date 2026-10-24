@@ -1,7 +1,7 @@
 import Foundation
 
-/// Taps on the picture, as in YouTube: one shows or hides the controls at once; a second soon after, on a side, undoes
-/// that and skips 10 seconds, and each further tap on that side skips 10 more. Two in the middle play or pause.
+/// Taps on the picture, as in YouTube: one shows or hides the controls at once; a second soon after, on a side, skips
+/// 10 seconds with the controls hidden, and each further tap on that side skips 10 more. Two in the middle play or pause.
 public struct PictureTaps: Sendable {
     public enum Zone: Sendable { case back, middle, forward }
 
@@ -9,7 +9,7 @@ public struct PictureTaps: Sendable {
         case toggleControls
         /// The second tap of two in the middle: undo the first one's toggle, then play or pause.
         case togglePlayback
-        /// Skip `seconds`; `total` is the run so far, for its label. `first` undoes the first tap's toggle.
+        /// Skip `seconds`; `total` is the run so far, for its label. `first` is the second tap of the double tap.
         case skip(seconds: Double, total: Double, first: Bool)
     }
 
