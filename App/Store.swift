@@ -16,6 +16,7 @@ import TVCore
     let playbackHistory: PlaybackHistory
     let playbackDefaults: UserDefaults
     let pinnedSources: PinnedSources
+    let hiddenSources: HiddenSources
     /// The history entry being resumed; another entry, or leaving the page, replaces or cancels it.
     private(set) var resumingHistoryID: String?
     private var resumeTask: Task<Void, Never>?
@@ -74,6 +75,10 @@ import TVCore
         playbackHistory = .shared
         #endif
         pinnedSources = PinnedSources(defaults: playbackDefaults)
+        hiddenSources = HiddenSources(defaults: playbackDefaults)
+        SourceHideReports.report = { [hiddenSources] site, origin, error in
+            hiddenSources.note(site, origin: origin, error: error, health: .shared)
+        }
         autoPlayNext = defaults.object(forKey: "autoPlayNextEpisode") == nil || defaults.bool(forKey: "autoPlayNextEpisode")
         let saved = defaults.data(forKey: "subscriptions").flatMap { try? JSONDecoder().decode([SubscriptionEntry].self, from: $0) }
         var entries = saved ?? [], copies: [String: Subscription] = [:]
@@ -267,7 +272,10 @@ import TVCore
     private func rebuildSubscription(resetting: Bool = true) {
         if resetting { searchModel.reset(); recommendationModel.reset() }
         subscription = Subscription.merge(subscriptions.filter(\.enabled).compactMap { documents[$0.address] })?.withBuiltInSites()
-        if let subscription { Self.registerPlugins(subscription) }
+        if let subscription {
+            Self.registerPlugins(subscription)
+            hiddenSources.backfill(subscription.sites, origin: subscription.origin, health: .shared)
+        }
     }
     func searchVideos(_ title: String) {
         guard let config = subscription else { return }

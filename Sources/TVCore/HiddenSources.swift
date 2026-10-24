@@ -49,3 +49,8 @@ import Observation
         defaults.set(true, forKey: Self.backfillKey)
     }
 }
+
+/// Set by the app so catalog requests can hide a source without TVCore owning the defaults suite.
+@MainActor public enum SourceHideReports {
+    public static var report: ((Site, URL, Error?) -> Void)?
+}
