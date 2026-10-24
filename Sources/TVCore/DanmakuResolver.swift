@@ -5,12 +5,15 @@ public struct DanmakuResolver: Sendable {
     public let http: DanmakuHTTP
     public let dandanServer: String
     public let dmkuServer: URL
+    /// Asked for an official page's comments when dmku fails or has none. It takes `type=json&id=<page>`.
+    public let backupServer: URL?
     public let officialLookup: Bool
+    public static let defaultBackupServer = URL(string: "https://danmu.zxz.ee/")!
     public init(cache: MediaCache = .shared, http: DanmakuHTTP = .init(),
                 dandanServer: String = CatalogDanmakuClient.defaultServer, dmkuServer: URL = URL(string: "https://dmku.hls.one/")!,
-                officialLookup: Bool = true) {
+                backupServer: URL? = Self.defaultBackupServer, officialLookup: Bool = true) {
         self.cache = cache; self.http = http; self.dandanServer = (try? CatalogDanmakuClient(address: dandanServer).server.absoluteString) ?? dandanServer
-        self.dmkuServer = dmkuServer; self.officialLookup = officialLookup
+        self.dmkuServer = dmkuServer; self.backupServer = backupServer; self.officialLookup = officialLookup
     }
     public static func episodeKey(_ context: PlaybackHistoryContext) -> String {
         CatalogDanmakuMatcher.episodeNumber(context.episodeName).map { "episode:\($0)" } ?? context.episodeName
@@ -95,14 +98,30 @@ public struct DanmakuResolver: Sendable {
             guard let mapping, let track = mapping.track(for: context), let page = track.page,
                   let safe = OfficialVideoPage.validated(page.absoluteString) else { return Outcome(mapping: mapping, responded: true) }
             stage = "comments"
-            var url = URLComponents(url: dmkuServer, resolvingAgainstBaseURL: false)!
-            url.queryItems = [.init(name: "ac", value: "dm"), .init(name: "url", value: safe.absoluteString)]
-            let request = URLRequest(url: url.url!, timeoutInterval: 35)
-            let comments = try CatalogDanmakuParser.parse(await http.send(request))
+            // dmku first; the backup only when dmku fails or has no comments for the page.
+            var servers = [("dmku", dmkuServer, [URLQueryItem(name: "ac", value: "dm"), .init(name: "url", value: safe.absoluteString)])]
+            if let backupServer {
+                servers.append((backupServer.host() ?? "backup", backupServer, [.init(name: "type", value: "json"), .init(name: "id", value: safe.absoluteString)]))
+            }
+            var comments: [CatalogDanmakuComment] = [], source = "dmku", failure: Error? = nil, answered = false
+            for (name, server, query) in servers {
+                var url = URLComponents(url: server, resolvingAgainstBaseURL: false)!
+                url.queryItems = query
+                do {
+                    comments = try CatalogDanmakuParser.parse(await http.send(URLRequest(url: url.url!, timeoutInterval: 35)))
+                    source = name; answered = true
+                    if !comments.isEmpty { break }
+                } catch {
+                    if error is CancellationError { throw error }
+                    failure = error
+                    Diagnostics.shared.record(.debug, "danmaku", "provider=\(provider) server=\(name) failed=\((error as NSError).domain):\((error as NSError).code)")
+                }
+            }
+            if !answered, let failure { throw failure }
             try Task.checkCancellation()
-            Diagnostics.shared.record(.debug, "danmaku", "provider=\(provider) comments=\(comments.count) seconds=\(Int(Date().timeIntervalSince(started)))")
+            Diagnostics.shared.record(.debug, "danmaku", "provider=\(provider) server=\(source) comments=\(comments.count) seconds=\(Int(Date().timeIntervalSince(started)))")
             return Outcome(result: AutomaticDanmakuResult(comments: comments, track: mapping.title + " · " + track.title,
-                source: "dmku · " + provider, state: comments.isEmpty ? "unmatched" : "loaded"), mapping: mapping, responded: true)
+                source: source + " · " + provider, state: comments.isEmpty ? "unmatched" : "loaded"), mapping: mapping, responded: true)
         } catch {
             if !(error is CancellationError) {
                 let failure = error as NSError

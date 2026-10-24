@@ -34,12 +34,22 @@ public enum CatalogDanmakuParser {
               root["comments"] != nil || root["danmuku"] != nil else {
             throw TVError.unsupported(L10n.text("The service did not return a supported danmaku list."))
         }
-        if let rows = root["danmuku"] as? [[Any]], (root["code"] as? NSNumber)?.intValue == 23 {
+        // dmku (code 23): time,"right"|"top"|"bottom",color,size,text. danmu.zxz.ee (code 200): time,mode,color,text,sent.
+        let code = (root["code"] as? NSNumber)?.intValue
+        if let rows = root["danmuku"] as? [[Any]], code == 23 || code == 200 {
             var seen = Set<CatalogDanmakuComment>()
             return rows.prefix(maximumComments).compactMap { row in
-                guard row.count >= 5, let time = row[0] as? NSNumber, let text = row[4] as? String else { return nil }
-                let direction = row[1] as? String ?? "right"
-                let mode = direction == "top" ? 5 : direction == "bottom" ? 4 : 1
+                guard row.count >= 5, let time = row[0] as? NSNumber else { return nil }
+                let mode: Int, text: String
+                if code == 23 {
+                    guard let value = row[4] as? String else { return nil }
+                    let direction = row[1] as? String ?? "right"
+                    mode = direction == "top" ? 5 : direction == "bottom" ? 4 : 1; text = value
+                } else {
+                    // Its first row announces the count ("有475条弹幕正在赶来…"); it isn't a comment.
+                    guard let value = row[3] as? String, let number = row[1] as? NSNumber, !value.contains("条弹幕正在赶来") else { return nil }
+                    mode = number.intValue; text = value
+                }
                 var colorText = (row[2] as? String ?? "").replacingOccurrences(of: "#", with: "")
                 if colorText.count == 3 { colorText = colorText.map { "\($0)\($0)" }.joined() }
                 let color = UInt32(colorText, radix: 16) ?? 0xffffff
