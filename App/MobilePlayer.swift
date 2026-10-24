@@ -152,12 +152,13 @@ struct MobilePlayerView: View {
         case .toggleControls:
             let showing = !chromeVisible
             toggleChrome()
-            if showing { settle() }
+            if showing { settle(); clearLabels() }
         case .togglePlayback:
             toggleChrome()
             session.togglePlayback()
-        case .skip(let seconds, let total, let first):
-            if first { toggleChrome() }
+        case .skip(let seconds, let total, _):
+            // Hidden whether the first tap showed the controls or hid them.
+            hideChrome()
             session.skip(seconds)
             nowPlaying.update(title: channel.name, session: session)
             skipped = (seconds > 0, total)
@@ -179,6 +180,18 @@ struct MobilePlayerView: View {
         }
     }
 
+    /// A gesture's label has the picture to itself: the controls make way, unless loading or a failure keeps them up.
+    private func hideChrome() {
+        if chromeVisible && showsTransport { toggleChrome() }
+    }
+
+    /// The controls a tap brings up replace the labels a skip or a slide leaves for a moment.
+    private func clearLabels() {
+        skippedTask?.cancel(); skipped = nil
+        guard !leveling else { return }
+        levelTask?.cancel(); level = nil; mountsVolume = false
+    }
+
     private var screen: UIScreen? { (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen }
 
     private func swiped(_ phase: PictureGestures.Swipe) {
@@ -188,7 +201,7 @@ struct MobilePlayerView: View {
             let start = clock.currentPosition
             swipeStart = start
             clock.scrub(to: start)
-            if chromeVisible { toggleChrome() }
+            hideChrome()
         case .began(let slide):
             let volume = slide == .volume
             guard volume || screen != nil else { return }
@@ -198,6 +211,7 @@ struct MobilePlayerView: View {
             if volume { mountsVolume = true }
             level = (volume, start, start)
             leveling = true
+            hideChrome()
         case .moved(let moved, let size):
             if let swipeStart {
                 clock.scrub(to: PictureSeek.target(from: swipeStart, moved: moved.width, width: size.width, duration: clock.duration))
@@ -309,7 +323,7 @@ struct MobilePlayerView: View {
             boost = started; holding = true
             session.setBoost(Float(started.rate))
             // The picture to itself, as in YouTube and Douyin.
-            if chromeVisible { toggleChrome() }
+            hideChrome()
         case .moved(let offset):
             guard holding, var moved = boost else { return }
             moved.moved(x: offset.width, y: offset.height)
