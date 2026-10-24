@@ -987,6 +987,8 @@
 "%lld s" = "%lld 秒";
 "Brightness" = "亮度";
 "Slide for Brightness and Volume" = "滑動調整亮度和音量";
+"Tab Bar Labels" = "標籤列文字";
+"Off shows only the icons in the tab bar along the bottom." = "關閉後，底部標籤列只顯示圖示。";
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "在影片左側上下滑動調整亮度，在右側上下滑動調整音量。";
 "Custom Search Order" = "自訂搜尋順序";
 "Sources at the top are searched first, and their results are listed first." = "排在前面的來源優先搜尋，結果也排在前面。";
@@ -1003,5 +1005,3 @@
 "Show on Watch Now" = "在「立即觀看」中顯示";
 "A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything." = "關閉的欄目只是不在「立即觀看」中顯示，播放記錄、收藏、點播來源和直播裡的內容都還在。";
 "Choose what Watch Now shows in Settings." = "可在設定中選擇「立即觀看」顯示哪些內容。";
-"Tab Bar Labels" = "標籤列文字";
-"Off shows only the icons in the tab bar along the bottom." = "關閉後，底部標籤列只顯示圖示。";
