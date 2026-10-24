@@ -983,3 +983,4 @@
 "Choose a source to move it. Sources at the top are searched first, and their results are listed first." = "ソースを選んで移動します。上にあるソースから先に検索し、その結果を先に表示します。";
 "Move to Top" = "一番上へ移動";
 "Move to Bottom" = "一番下へ移動";
+"The plugin runtime could not complete this request. Try again or use another source." = "プラグインの実行環境でリクエストを完了できませんでした。再試行するか、別のソースを使用してください。";

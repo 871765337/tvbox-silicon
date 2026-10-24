@@ -41,6 +41,19 @@ import Testing
     #expect(PluginFailure.diagnostic(source: "Luck", android) == "source=Luck code=unsupported_android NoClassDefFoundError missingClass=android.util.AtomicFile")
     #expect(PluginFailure.message(["error": .string("boom")], language: "en") == "Plugin error: boom")
 }
+@Test func embeddedPluginFailuresAreLocalizedAndKeepTheNativeReason() {
+    let failure: [String: JSONValue] = ["error": .string("The embedded plugin request failed. See diagnostic logs."), "errorCode": .string("embedded_request")]
+    let expected = [
+        "en": "The plugin runtime could not complete this request. Try again or use another source.",
+        "zh-Hans": "插件运行时无法完成此请求，请重试或使用其他来源。",
+        "zh-Hant": "外掛執行環境無法完成此請求，請重試或使用其他來源。",
+        "ja": "プラグインの実行環境でリクエストを完了できませんでした。再試行するか、別のソースを使用してください。"
+    ]
+    for (language, message) in expected {
+        #expect(PluginFailure.message(failure, language: language) == message)
+    }
+    #expect(PluginFailure.diagnostic(source: "test", failure) == "source=test code=embedded_request The embedded plugin request failed. See diagnostic logs.")
+}
 #if os(macOS)
 @Test func structuredPluginFailuresAreLocalizedWithoutChangingHostOrStatus() {
     let failure: [String: JSONValue] = ["error": .string("raw diagnostic"), "errorCode": .string("source_http"), "host": .string("example.com"), "status": .number(403)]

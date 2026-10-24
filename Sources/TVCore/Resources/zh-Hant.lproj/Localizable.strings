@@ -983,3 +983,4 @@
 "Choose a source to move it. Sources at the top are searched first, and their results are listed first." = "選擇一個來源來移動它。排在前面的來源優先搜尋，結果也排在前面。";
 "Move to Top" = "移到最前";
 "Move to Bottom" = "移到最後";
+"The plugin runtime could not complete this request. Try again or use another source." = "外掛執行環境無法完成此請求，請重試或使用其他來源。";
