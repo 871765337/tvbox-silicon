@@ -76,6 +76,17 @@ import Testing
         #expect(QuarkFiles.file(["fid": "d", "file_name": "来自：分享", "dir": true])?.isFolder == true)
     }
 
+    @Test func aVideoTooLargeToDownloadPlaysTheTranscodedCopy() async throws {
+        QuarkStub.reset()
+        let drive = QuarkFiles(.quark, session: QuarkStub.session, account: { "__pus=abc" })
+        let url = try await drive.stream("big", name: "夫妇.mp4")
+        #expect(url.scheme == CloudStreams.scheme)
+        #expect(QuarkStub.calls == ["/1/clouddrive/file/download", "/1/clouddrive/file/v2/play"])
+        CloudStreams.stop(url)
+        // A song has no transcoded copy, so the refusal is the viewer's to read.
+        await #expect(throws: TVError.self) { try await drive.stream("big", name: "歌.mp3") }
+    }
+
     @Test func aGuestThatMayNotBrowseSignsInOnce() async throws {
         AListStub.reset()
         let server = AListServer(id: "s", name: "Stub", address: "https://alist.test", username: "me", password: "pw")
@@ -149,6 +160,41 @@ import Testing
         player.pause()
         CloudStreams.stop(url)
     }
+}
+
+/// A Quark drive whose account may not download its files as they are, only play the transcoded copy.
+final class QuarkStub: URLProtocol, @unchecked Sendable {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var log: [String] = []
+    static var calls: [String] { lock.withLock { log } }
+    static func reset() { lock.withLock { log = [] } }
+    static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [QuarkStub.self]
+        return URLSession(configuration: configuration)
+    }()
+    override class func canInit(with request: URLRequest) -> Bool { request.url?.host() == "drive-pc.quark.cn" }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        guard let url = request.url, let client else { return }
+        Self.lock.withLock { Self.log.append(url.path) }
+        let answer: [String: Any]
+        switch url.path {
+        case "/1/clouddrive/file/download":
+            answer = ["status": 400, "code": 23018, "message": "download file size limit[0f72b19798924b5191194e364cf4265e]"]
+        case "/1/clouddrive/file/v2/play":
+            answer = ["status": 200, "code": 0, "data": ["video_list": [
+                ["resolution": "super", "accessable": false],
+                ["resolution": "normal", "accessable": true, "video_info": ["url": "https://video-play.quark.test/a.mp4", "size": 1000]],
+            ]]]
+        default:
+            answer = ["status": 404, "code": 404, "message": "not found"]
+        }
+        client.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])!, cacheStoragePolicy: .notAllowed)
+        client.urlProtocol(self, didLoad: try! JSONSerialization.data(withJSONObject: answer))
+        client.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
 }
 
 /// An AList server that wants a sign-in from guests and protects /Private with "1234".
