@@ -54,9 +54,27 @@ public struct PlaybackHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     public var resumePosition: Double { completed ? 0 : position }
     public var progress: Double { duration > 0 ? min(1, max(0, position / duration)) : 0 }
 
+    public init(context: PlaybackHistoryContext, position: Double, duration: Double, updatedAt: Date) {
+        self.context = context
+        self.position = position
+        self.duration = duration
+        self.updatedAt = updatedAt
+    }
+
     public static func resumeTarget(_ position: Double, duration: Double) -> Double? {
         guard position.isFinite, position >= 0, duration.isFinite, duration > 0 else { return nil }
         return min(position, max(0, duration - 0.25))
+    }
+}
+
+extension PlaybackHistoryEntry {
+    /// The favorite this row points at: the cloud file, or this episode. Not the whole video.
+    public func favoriteItem() -> FavoriteItem {
+        if context.sourceKey == CloudFiles.sourceKey {
+            return .cloud(FavoriteCloudFile(driveKey: context.episodeFlag, folderID: context.videoID, folderName: context.videoName, fileID: context.episodeID, fileName: context.episodeName, size: 0))
+        }
+        let video = FavoriteVideo(origin: context.origin, sourceKey: context.sourceKey, sourceName: context.sourceName, videoID: context.videoID, videoName: context.videoName, poster: context.poster, posterHeaders: context.posterHeaders ?? [:], year: context.year)
+        return .episode(FavoriteEpisode(video: video, episodeFlag: context.episodeFlag, episodeName: context.episodeName, episodeID: context.episodeID))
     }
 }
 
