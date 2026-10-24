@@ -25,6 +25,8 @@ import TVCore
     var subscription: Subscription?
     /// The address being typed in to add a subscription.
     var subscriptionAddress: String
+    /// What to call the subscription being added; empty shows where it lives instead.
+    var subscriptionName = ""
     /// Every subscription the viewer added, in the order they merge.
     var subscriptions: [SubscriptionEntry] = []
     /// Why a subscription last failed to refresh, by address; its last good copy stays in use.
@@ -176,9 +178,12 @@ import TVCore
             let url = try WebAddress.resolve(typed)
             switch try await http.subscriptionImport(url) {
             case .subscription(let value):
-                let entry = SubscriptionEntry(address: url.absoluteString)
-                if let index = subscriptions.firstIndex(where: { $0.address == entry.address }) { subscriptions[index].enabled = true }
-                else { subscriptions.append(entry) }
+                let name = address == nil ? subscriptionName.trimmingCharacters(in: .whitespacesAndNewlines) : ""
+                let entry = SubscriptionEntry(address: url.absoluteString, name: name)
+                if let index = subscriptions.firstIndex(where: { $0.address == entry.address }) {
+                    subscriptions[index].enabled = true
+                    if !name.isEmpty { subscriptions[index].name = name }
+                } else { subscriptions.append(entry) }
                 keep(value, for: entry)
                 if persistsChanges { defaults.set(url.absoluteString, forKey: "subscriptionAddress") }
                 notice = L10n.text("Imported sources: %lld · Live playlists: %lld", value.sites.count, value.lives.count)
@@ -192,7 +197,7 @@ import TVCore
                 notice = saved.count == 1 ? L10n.text("Added the AList server %@. Browse it in Cloud Files.", saved[0].name)
                     : L10n.text("Added %lld AList servers. Browse them in Cloud Files.", saved.count)
             }
-            if address == nil { subscriptionAddress = "" }
+            if address == nil { subscriptionAddress = ""; subscriptionName = "" }
             saveSubscriptionList()
             rebuildSubscription()
         } catch {
@@ -214,6 +219,12 @@ import TVCore
         subscriptions[index].enabled = enabled
         saveSubscriptionList()
         if enabled, documents[entry.address] == nil { await restoreSubscription() } else { rebuildSubscription() }
+    }
+    /// Names a subscription in Settings and Sources; an empty name shows where it lives again.
+    func renameSubscription(_ entry: SubscriptionEntry, to name: String) {
+        guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }), subscriptions[index].name != name else { return }
+        subscriptions[index].name = name
+        saveSubscriptionList()
     }
     func removeSubscription(_ entry: SubscriptionEntry) {
         subscriptions.removeAll { $0.address == entry.address }
