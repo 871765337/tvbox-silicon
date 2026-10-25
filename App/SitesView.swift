@@ -1354,7 +1354,7 @@ struct VideoDetailView: View {
                 let playback = store.subscription.map { client.applying($0) } ?? client
                 let resolved = try await playback.resolvePlayback(plan, choice: plan.choices[0])
                 try Task.checkCancellation()
-                store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: client)
+                store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: playback)
             }
         } catch { fail(episode, error) }
     }
@@ -1365,7 +1365,7 @@ struct VideoDetailView: View {
             let playback = store.subscription.map { client.applying($0) } ?? client
             let resolved = try await playback.resolvePlayback(plan, choice: choice)
             try Task.checkCancellation()
-            store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: client)
+            store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: playback)
         } catch { fail(episode, error) }
     }
     #if !os(macOS)

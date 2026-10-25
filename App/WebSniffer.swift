@@ -72,7 +72,6 @@ private final class SniffBox: @unchecked Sendable {
 @MainActor
 private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessageHandlerWithReply {
     private let box: SniffBox
-    private let headers: [String: String]
     private let click: String
     private let ads: [String]
     private let rules: [SniffRule]
@@ -84,7 +83,6 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
 
     init(box: SniffBox, url: String, headers: [String: String], click: String, detect: Bool, ads: [String], rules: [SniffRule]) {
         self.box = box
-        self.headers = headers
         self.click = click
         self.ads = ads
         self.rules = rules
@@ -112,13 +110,15 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
         box.resume(nil)
     }
 
-    func succeed(url: String, headers reported: [String: String], webView: WKWebView) {
+    func succeed(url: String, headers reported: [String: String], page: SniffPage) {
         guard !stopped, let media = URL(string: url) else { return }
         stopped = true
         timeout?.cancel()
         challenge?.dismiss()
         let store = self.store
-        let agent = webView.customUserAgent ?? ""
+        let agent = page.webView.customUserAgent ?? ""
+        // A script report has no browser request headers. Use the headers that opened this page.
+        let opened = reported.isEmpty ? page.headers : reported
         Task {
             let cookies = await store.httpCookieStore.allCookies()
             let host = media.host ?? ""
@@ -126,7 +126,7 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
                 let domain = item.domain.hasPrefix(".") ? String(item.domain.dropFirst()) : item.domain
                 return host == domain || host.hasSuffix("." + domain)
             }.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
-            var result = reported
+            var result = opened
             Self.overlay(&result, name: "Cookie", value: cookie)
             Self.overlay(&result, name: "User-Agent", value: agent)
             for page in self.pages { page.close() }
@@ -141,11 +141,11 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
         case .allow: return "allow"
         case .block: return "block"
         case .video:
-            succeed(url: url, headers: reported, webView: page.webView)
+            succeed(url: url, headers: reported, page: page)
             return "block"
         case .follow:
             page.followed.insert(url)
-            let child = SniffPage(session: self, url: url, detect: !url.contains("player/?url="), headers: reported.isEmpty ? headers : reported)
+            let child = SniffPage(session: self, url: url, detect: !url.contains("player/?url="), headers: reported.isEmpty ? page.headers : reported)
             pages.append(child)
             child.load()
             return "allow"
@@ -245,11 +245,16 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        guard let page = pages.first(where: { $0.webView == webView }) else { return }
-        pageFailed(page)
+        noteLoadFailure(webView, error: error)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        noteLoadFailure(webView, error: error)
+    }
+
+    /// A cancelled navigation is one this sniffer rejected. The page that is already open keeps sniffing.
+    private func noteLoadFailure(_ webView: WKWebView, error: Error) {
+        guard (error as NSError).code != NSURLErrorCancelled else { return }
         guard let page = pages.first(where: { $0.webView == webView }) else { return }
         pageFailed(page)
     }
