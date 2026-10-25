@@ -90,6 +90,10 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
     private let store = WKWebsiteDataStore.nonPersistent()
     fileprivate let stage = SniffStage()
     private var pages: [SniffPage] = []
+    /// Every address a page of this session followed. A hook and a navigation can report the same
+    /// address, and each child page sniffs too, so the cap is for the whole session.
+    private var followed = Set<String>()
+    private static let followLimit = 5
     private var timeout: Task<Void, Never>?
     private var challenge: SniffChallenge?
     private var stopped = false
@@ -129,6 +133,7 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
         stopped = true
         timeout?.cancel()
         challenge?.dismiss()
+        challenge = nil
         let store = self.store
         let agent = page.webView.customUserAgent ?? ""
         // A script report has no browser request headers. Use the headers that opened this page.
@@ -159,6 +164,8 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
             succeed(url: url, headers: reported, page: page)
             return "block"
         case .follow:
+            guard !followed.contains(url), followed.count < Self.followLimit else { return "allow" }
+            followed.insert(url)
             page.followed.insert(url)
             let child = SniffPage(session: self, url: url, detect: !url.contains("player/?url="), headers: reported.isEmpty ? page.headers : reported)
             pages.append(child)
@@ -369,6 +376,8 @@ private final class SniffPage {
         }
     }
     func close() {
+        // The content controller keeps its message handler, the session, alive.
+        webViewStorage?.configuration.userContentController.removeAllScriptMessageHandlers()
         webViewStorage?.stopLoading()
         webViewStorage?.removeFromSuperview()
         webViewStorage = nil

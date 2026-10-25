@@ -436,26 +436,37 @@ public struct CatalogClient: Sendable {
         return Channel(name: choice.name, group: plan.group, url: found.url, headers: found.headers)
     }
 
+    /// Every type 0 and type 1 parser races, a few at a time: a web parser is a hidden page and window,
+    /// and a dead JSON service holds its slot until the HTTP timeout.
     private func superParse(_ plan: PlaybackPlan, page: String) async -> (url: URL, headers: [String: String])? {
         let json = Self.parsers(parses, type: 1, flag: plan.group)
         let webs = Self.parsers(parses, type: 0, flag: plan.group)
-        return await withTaskGroup(of: (url: URL, headers: [String: String])?.self) { group in
-            for item in json {
-                group.addTask { await WebPlayback.askJSON(service: item.url, page: page, headers: item.headers, http: self.http) }
+        let active = sniffer ?? WebSniff.current
+        let http = self.http, ads = sniffAds, rules = sniffRules
+        return await withTaskGroup(of: (web: Bool, found: (url: URL, headers: [String: String])?).self) { group in
+            var pendingJSON = json.makeIterator(), pendingWebs = webs.makeIterator()
+            func askNextJSON() {
+                guard let item = pendingJSON.next() else { return }
+                group.addTask { (false, await WebPlayback.askJSON(service: item.url, page: page, headers: item.headers, http: http)) }
             }
-            let active = sniffer ?? WebSniff.current
-            for item in webs {
+            func sniffNextWeb() {
+                guard let active, let item = pendingWebs.next() else { return }
                 let target = item.url + page
-                group.addTask { [sniffAds, sniffRules] in
-                    await active?.sniff(url: target, headers: item.headers, click: item.click, detect: !target.contains("player/?url="), ads: sniffAds, rules: sniffRules)
+                group.addTask {
+                    (true, await active.sniff(url: target, headers: item.headers, click: item.click, detect: !target.contains("player/?url="), ads: ads, rules: rules))
                 }
             }
-            for await found in group {
-                if let found { group.cancelAll(); return found }
+            for _ in 0..<Self.superParseJSONWidth { askNextJSON() }
+            for _ in 0..<Self.superParseWebWidth { sniffNextWeb() }
+            while let next = await group.next() {
+                if let found = next.found { group.cancelAll(); return found }
+                if next.web { sniffNextWeb() } else { askNextJSON() }
             }
             return nil
         }
     }
+    static let superParseJSONWidth = 4
+    static let superParseWebWidth = 2
 
     private static func parsers(_ items: [ParseService], type: Int, flag: String) -> [ParseService] {
         let typed = items.filter { $0.type == type }

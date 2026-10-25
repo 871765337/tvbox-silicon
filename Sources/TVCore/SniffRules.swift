@@ -26,7 +26,8 @@ public enum SniffDecision: Equatable, Sendable {
 /// 2. An empty host is blocked. Any other host on the subscription `ads` list is blocked,
 ///    unless the address is a Cloudflare challenge resource.
 /// 3. With `detect` on, an address matching `player.*https?://` is followed while this page
-///    has followed fewer than five. Following wins over the video test.
+///    has followed fewer than five. The page's own address is not followed: a child page for it
+///    would follow itself again. Following wins over the video test.
 /// 4. A video address wins and stops the sniff.
 /// 5. Anything else loads.
 ///
@@ -51,7 +52,7 @@ public enum SniffRules {
         let host = parsed?.host ?? ""
         let cloudflare = parsed.map(isCloudflareResource) ?? false
         if host.isEmpty || (!cloudflare && isAd(host: host, ads: ads)) { return .block }
-        if detect, followedCount < 5, matches(url, expression: player) { return .follow }
+        if detect, followedCount < 5, url != pageURL, matches(url, expression: player) { return .follow }
         if isVideo(url: url, pageURL: pageURL, detect: detect, rules: rules) { return .video }
         return .allow
     }

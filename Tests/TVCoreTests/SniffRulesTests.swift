@@ -33,6 +33,12 @@ private let page = "https://player.example/watch/1"
     #expect(SniffRules.isVideo(url: wrapped, pageURL: page, detect: true, rules: [rule]))
 }
 
+@Test func sniffRulesDoNotFollowThePagesOwnAddress() {
+    let player = "https://jx.example/player.php?url=https://v.example/1.html"
+    #expect(SniffRules.decision(url: player, pageURL: player, detect: true, followedCount: 0, ads: [], rules: []) == .allow)
+    #expect(SniffRules.decision(url: player, pageURL: page, detect: true, followedCount: 0, ads: [], rules: []) == .follow)
+}
+
 @Test func sniffRulesBlockAdsButNotCloudflareOrLocalDocuments() {
     let ads = ["ads.example"]
     #expect(SniffRules.decision(url: "https://ads.example/a.m3u8", pageURL: page, detect: true, followedCount: 0, ads: ads, rules: []) == .block)

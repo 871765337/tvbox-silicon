@@ -36,15 +36,27 @@ private final class RoutingProtocol: URLProtocol, @unchecked Sendable {
     override func stopLoading() {}
 }
 
+/// Type 4 calls this from several tasks at once, so every field is behind the lock.
 private final class RecordingSniffer: WebSniffing, @unchecked Sendable {
-    var urls: [String] = []
-    var clicks: [String] = []
-    var detects: [Bool] = []
+    private let lock = NSLock()
+    private var _urls: [String] = []
+    private var _clicks: [String] = []
+    private var _detects: [Bool] = []
+    private var running = 0
+    private var _mostAtOnce = 0
     var answer: URL?
+    var delay: Duration = .zero
+    var urls: [String] { lock.withLock { _urls } }
+    var clicks: [String] { lock.withLock { _clicks } }
+    var detects: [Bool] { lock.withLock { _detects } }
+    var mostAtOnce: Int { lock.withLock { _mostAtOnce } }
     func sniff(url: String, headers: [String: String], click: String, detect: Bool, ads: [String], rules: [SniffRule]) async -> (url: URL, headers: [String: String])? {
-        urls.append(url)
-        clicks.append(click)
-        detects.append(detect)
+        lock.withLock {
+            _urls.append(url); _clicks.append(click); _detects.append(detect)
+            running += 1; _mostAtOnce = max(_mostAtOnce, running)
+        }
+        if delay > .zero { try? await Task.sleep(for: delay) }
+        lock.withLock { running -= 1 }
         return answer.map { ($0, ["Referer": "https://player.example/"]) }
     }
 }
@@ -122,6 +134,15 @@ private let sniffTimeout = "Video detection timed out before a playable address 
     sniffer.answer = URL(string: "https://cdn.example/super.m3u8")
     _ = try await client.playback(episode)
     #expect(sniffer.urls == ["https://match.example/?url=https://page.example/v"])
+}
+
+@Test func type4SniffsOnlyAFewWebParsersAtATime() async throws {
+    let webs = (1...5).map { ParseService(name: "web\($0)", type: 0, url: "https://web\($0).example/?url=", headers: [:]) }
+    let (client, sniffer, episode) = try catalog(play: "super", parses: [ParseService(name: "super", type: 4, url: "csp_Super", headers: [:])] + webs)
+    sniffer.delay = .milliseconds(50)
+    await #expect(throws: TVError.self) { try await client.playback(episode) }
+    #expect(sniffer.urls.count == 5)
+    #expect(sniffer.mostAtOnce == CatalogClient.superParseWebWidth)
 }
 
 @Test func embeddedMediaSkipsTheSniffer() async throws {

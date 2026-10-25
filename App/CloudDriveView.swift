@@ -138,7 +138,7 @@ struct CloudLoginView: View {
     }
 
     /// Saves once the page has a drive cookie. Quark also waits briefly for the sign-in ticket the page
-    /// sends in the background; without it, FTY asks to sign in again.
+    /// sends in the background. Without it the cookie still saves; only FTY asks to sign in again.
     private func commit() async {
         saving = true
         defer { saving = false }
@@ -158,10 +158,6 @@ struct CloudLoginView: View {
                 try? await Task.sleep(for: .seconds(1))
                 if let ticket { found = ticket; break }
             }
-        }
-        if provider == .quark, found == nil {
-            error = L10n.text("Sign-in was approved, but the drive didn't return a login. Try again.")
-            return
         }
         var fields: [String: String] = [:]
         for cookie in selected where !cookie.value.isEmpty { fields[cookie.name] = cookie.value }
@@ -392,10 +388,10 @@ extension CloudProvider {
         var accounts = (try? CloudDriveAccounts.load()) ?? CloudDriveAccounts()
         set(cookie, in: &accounts)
         if self == .quark {
-            guard let ticket, !ticket.isEmpty else {
-                throw TVError.unsupported(L10n.text("Sign-in was approved, but the drive didn't return a login. Try again."))
+            // The cookie is the login every other plugin uses, so a missing or failed ticket does not stop the save.
+            if let ticket, !ticket.isEmpty {
+                do { accounts.quarkServiceTicket = try await CloudDriveQRLogin.quarkMobileTicket(ticket, cookie: cookie) } catch {}
             }
-            accounts.quarkServiceTicket = try await CloudDriveQRLogin.quarkMobileTicket(ticket, cookie: cookie)
             Diagnostics.shared.record(.info, "cloud.signin", "quark login saved mobileTicket=\(accounts.quarkServiceTicket != nil)")
         }
         try accounts.save()
