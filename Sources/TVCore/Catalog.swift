@@ -409,6 +409,8 @@ public struct CatalogClient: Sendable {
     }
 
     private static let webDetectionError = TVError.unsupported(L10n.text("This source requires web video detection or additional parsing. Only resolved media URLs are supported."))
+    /// The sniffer ran and the 15 second clock ended with no playable address.
+    private static let sniffTimeoutError = TVError.unsupported(L10n.text("Video detection timed out before a playable address appeared."))
 
     private func playResolved(_ plan: PlaybackPlan, choice: PlaybackChoice) async throws -> Channel {
         let address = Self.unwrapPluginProxy(choice.address)
@@ -424,9 +426,9 @@ public struct CatalogClient: Sendable {
 
     private func sniff(_ plan: PlaybackPlan, choice: PlaybackChoice, target: String, headers: [String: String], click: String) async throws -> Channel {
         let detect = !target.contains("player/?url=")
-        guard let sniffer = sniffer ?? WebSniff.current,
-              let found = await sniffer.sniff(url: target, headers: headers, click: click, detect: detect, ads: sniffAds, rules: sniffRules) else {
-            throw Self.webDetectionError
+        guard let sniffer = sniffer ?? WebSniff.current else { throw Self.webDetectionError }
+        guard let found = await sniffer.sniff(url: target, headers: headers, click: click, detect: detect, ads: sniffAds, rules: sniffRules) else {
+            throw Self.sniffTimeoutError
         }
         if found.url.absoluteString.lowercased().hasPrefix("magnet:") {
             throw TVError.unsupported(L10n.text("This source returned a magnet link. Torrent playback is not supported."))

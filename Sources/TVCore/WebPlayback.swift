@@ -54,7 +54,22 @@ enum WebPlayback {
            let address = embeddedMedia(in: String(decoding: data, as: UTF8.self), base: pageURL) {
             return (address, headers)
         }
-        return await askParseServices(page: page, parses: parses, http: http)
+        // A dead JSON service hangs until the HTTP timeout. That wait sits in front of the
+        // 15 second sniff, so the fast path gives up after 8 seconds and lets sniff start.
+        return await first(within: 8) { await askParseServices(page: page, parses: parses, http: http) }
+    }
+
+    private static func first(within seconds: TimeInterval, _ operation: @escaping @Sendable () async -> (url: URL, headers: [String: String])?) async -> (url: URL, headers: [String: String])? {
+        await withTaskGroup(of: (url: URL, headers: [String: String])?.self) { group in
+            group.addTask { await operation() }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return nil
+            }
+            let answer = await group.next() ?? nil
+            group.cancelAll()
+            return answer
+        }
     }
 
     private static let playerData = try! NSRegularExpression(pattern: #"player_[A-Za-z0-9_]+\s*=\s*(\{.*?\})\s*[;<]"#, options: [.dotMatchesLineSeparators])

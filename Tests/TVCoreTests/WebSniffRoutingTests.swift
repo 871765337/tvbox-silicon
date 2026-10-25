@@ -65,6 +65,7 @@ private func catalog(play: String, click: String = "site-click", parses: [ParseS
 }
 
 private let sniffError = "This source requires web video detection or additional parsing. Only resolved media URLs are supported."
+private let sniffTimeout = "Video detection timed out before a playable address appeared."
 
 @Test func jsonPlayURLUsesOnlyThatService() async throws {
     let (client, sniffer, episode) = try catalog(play: "json")
@@ -144,6 +145,16 @@ private let sniffError = "This source requires web video detection or additional
     let channel = try await client.playback(episode)
     #expect(channel.url.absoluteString == "https://cdn.example/direct.m3u8")
     #expect(sniffer.urls.isEmpty)
+}
+
+@Test func aSnifferThatFindsNothingReportsATimeout() async throws {
+    let (client, _, episode) = try catalog(play: "page", click: "")
+    do {
+        _ = try await client.playback(episode)
+        Issue.record("expected the sniff timeout")
+    } catch {
+        #expect(error.localizedDescription == sniffTimeout)
+    }
 }
 
 @Test func noSnifferKeepsTheCurrentError() async throws {

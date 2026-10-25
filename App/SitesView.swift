@@ -889,11 +889,9 @@ struct VideoDetailView: View {
         // Sign in where playback failed, then resume the episode that needed the account.
         #if os(macOS)
         .sheet(item: $signingIn) { drive in
-            CloudLoginView(provider: drive.provider) { cookie in
-                startRequest {
-                    do { try await drive.provider.saveLogin(cookie) } catch { return }
-                    if let episode = playbackIssue?.episode { await play(episode) }
-                }
+            CloudLoginView(provider: drive.provider) { cookie, ticket in
+                try await drive.provider.saveLogin(cookie, ticket: ticket)
+                if let episode = playbackIssue?.episode { startRequest { await play(episode) } }
             }
         }
         #elseif os(iOS)

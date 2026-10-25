@@ -21,19 +21,31 @@ import UIKit
 /// Cloudflare sheet does not pause or restart it. Closing that sheet fails the sniff.
 /// Certificate errors are not ignored: WebKit fails the load, and the sniff fails
 /// when no page is still loading. Spider `isVideoFormat` is not called.
+///
+/// Each page view is attached to a clear, click-through window. WebKit does not
+/// load or run JavaScript in a view that is not in a window, so a free-floating
+/// web view waits out the clock without ever seeing a media address.
 public final class WKWebSniffer: WebSniffing, @unchecked Sendable {
     public init() {}
     public func sniff(url: String, headers: [String: String], click: String, detect: Bool, ads: [String], rules: [SniffRule]) async -> (url: URL, headers: [String: String])? {
+        let host = URL(string: url)?.host() ?? "-"
+        Diagnostics.shared.record(.info, "sniff", "start host=\(host)")
         let box = SniffBox()
         let session = await MainActor.run {
             SniffSession(box: box, url: url, headers: headers, click: click, detect: detect, ads: ads, rules: rules)
         }
         await session.start()
-        return await withTaskCancellationHandler {
+        let found = await withTaskCancellationHandler {
             await box.result
         } onCancel: {
             Task { @MainActor in session.stop() }
         }
+        if let found {
+            Diagnostics.shared.record(.info, "sniff", "hit host=\(found.url.host() ?? host)")
+        } else {
+            Diagnostics.shared.record(.warning, "sniff", "miss host=\(host)")
+        }
+        return found
     }
 }
 
@@ -76,6 +88,7 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
     private let ads: [String]
     private let rules: [SniffRule]
     private let store = WKWebsiteDataStore.nonPersistent()
+    fileprivate let stage = SniffStage()
     private var pages: [SniffPage] = []
     private var timeout: Task<Void, Never>?
     private var challenge: SniffChallenge?
@@ -107,6 +120,7 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
         challenge = nil
         for page in pages { page.close() }
         pages = []
+        stage.close()
         box.resume(nil)
     }
 
@@ -131,6 +145,7 @@ private final class SniffSession: NSObject, WKNavigationDelegate, WKScriptMessag
             Self.overlay(&result, name: "User-Agent", value: agent)
             for page in self.pages { page.close() }
             self.pages = []
+            self.stage.close()
             self.box.resume((url: media, headers: result))
         }
     }
@@ -324,6 +339,7 @@ private final class SniffPage {
     var webView: WKWebView {
         if let webViewStorage { return webViewStorage }
         let created = session.makeWebView(page: self)
+        session.stage.attach(created)
         webViewStorage = created
         return created
     }
@@ -354,7 +370,79 @@ private final class SniffPage {
     }
     func close() {
         webViewStorage?.stopLoading()
+        webViewStorage?.removeFromSuperview()
         webViewStorage = nil
+    }
+}
+
+/// A clear window that keeps sniff pages in a real view hierarchy. Clicks pass through,
+/// and the window is not key, so playback stays in front. WebKit still loads it: a view
+/// with no window never starts its navigation.
+@MainActor
+private final class SniffStage {
+    #if os(macOS)
+    private let window: NSWindow
+    private let container = NSView(frame: NSRect(x: 0, y: 0, width: 1280, height: 720))
+    #else
+    private let window: UIWindow?
+    private let container = UIView(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+    #endif
+    private var closed = false
+
+    init() {
+        #if os(macOS)
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 720), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = container
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = false
+        window.ignoresMouseEvents = true
+        window.isReleasedWhenClosed = false
+        window.isExcludedFromWindowsMenu = true
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        window.alphaValue = 0
+        if let screen = NSScreen.main {
+            window.setFrameOrigin(NSPoint(x: screen.frame.minX, y: screen.frame.minY))
+        }
+        window.orderFrontRegardless()
+        #else
+        if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first {
+            let window = UIWindow(windowScene: scene)
+            let controller = UIViewController()
+            controller.view = container
+            window.rootViewController = controller
+            window.windowLevel = .normal
+            window.isUserInteractionEnabled = false
+            window.alpha = 0
+            window.isHidden = false
+            self.window = window
+        } else {
+            window = nil
+        }
+        #endif
+    }
+
+    func attach(_ webView: WKWebView) {
+        guard !closed else { return }
+        #if os(macOS)
+        webView.frame = container.bounds
+        webView.autoresizingMask = [.width, .height]
+        #else
+        webView.frame = container.bounds
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        #endif
+        container.addSubview(webView)
+    }
+
+    func close() {
+        guard !closed else { return }
+        closed = true
+        #if os(macOS)
+        window.orderOut(nil)
+        #else
+        window?.isHidden = true
+        #endif
     }
 }
 
